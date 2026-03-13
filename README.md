@@ -9,7 +9,7 @@ Your client marketing management platform. Built with React + Vite + Supabase.
 - **Dashboard** — stats, active campaigns, activity feed, audience growth
 - **Clients** — full list, add/edit modal, search, status tracking
 - **Client detail** — per-client project history, financials, notes
-- **Projects** — work view + financial view, add/edit modal, search, financial totals
+- **Projects** — work view + financial view, add/edit modal, search, client filter, financial totals
 - **Theme toggle** — dark/light mode, persists across sessions
 - **Demo mode** — runs with sample data if no Supabase credentials are set
 - Placeholder pages for: Campaigns, Calendar, Proofs, Time board, Billing (Phase 2)
