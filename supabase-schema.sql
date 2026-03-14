@@ -223,3 +223,43 @@ create policy "Authenticated full access" on audience_metrics     for all to aut
 
 -- Phase 3: archive support for projects
 alter table projects add column if not exists archived boolean not null default false;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Phase 4: Project Items + Proofs redesign
+-- Run the entire block below as one query in Supabase SQL Editor
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- 1. Project Items table
+create table if not exists project_items (
+  id             uuid primary key default uuid_generate_v4(),
+  project_id     uuid not null references projects(id) on delete cascade,
+  item_number    text not null,           -- e.g. "01", "02"
+  name           text not null,
+  scheduled_date date,
+  status         text not null default 'Open',
+  sort_order     integer not null default 0,
+  created_at     timestamptz not null default now()
+);
+
+-- RLS for project_items
+alter table project_items enable row level security;
+create policy "Authenticated full access" on project_items
+  for all to authenticated using (true) with check (true);
+
+-- 2. Add new columns to proofs
+alter table proofs
+  add column if not exists item_id          uuid references project_items(id) on delete set null,
+  add column if not exists proof_link       text,
+  add column if not exists post_copy        text,
+  add column if not exists client_comments  text;
+
+-- Note: proofs.image_url already exists in the original schema.
+-- Note: proofs.version already exists — it becomes the letter suffix (A=1, B=2…)
+--       The full version label (e.g. "01A") is composed in the app as
+--       item_number + chr(64 + version).
+
+-- 3. Auto-update trigger for project_items (updated_at not needed — no updated_at col)
+--    Nothing to add here; created_at is set on insert.
+
+-- 4. Ensure calendar_events RLS is ready for auto-population from items
+--    (policy already exists from initial schema)
