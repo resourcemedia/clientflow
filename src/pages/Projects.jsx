@@ -229,23 +229,33 @@ function ProjectModal({ project, clients, onClose, onSaved }) {
     end_date: project?.end_date || '',
   })
   const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState('')
 
   function set(field) { return e => setForm(f => ({ ...f, [field]: e.target.value })) }
 
   async function save() {
     if (!form.name.trim()) return
+    setError('')
     setSaving(true)
     if (isDemo) {
       setTimeout(() => { setSaving(false); onSaved() }, 400)
       return
     }
+
+    // Convert empty strings to null for numeric/uuid fields so Supabase accepts them
+    const NUMERIC = ['est_amount','client_owed','client_paid','team_owed','team_paid']
     const payload = { ...form }
-    if (isEdit) {
-      await supabase.from('projects').update(payload).eq('id', project.id)
-    } else {
-      await supabase.from('projects').insert(payload)
-    }
+    NUMERIC.forEach(k => { payload[k] = payload[k] === '' ? null : Number(payload[k]) })
+    if (!payload.client_id) payload.client_id = null
+    if (!payload.start_date) payload.start_date = null
+    if (!payload.end_date)   payload.end_date   = null
+
+    const { error: err } = isEdit
+      ? await supabase.from('projects').update(payload).eq('id', project.id)
+      : await supabase.from('projects').insert(payload)
+
     setSaving(false)
+    if (err) { setError(err.message); return }
     onSaved()
   }
 
@@ -255,6 +265,7 @@ function ProjectModal({ project, clients, onClose, onSaved }) {
       onClose={onClose}
       footer={
         <>
+          {error && <span style={{ color: 'var(--red)', fontSize: '0.82rem', flex: 1 }}>{error}</span>}
           <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
           <button className="btn btn-primary" onClick={save} disabled={saving}>
             {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add project'}
