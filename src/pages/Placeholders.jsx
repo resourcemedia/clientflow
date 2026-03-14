@@ -2,9 +2,6 @@
 export function CampaignsPage() {
   return <ComingSoon title="Campaigns" icon="📣" next="campaign builder with benefit / proof / CTA and channel selection" />
 }
-export function CalendarPage() {
-  return <ComingSoon title="Content calendar" icon="📅" next="monthly content calendar with color-coded channel events" />
-}
 export function ProofsPage() {
   return <ComingSoon title="Proofs" icon="📄" next="proof review board with Approve / Revise / No Go workflow" />
 }

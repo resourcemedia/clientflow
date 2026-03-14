@@ -8,7 +8,8 @@ import ClientDetail from './pages/ClientDetail'
 import ProjectsPage from './pages/Projects'
 import ProjectDetailPage from './pages/ProjectDetail'
 import LoginPage from './pages/Login'
-import { CampaignsPage, CalendarPage, ProofsPage, TimeboardPage, BillingPage } from './pages/Placeholders'
+import CalendarPage from './pages/Calendar'
+import { CampaignsPage, ProofsPage, TimeboardPage, BillingPage } from './pages/Placeholders'
 import './styles.css'
 
 function AppShell() {
