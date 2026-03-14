@@ -217,3 +217,9 @@ create policy "Authenticated full access" on calendar_events      for all to aut
 create policy "Authenticated full access" on time_entries         for all to authenticated using (true) with check (true);
 create policy "Authenticated full access" on invoices             for all to authenticated using (true) with check (true);
 create policy "Authenticated full access" on audience_metrics     for all to authenticated using (true) with check (true);
+
+-- ── MIGRATIONS ───────────────────────────────────────────────────────────────
+-- Run these in Supabase Dashboard → SQL Editor after the initial schema above.
+
+-- Phase 3: archive support for projects
+alter table projects add column if not exists archived boolean not null default false;

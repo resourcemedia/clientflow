@@ -7,14 +7,16 @@ import { StatusBadge, Modal, EmptyState, StatCard, PillNav, FormGroup, fmt$ } fr
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState([])
-  const [clients, setClients]   = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [tab, setTab]           = useState('work')
-  const [showModal, setShowModal] = useState(false)
+  const [projects, setProjects]       = useState([])
+  const [clients, setClients]         = useState([])
+  const [loading, setLoading]         = useState(true)
+  const [tab, setTab]                 = useState('work')
+  const [showModal, setShowModal]     = useState(false)
   const [editProject, setEditProject] = useState(null)
-  const [search, setSearch]     = useState('')
-  const [searchParams]          = useSearchParams()
+  const [search, setSearch]           = useState('')
+  const [showArchived, setShowArchived] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(null) // project id pending delete
+  const [searchParams]                = useSearchParams()
   const [clientFilter, setClientFilter] = useState(searchParams.get('client') || '')
   const navigate = useNavigate()
 
@@ -36,7 +38,21 @@ export default function ProjectsPage() {
     setLoading(false)
   }
 
+  async function handleArchive(project) {
+    const newVal = !project.archived
+    await supabase.from('projects').update({ archived: newVal }).eq('id', project.id)
+    setProjects(ps => ps.map(p => p.id === project.id ? { ...p, archived: newVal } : p))
+  }
+
+  async function handleDelete(id) {
+    await supabase.from('projects').delete().eq('id', id)
+    setProjects(ps => ps.filter(p => p.id !== id))
+    setConfirmDelete(null)
+  }
+
   const filtered = projects.filter(p => {
+    if (!showArchived && p.archived) return false
+    if (showArchived  && !p.archived) return false
     if (clientFilter && p.client_id !== clientFilter) return false
     const q = search.toLowerCase()
     return !q
@@ -45,11 +61,10 @@ export default function ProjectsPage() {
       || (p.client?.company || '').toLowerCase().includes(q)
   })
 
-  // Financial totals
-  const totalEst       = filtered.reduce((s, p) => s + (p.est_amount  || 0), 0)
-  const totalOwed      = filtered.reduce((s, p) => s + (p.client_owed || 0), 0)
-  const totalPaid      = filtered.reduce((s, p) => s + (p.client_paid || 0), 0)
-  const openCount      = filtered.filter(p => p.inv_status !== 'Paid').length
+  const totalEst  = filtered.reduce((s, p) => s + (p.est_amount  || 0), 0)
+  const totalOwed = filtered.reduce((s, p) => s + (p.client_owed || 0), 0)
+  const totalPaid = filtered.reduce((s, p) => s + (p.client_paid || 0), 0)
+  const openCount = filtered.filter(p => p.inv_status !== 'Paid').length
 
   const TABS = [
     { id: 'work',      label: 'Work view' },
@@ -78,22 +93,38 @@ export default function ProjectsPage() {
           onChange={e => setSearch(e.target.value)}
           style={{ width: 200 }}
         />
+        <button
+          className={`btn ${showArchived ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setShowArchived(v => !v)}
+        >
+          {showArchived ? 'Archived' : 'Active'}
+        </button>
         <button className="btn btn-primary" onClick={() => { setEditProject(null); setShowModal(true) }}>
           + Add project
         </button>
       </div>
 
       <div className="page-content">
-        {/* Stats */}
         <div className="stat-grid mb-24">
-          <StatCard label="Total projects" value={filtered.length}     color="blue" />
-          <StatCard label="Open invoices"  value={openCount}           color="amber"  />
-          <StatCard label="Total estimated" value={fmt$(totalEst)}     color="accent" />
-          <StatCard label="Outstanding"     value={fmt$(totalOwed)}    color={totalOwed > 0 ? 'amber' : 'green'} />
+          <StatCard label={showArchived ? 'Archived projects' : 'Total projects'} value={filtered.length} color="blue" />
+          <StatCard label="Open invoices"   value={openCount}        color="amber"  />
+          <StatCard label="Total estimated" value={fmt$(totalEst)}   color="accent" />
+          <StatCard label="Outstanding"     value={fmt$(totalOwed)}  color={totalOwed > 0 ? 'amber' : 'green'} />
         </div>
 
         {tab === 'work' ? (
-          <WorkView projects={filtered} loading={loading} onEdit={p => { setEditProject(p); setShowModal(true) }} onNavigate={navigate} />
+          <WorkView
+            projects={filtered}
+            loading={loading}
+            showArchived={showArchived}
+            confirmDelete={confirmDelete}
+            onEdit={p => { setEditProject(p); setShowModal(true) }}
+            onArchive={handleArchive}
+            onDeleteRequest={id => setConfirmDelete(id)}
+            onDeleteCancel={() => setConfirmDelete(null)}
+            onDeleteConfirm={handleDelete}
+            onNavigate={navigate}
+          />
         ) : (
           <FinancialView projects={filtered} loading={loading} totalEst={totalEst} totalOwed={totalOwed} totalPaid={totalPaid} onNavigate={navigate} />
         )}
@@ -112,14 +143,16 @@ export default function ProjectsPage() {
 }
 
 // ── WORK VIEW ──────────────────────────────────────────────────────────
-function WorkView({ projects, loading, onEdit, onNavigate }) {
+function WorkView({ projects, loading, showArchived, confirmDelete, onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm, onNavigate }) {
   if (loading) return <div className="card"><div className="empty-state text-dim">Loading…</div></div>
   return (
     <div className="card">
-      <div className="card-header"><span className="card-title">All projects</span></div>
+      <div className="card-header">
+        <span className="card-title">{showArchived ? 'Archived projects' : 'All projects'}</span>
+      </div>
       <div className="table-wrap">
         {projects.length === 0 ? (
-          <EmptyState icon="📁" title="No projects found" sub="Add a project to get started" />
+          <EmptyState icon="📁" title={showArchived ? 'No archived projects' : 'No projects found'} sub={showArchived ? '' : 'Add a project to get started'} />
         ) : (
           <table>
             <thead>
@@ -131,20 +164,42 @@ function WorkView({ projects, loading, onEdit, onNavigate }) {
             </thead>
             <tbody>
               {projects.map(p => (
-                <tr key={p.id} onClick={() => onNavigate(`/projects/${p.id}`)}>
-                  <td className="text-mono text-dim">{p.project_number}</td>
-                  <td className="td-main">{p.name}</td>
-                  <td>{p.client?.company || '—'}</td>
-                  <td><StatusBadge status={p.product_type} /></td>
-                  <td><StatusBadge status={p.priority} /></td>
-                  <td><StatusBadge status={p.proof_status} /></td>
-                  <td><StatusBadge status={p.inv_status} /></td>
-                  <td><StatusBadge status={p.collect_status} /></td>
-                  <td className="text-mono text-dim">{p.start_date?.slice(0,10) || '—'}</td>
-                  <td onClick={e => e.stopPropagation()}>
-                    <button className="btn btn-ghost btn-sm" onClick={() => onEdit(p)}>Edit</button>
-                  </td>
-                </tr>
+                confirmDelete === p.id ? (
+                  <tr key={p.id} style={{ background: 'var(--red-bg)' }}>
+                    <td colSpan={9} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
+                      Delete <strong>{p.name}</strong>? This cannot be undone.
+                    </td>
+                    <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
+                      <button className="btn btn-sm" style={{ background: 'var(--red)', color: '#fff', marginRight: 6 }} onClick={() => onDeleteConfirm(p.id)}>
+                        Delete
+                      </button>
+                      <button className="btn btn-ghost btn-sm" onClick={onDeleteCancel}>Cancel</button>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={p.id} onClick={() => onNavigate(`/projects/${p.id}`)} style={{ opacity: p.archived ? 0.55 : 1 }}>
+                    <td className="text-mono text-dim">{p.project_number}</td>
+                    <td className="td-main">{p.name}</td>
+                    <td>{p.client?.company || '—'}</td>
+                    <td><StatusBadge status={p.product_type} /></td>
+                    <td><StatusBadge status={p.priority} /></td>
+                    <td><StatusBadge status={p.proof_status} /></td>
+                    <td><StatusBadge status={p.inv_status} /></td>
+                    <td><StatusBadge status={p.collect_status} /></td>
+                    <td className="text-mono text-dim">{p.start_date?.slice(0,10) || '—'}</td>
+                    <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
+                      {!showArchived && (
+                        <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onEdit(p)}>Edit</button>
+                      )}
+                      <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onArchive(p)}>
+                        {p.archived ? 'Restore' : 'Archive'}
+                      </button>
+                      <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)' }} onClick={() => onDeleteRequest(p.id)}>
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                )
               ))}
             </tbody>
           </table>
@@ -190,7 +245,6 @@ function FinancialView({ projects, loading, totalEst, totalOwed, totalPaid, onNa
             })}
           </tbody>
         </table>
-        {/* Totals row */}
         <div style={{
           padding: '14px 20px',
           borderTop: '2px solid var(--border2)',
@@ -211,22 +265,22 @@ function ProjectModal({ project, clients, onClose, onSaved }) {
   const isEdit = !!project
   const [form, setForm] = useState({
     project_number: project?.project_number || '',
-    name: project?.name || '',
-    client_id: project?.client_id || (clients[0]?.id || ''),
-    product_type: project?.product_type || 'CO',
-    priority: project?.priority || 'Normal',
-    area: project?.area || '',
-    est_status: project?.est_status || 'Open',
-    proof_status: project?.proof_status || 'Open',
-    inv_status: project?.inv_status || 'Open',
+    name:           project?.name           || '',
+    client_id:      project?.client_id      || (clients[0]?.id || ''),
+    product_type:   project?.product_type   || 'CO',
+    priority:       project?.priority       || 'Normal',
+    area:           project?.area           || '',
+    est_status:     project?.est_status     || 'Open',
+    proof_status:   project?.proof_status   || 'Open',
+    inv_status:     project?.inv_status     || 'Open',
     collect_status: project?.collect_status || 'Open',
-    est_amount: project?.est_amount || '',
-    client_owed: project?.client_owed || '',
-    client_paid: project?.client_paid || '',
-    team_owed: project?.team_owed || '',
-    team_paid: project?.team_paid || '',
-    start_date: project?.start_date || '',
-    end_date: project?.end_date || '',
+    est_amount:     project?.est_amount     || '',
+    client_owed:    project?.client_owed    || '',
+    client_paid:    project?.client_paid    || '',
+    team_owed:      project?.team_owed      || '',
+    team_paid:      project?.team_paid      || '',
+    start_date:     project?.start_date     || '',
+    end_date:       project?.end_date       || '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
@@ -242,7 +296,6 @@ function ProjectModal({ project, clients, onClose, onSaved }) {
       return
     }
 
-    // Convert empty strings to null for numeric/uuid fields so Supabase accepts them
     const NUMERIC = ['est_amount','client_owed','client_paid','team_owed','team_paid']
     const payload = { ...form }
     NUMERIC.forEach(k => { payload[k] = payload[k] === '' ? null : Number(payload[k]) })
