@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useTheme } from '../../lib/theme'
 import { useAuth } from '../../lib/auth'
+import { supabase } from '../../lib/supabase'
 
 const NAV = [
   {
@@ -13,7 +15,7 @@ const NAV = [
     section: 'Clients',
     items: [
       { to: '/clients',  label: 'Clients',  icon: UsersIcon },
-      { to: '/projects', label: 'Projects', icon: FolderIcon, badge: '5', badgeWarn: true },
+      { to: '/projects', label: 'Projects', icon: FolderIcon, badgeKey: 'projects', badgeWarn: true },
     ]
   },
   {
@@ -21,7 +23,7 @@ const NAV = [
     items: [
       { to: '/campaigns', label: 'Campaigns', icon: ActivityIcon },
       { to: '/calendar',  label: 'Calendar',  icon: CalendarIcon },
-      { to: '/proofs',    label: 'Proofs',    icon: FileIcon, badge: '3' },
+      { to: '/proofs',    label: 'Proofs',    icon: FileIcon, badgeKey: 'proofs' },
     ]
   },
   {
@@ -37,6 +39,16 @@ export default function Sidebar() {
   const { theme, toggle } = useTheme()
   const { signOut } = useAuth()
   const loc = useLocation()
+  const [badges, setBadges] = useState({ projects: 0, proofs: 0 })
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from('projects').select('*', { count: 'exact', head: true }).neq('inv_status', 'Paid'),
+      supabase.from('proofs').select('*', { count: 'exact', head: true }).eq('status', 'Open'),
+    ]).then(([{ count: projects }, { count: proofs }]) => {
+      setBadges({ projects: projects || 0, proofs: proofs || 0 })
+    })
+  }, [])
 
   return (
     <aside className="sidebar">
@@ -68,9 +80,9 @@ export default function Sidebar() {
                 >
                   <Icon className="nav-icon" />
                   {item.label}
-                  {item.badge && (
+                  {item.badgeKey && badges[item.badgeKey] > 0 && (
                     <span className={`nav-badge${item.badgeWarn ? ' warn' : ''}`}>
-                      {item.badge}
+                      {badges[item.badgeKey]}
                     </span>
                   )}
                 </NavLink>
