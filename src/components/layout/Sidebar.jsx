@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { useTheme } from '../../lib/theme'
+import { useAuth } from '../../lib/auth'
 
 const NAV = [
   {
@@ -34,7 +35,11 @@ const NAV = [
 
 export default function Sidebar() {
   const { theme, toggle } = useTheme()
+  const { user, signOut } = useAuth()
   const loc = useLocation()
+
+  const email = user?.email ?? ''
+  const initials = email.slice(0, 2).toUpperCase()
 
   return (
     <aside className="sidebar">
@@ -80,9 +85,11 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="sidebar-footer">
-        <div className="user-avatar">JO</div>
+        <div className="user-avatar">{initials}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="user-name">Jim OConnell</div>
+          <div className="user-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {email}
+          </div>
           <div className="user-role">Manager</div>
         </div>
         <button
@@ -91,6 +98,13 @@ export default function Sidebar() {
           title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
         >
           {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+        </button>
+        <button
+          className="theme-toggle"
+          onClick={signOut}
+          title="Sign out"
+        >
+          <SignOutIcon />
         </button>
       </div>
     </aside>
@@ -158,5 +172,12 @@ function SunIcon() {
 function MoonIcon() {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+  </svg>
+}
+function SignOutIcon() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+    <polyline points="16 17 21 12 16 7"/>
+    <line x1="21" y1="12" x2="9" y2="12"/>
   </svg>
 }
