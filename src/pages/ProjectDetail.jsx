@@ -61,6 +61,41 @@ export default function ProjectDetailPage() {
     setView('proofs')
   }
 
+  async function syncCalendarEvent(itemId, form) {
+    const clientName = project.client?.company || project.client?.alias || ''
+    const title      = `${clientName} | ${project.name} | ${form.name.trim()}`
+    const clientId   = project.client?.id || project.client_id
+
+    if (form.scheduled_date) {
+      const { data: existing } = await supabase
+        .from('calendar_events')
+        .select('id')
+        .eq('item_id', itemId)
+        .maybeSingle()
+
+      if (existing) {
+        await supabase.from('calendar_events').update({
+          title,
+          event_date: form.scheduled_date,
+          channel:    project.product_type,
+          client_id:  clientId,
+        }).eq('id', existing.id)
+      } else {
+        await supabase.from('calendar_events').insert({
+          item_id:    itemId,
+          title,
+          event_date: form.scheduled_date,
+          channel:    project.product_type,
+          client_id:  clientId,
+          status:     'scheduled',
+        })
+      }
+    } else {
+      // scheduled_date cleared — remove any linked calendar event
+      await supabase.from('calendar_events').delete().eq('item_id', itemId)
+    }
+  }
+
   async function handleSaveItem(form, existing) {
     const payload = {
       project_id:     id,
@@ -70,16 +105,22 @@ export default function ProjectDetailPage() {
       status:         form.status,
       sort_order:     form.sort_order !== '' ? parseInt(form.sort_order, 10) : 0,
     }
+    let savedItem = null
     if (existing) {
       const { data } = await supabase.from('project_items').update(payload).eq('id', existing.id).select().single()
       if (data) {
         setItems(its => its.map(i => i.id === existing.id ? data : i))
         if (selectedItem?.id === existing.id) setSelectedItem(data)
+        savedItem = data
       }
     } else {
       const { data } = await supabase.from('project_items').insert(payload).select().single()
-      if (data) setItems(its => [...its, data])
+      if (data) {
+        setItems(its => [...its, data])
+        savedItem = data
+      }
     }
+    if (savedItem) await syncCalendarEvent(savedItem.id, form)
     setItemModal(null)
   }
 

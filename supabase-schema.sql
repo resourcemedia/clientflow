@@ -253,6 +253,10 @@ alter table proofs
   add column if not exists post_copy        text,
   add column if not exists client_comments  text;
 
+-- 3. Add item_id to calendar_events for reliable upsert/delete by item
+alter table calendar_events
+  add column if not exists item_id uuid references project_items(id) on delete cascade;
+
 -- Note: proofs.image_url already exists in the original schema.
 -- Note: proofs.version already exists — it becomes the letter suffix (A=1, B=2…)
 --       The full version label (e.g. "01A") is composed in the app as

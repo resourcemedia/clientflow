@@ -21,7 +21,6 @@ const NAV = [
   {
     section: 'Marketing',
     items: [
-      { to: '/campaigns', label: 'Campaigns', icon: ActivityIcon },
       { to: '/calendar',  label: 'Calendar',  icon: CalendarIcon },
       { to: '/proofs',    label: 'Proofs',    icon: FileIcon, badgeKey: 'proofs' },
     ]
@@ -135,11 +134,6 @@ function UsersIcon(props) {
 function FolderIcon(props) {
   return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-  </svg>
-}
-function ActivityIcon(props) {
-  return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
   </svg>
 }
 function CalendarIcon(props) {
