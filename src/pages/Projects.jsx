@@ -7,17 +7,17 @@ import { StatusBadge, Modal, EmptyState, StatCard, PillNav, FormGroup, fmt$ } fr
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 
 export default function ProjectsPage() {
-  const [projects, setProjects]       = useState([])
-  const [clients, setClients]         = useState([])
-  const [loading, setLoading]         = useState(true)
-  const [tab, setTab]                 = useState('work')
-  const [showModal, setShowModal]     = useState(false)
-  const [editProject, setEditProject] = useState(null)
-  const [search, setSearch]           = useState('')
-  const [showArchived, setShowArchived] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(null) // project id pending delete
-  const [searchParams]                = useSearchParams()
-  const [clientFilter, setClientFilter] = useState(searchParams.get('client') || '')
+  const [projects, setProjects]           = useState([])
+  const [clients, setClients]             = useState([])
+  const [loading, setLoading]             = useState(true)
+  const [tab, setTab]                     = useState('work')
+  const [showModal, setShowModal]         = useState(false)
+  const [editProject, setEditProject]     = useState(null)
+  const [search, setSearch]               = useState('')
+  const [showArchived, setShowArchived]   = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [searchParams]                    = useSearchParams()
+  const [clientFilter, setClientFilter]   = useState(searchParams.get('client') || '')
   const navigate = useNavigate()
 
   useEffect(() => { load() }, [])
@@ -29,7 +29,7 @@ export default function ProjectsPage() {
       setClients(DEMO_CLIENTS)
     } else {
       const [{ data: p }, { data: c }] = await Promise.all([
-        supabase.from('projects').select('*, client:clients(company,alias)').order('created_at', { ascending: false }),
+        supabase.from('projects').select('*, client:clients(company,alias)').order('project_number', { ascending: false }),
         supabase.from('clients').select('id, company, alias').eq('status','active').order('company'),
       ])
       setProjects(p || [])
@@ -107,9 +107,9 @@ export default function ProjectsPage() {
       <div className="page-content">
         <div className="stat-grid mb-24">
           <StatCard label={showArchived ? 'Archived projects' : 'Total projects'} value={filtered.length} color="blue" />
-          <StatCard label="Open invoices"   value={openCount}        color="amber"  />
-          <StatCard label="Total estimated" value={fmt$(totalEst)}   color="accent" />
-          <StatCard label="Outstanding"     value={fmt$(totalOwed)}  color={totalOwed > 0 ? 'amber' : 'green'} />
+          <StatCard label="Open invoices"   value={openCount}       color="amber"  />
+          <StatCard label="Total estimated" value={fmt$(totalEst)}  color="accent" />
+          <StatCard label="Outstanding"     value={fmt$(totalOwed)} color={totalOwed > 0 ? 'amber' : 'green'} />
         </div>
 
         {tab === 'work' ? (
@@ -123,10 +123,17 @@ export default function ProjectsPage() {
             onDeleteRequest={id => setConfirmDelete(id)}
             onDeleteCancel={() => setConfirmDelete(null)}
             onDeleteConfirm={handleDelete}
-            onNavigate={navigate}
+            onView={id => navigate(`/projects/${id}`)}
           />
         ) : (
-          <FinancialView projects={filtered} loading={loading} totalEst={totalEst} totalOwed={totalOwed} totalPaid={totalPaid} onNavigate={navigate} />
+          <FinancialView
+            projects={filtered}
+            loading={loading}
+            totalEst={totalEst}
+            totalOwed={totalOwed}
+            totalPaid={totalPaid}
+            onView={id => navigate(`/projects/${id}`)}
+          />
         )}
       </div>
 
@@ -134,6 +141,7 @@ export default function ProjectsPage() {
         <ProjectModal
           project={editProject}
           clients={clients}
+          projects={projects}
           onClose={() => setShowModal(false)}
           onSaved={() => { setShowModal(false); load() }}
         />
@@ -142,75 +150,121 @@ export default function ProjectsPage() {
   )
 }
 
-// ── WORK VIEW ──────────────────────────────────────────────────────────
-function WorkView({ projects, loading, showArchived, confirmDelete, onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm, onNavigate }) {
+// ── GROUP helpers ───────────────────────────────────────────────────────
+function groupByClient(projects) {
+  const map = {}
+  for (const p of projects) {
+    const key  = p.client_id || '__none__'
+    const name = p.client?.company || p.client?.alias || 'No client'
+    if (!map[key]) map[key] = { name, projects: [] }
+    map[key].projects.push(p)
+  }
+  return Object.values(map).sort((a, b) => a.name.localeCompare(b.name))
+}
+
+// ── WORK VIEW ───────────────────────────────────────────────────────────
+function WorkView({ projects, loading, showArchived, confirmDelete, onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm, onView }) {
   if (loading) return <div className="card"><div className="empty-state text-dim">Loading…</div></div>
+
+  if (projects.length === 0) {
+    return (
+      <div className="card">
+        <EmptyState icon="📁" title={showArchived ? 'No archived projects' : 'No projects found'} sub={showArchived ? '' : 'Add a project to get started'} />
+      </div>
+    )
+  }
+
+  const groups = groupByClient(projects)
+
   return (
     <div className="card">
       <div className="card-header">
         <span className="card-title">{showArchived ? 'Archived projects' : 'All projects'}</span>
       </div>
       <div className="table-wrap">
-        {projects.length === 0 ? (
-          <EmptyState icon="📁" title={showArchived ? 'No archived projects' : 'No projects found'} sub={showArchived ? '' : 'Add a project to get started'} />
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>#</th><th>Project</th><th>Client</th><th>Type</th>
-                <th>Priority</th><th>Proof</th><th>Invoice</th><th>Collect</th>
-                <th>Start</th><th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {projects.map(p => (
-                confirmDelete === p.id ? (
-                  <tr key={p.id} style={{ background: 'var(--red-bg)' }}>
-                    <td colSpan={9} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
-                      Delete <strong>{p.name}</strong>? This cannot be undone.
-                    </td>
-                    <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
-                      <button className="btn btn-sm" style={{ background: 'var(--red)', color: '#fff', marginRight: 6 }} onClick={() => onDeleteConfirm(p.id)}>
-                        Delete
-                      </button>
-                      <button className="btn btn-ghost btn-sm" onClick={onDeleteCancel}>Cancel</button>
-                    </td>
-                  </tr>
-                ) : (
-                  <tr key={p.id} onClick={() => onNavigate(`/projects/${p.id}`)} style={{ opacity: p.archived ? 0.55 : 1 }}>
-                    <td className="text-mono text-dim">{p.project_number}</td>
-                    <td className="td-main">{p.name}</td>
-                    <td>{p.client?.company || '—'}</td>
-                    <td><StatusBadge status={p.product_type} /></td>
-                    <td><StatusBadge status={p.priority} /></td>
-                    <td><StatusBadge status={p.proof_status} /></td>
-                    <td><StatusBadge status={p.inv_status} /></td>
-                    <td><StatusBadge status={p.collect_status} /></td>
-                    <td className="text-mono text-dim">{p.start_date?.slice(0,10) || '—'}</td>
-                    <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
-                      {!showArchived && (
-                        <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onEdit(p)}>Edit</button>
-                      )}
-                      <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onArchive(p)}>
-                        {p.archived ? 'Restore' : 'Archive'}
-                      </button>
-                      <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)' }} onClick={() => onDeleteRequest(p.id)}>
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                )
-              ))}
-            </tbody>
-          </table>
-        )}
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Project</th><th>Type</th>
+              <th>Priority</th><th>Proof</th><th>Invoice</th><th>Collect</th>
+              <th>Start</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {groups.map(group => (
+              <>
+                {/* Client group header */}
+                <tr key={`group-${group.name}`} style={{ background: 'var(--bg3)', pointerEvents: 'none' }}>
+                  <td colSpan={9} style={{
+                    padding: '7px 16px',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    letterSpacing: '0.07em',
+                    textTransform: 'uppercase',
+                    color: 'var(--text2)',
+                  }}>
+                    {group.name}
+                  </td>
+                </tr>
+
+                {/* Project rows */}
+                {group.projects.map(p => (
+                  confirmDelete === p.id ? (
+                    <tr key={p.id} style={{ background: 'var(--red-bg)' }}>
+                      <td colSpan={8} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
+                        Delete <strong>{p.name}</strong>? This cannot be undone.
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <button
+                          className="btn btn-sm"
+                          style={{ background: 'var(--red)', color: '#fff', marginRight: 6 }}
+                          onClick={() => onDeleteConfirm(p.id)}
+                        >
+                          Delete
+                        </button>
+                        <button className="btn btn-ghost btn-sm" onClick={onDeleteCancel}>Cancel</button>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={p.id} style={{ opacity: p.archived ? 0.55 : 1 }}>
+                      <td className="text-mono text-dim">{p.project_number}</td>
+                      <td className="td-main">{p.name}</td>
+                      <td><StatusBadge status={p.product_type} /></td>
+                      <td><StatusBadge status={p.priority} /></td>
+                      <td><StatusBadge status={p.proof_status} /></td>
+                      <td><StatusBadge status={p.inv_status} /></td>
+                      <td><StatusBadge status={p.collect_status} /></td>
+                      <td className="text-mono text-dim">{p.start_date?.slice(0,10) || '—'}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onView(p.id)}>
+                          View
+                        </button>
+                        {!showArchived && (
+                          <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onEdit(p)}>
+                            Edit
+                          </button>
+                        )}
+                        <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onArchive(p)}>
+                          {p.archived ? 'Restore' : 'Archive'}
+                        </button>
+                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)' }} onClick={() => onDeleteRequest(p.id)}>
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                ))}
+              </>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   )
 }
 
-// ── FINANCIAL VIEW ─────────────────────────────────────────────────────
-function FinancialView({ projects, loading, totalEst, totalOwed, totalPaid, onNavigate }) {
+// ── FINANCIAL VIEW ──────────────────────────────────────────────────────
+function FinancialView({ projects, loading, totalEst, totalOwed, totalPaid, onView }) {
   if (loading) return <div className="card"><div className="empty-state text-dim">Loading…</div></div>
   return (
     <div className="card">
@@ -219,16 +273,17 @@ function FinancialView({ projects, loading, totalEst, totalOwed, totalPaid, onNa
         <table>
           <thead>
             <tr>
-              <th>Project</th><th>Client</th><th>Est amount</th>
+              <th>#</th><th>Project</th><th>Client</th><th>Est amount</th>
               <th>C owed</th><th>C paid</th><th>Balance</th>
-              <th>Team owed</th><th>Team paid</th><th>Invoice</th>
+              <th>Team owed</th><th>Team paid</th><th>Invoice</th><th></th>
             </tr>
           </thead>
           <tbody>
             {projects.map(p => {
               const balance = (p.client_owed || 0) - (p.client_paid || 0)
               return (
-                <tr key={p.id} onClick={() => onNavigate(`/projects/${p.id}`)}>
+                <tr key={p.id}>
+                  <td className="text-mono text-dim">{p.project_number}</td>
                   <td className="td-main">{p.name}</td>
                   <td>{p.client?.company || '—'}</td>
                   <td className="text-mono">{fmt$(p.est_amount)}</td>
@@ -240,6 +295,9 @@ function FinancialView({ projects, loading, totalEst, totalOwed, totalPaid, onNa
                   <td className="text-mono text-dim">{fmt$(p.team_owed)}</td>
                   <td className="text-mono text-dim">{fmt$(p.team_paid)}</td>
                   <td><StatusBadge status={p.inv_status} /></td>
+                  <td>
+                    <button className="btn btn-ghost btn-sm" onClick={() => onView(p.id)}>View</button>
+                  </td>
                 </tr>
               )
             })}
@@ -249,7 +307,7 @@ function FinancialView({ projects, loading, totalEst, totalOwed, totalPaid, onNa
           padding: '14px 20px',
           borderTop: '2px solid var(--border2)',
           display: 'flex', justifyContent: 'flex-end', gap: 40,
-          fontFamily: 'DM Mono, monospace', fontSize: 13
+          fontFamily: 'DM Mono, monospace', fontSize: 13,
         }}>
           <span className="text-dim">Total est: <span style={{ color: 'var(--text)', fontWeight: 600 }}>{fmt$(totalEst)}</span></span>
           <span className="text-dim">Total owed: <span style={{ color: 'var(--amber)', fontWeight: 600 }}>{fmt$(totalOwed)}</span></span>
@@ -260,11 +318,20 @@ function FinancialView({ projects, loading, totalEst, totalOwed, totalPaid, onNa
   )
 }
 
-// ── PROJECT MODAL ──────────────────────────────────────────────────────
-function ProjectModal({ project, clients, onClose, onSaved }) {
+// ── PROJECT MODAL ───────────────────────────────────────────────────────
+function ProjectModal({ project, clients, projects, onClose, onSaved }) {
   const isEdit = !!project
+
+  // Auto-generate next project number for new projects
+  const nextNumber = (() => {
+    const nums = projects
+      .map(p => parseInt(p.project_number, 10))
+      .filter(n => !isNaN(n))
+    return nums.length ? String(Math.max(...nums) + 1) : '1000'
+  })()
+
   const [form, setForm] = useState({
-    project_number: project?.project_number || '',
+    project_number: project?.project_number ?? nextNumber,
     name:           project?.name           || '',
     client_id:      project?.client_id      || (clients[0]?.id || ''),
     product_type:   project?.product_type   || 'CO',
@@ -285,6 +352,11 @@ function ProjectModal({ project, clients, onClose, onSaved }) {
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
 
+  // Duplicate number check (warn but don't block)
+  const isDupe = form.project_number.trim() !== '' && projects.some(
+    p => p.project_number === form.project_number.trim() && p.id !== project?.id
+  )
+
   function set(field) { return e => setForm(f => ({ ...f, [field]: e.target.value })) }
 
   async function save() {
@@ -299,7 +371,7 @@ function ProjectModal({ project, clients, onClose, onSaved }) {
     const NUMERIC = ['est_amount','client_owed','client_paid','team_owed','team_paid']
     const payload = { ...form }
     NUMERIC.forEach(k => { payload[k] = payload[k] === '' ? null : Number(payload[k]) })
-    if (!payload.client_id) payload.client_id = null
+    if (!payload.client_id)  payload.client_id  = null
     if (!payload.start_date) payload.start_date = null
     if (!payload.end_date)   payload.end_date   = null
 
@@ -329,6 +401,15 @@ function ProjectModal({ project, clients, onClose, onSaved }) {
       <div className="form-grid">
         <FormGroup label="Project #">
           <input value={form.project_number} onChange={set('project_number')} placeholder="e.g. 8037" />
+          {isDupe && (
+            <div style={{
+              marginTop: 5, padding: '5px 8px',
+              background: 'var(--amber-bg)', border: '1px solid var(--amber)',
+              borderRadius: 6, fontSize: '0.78rem', color: 'var(--amber)',
+            }}>
+              Project #{form.project_number} already exists — you can still save with this number.
+            </div>
+          )}
         </FormGroup>
         <FormGroup label="Project name">
           <input value={form.name} onChange={set('name')} placeholder="e.g. FB Posts 52" />
@@ -381,11 +462,11 @@ function ProjectModal({ project, clients, onClose, onSaved }) {
         <div className="full" style={{ gridColumn: '1/-1', borderTop: '1px solid var(--border)', margin: '4px -20px 0', padding: '16px 20px 0' }}>
           <div className="text-xs text-dim fw-600" style={{ letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>Financials</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
-            <FormGroup label="Est amount"><input type="number" value={form.est_amount} onChange={set('est_amount')} /></FormGroup>
+            <FormGroup label="Est amount"><input type="number" value={form.est_amount}  onChange={set('est_amount')} /></FormGroup>
             <FormGroup label="Client owed"><input type="number" value={form.client_owed} onChange={set('client_owed')} /></FormGroup>
             <FormGroup label="Client paid"><input type="number" value={form.client_paid} onChange={set('client_paid')} /></FormGroup>
-            <FormGroup label="Team owed"><input type="number" value={form.team_owed} onChange={set('team_owed')} /></FormGroup>
-            <FormGroup label="Team paid"><input type="number" value={form.team_paid} onChange={set('team_paid')} /></FormGroup>
+            <FormGroup label="Team owed"><input type="number" value={form.team_owed}   onChange={set('team_owed')} /></FormGroup>
+            <FormGroup label="Team paid"><input type="number" value={form.team_paid}   onChange={set('team_paid')} /></FormGroup>
           </div>
         </div>
 
