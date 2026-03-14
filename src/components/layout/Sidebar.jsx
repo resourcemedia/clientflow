@@ -35,11 +35,8 @@ const NAV = [
 
 export default function Sidebar() {
   const { theme, toggle } = useTheme()
-  const { user, signOut } = useAuth()
+  const { signOut } = useAuth()
   const loc = useLocation()
-
-  const email = user?.email ?? ''
-  const initials = email.slice(0, 2).toUpperCase()
 
   return (
     <aside className="sidebar">
@@ -85,11 +82,9 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="sidebar-footer">
-        <div className="user-avatar">{initials}</div>
+        <div className="user-avatar">JO</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="user-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {email}
-          </div>
+          <div className="user-name">Jim OConnell</div>
           <div className="user-role">Manager</div>
         </div>
         <button
