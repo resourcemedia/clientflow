@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import ClientsPage from './pages/Clients'
 import ClientDetail from './pages/ClientDetail'
 import ProjectsPage from './pages/Projects'
+import ProjectDetailPage from './pages/ProjectDetail'
 import LoginPage from './pages/Login'
 import { CampaignsPage, CalendarPage, ProofsPage, TimeboardPage, BillingPage } from './pages/Placeholders'
 import './styles.css'
@@ -33,7 +34,8 @@ function AppShell() {
           <Route path="/"           element={<Dashboard />} />
           <Route path="/clients"    element={<ClientsPage />} />
           <Route path="/clients/:id" element={<ClientDetail />} />
-          <Route path="/projects"   element={<ProjectsPage />} />
+          <Route path="/projects"      element={<ProjectsPage />} />
+          <Route path="/projects/:id"  element={<ProjectDetailPage />} />
           <Route path="/campaigns"  element={<CampaignsPage />} />
           <Route path="/calendar"   element={<CalendarPage />} />
           <Route path="/proofs"     element={<ProofsPage />} />

@@ -11,6 +11,8 @@ export function StatusBadge({ status }) {
     'In Progress': ['amber', 'In Progress'],
     Open: ['blue', 'Open'],
     Approved: ['green', 'Approved'],
+    Complete: ['green', 'Complete'],
+    Review: ['blue', 'Review'],
     Revise: ['amber', 'Revise'],
     'No Go': ['red', 'No Go'],
     Sent: ['amber', 'Sent'],
