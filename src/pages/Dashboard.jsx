@@ -63,7 +63,7 @@ export default function Dashboard() {
         { data: calRows },
         { data: invoiceRows },
       ] = await Promise.all([
-        supabase.from('projects').select('*', { count: 'exact', head: true }).eq('archived', false),
+        supabase.from('projects').select('*', { count: 'exact', head: true }).neq('archived', true),
         supabase.from('proofs').select('*', { count: 'exact', head: true }).eq('status', 'Open'),
         supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('status', 'Open'),
         supabase.from('calendar_events').select('*', { count: 'exact', head: true }).gte('event_date', today),
@@ -72,7 +72,7 @@ export default function Dashboard() {
         // Projects panel — latest 5
         supabase.from('projects')
           .select('id, name, client:clients(company,alias), product:products(name,type)')
-          .eq('archived', false)
+          .neq('archived', true)
           .order('created_at', { ascending: false })
           .limit(5),
 
