@@ -51,23 +51,14 @@ export default function Dashboard() {
     async function load() {
       const today = new Date().toISOString().slice(0, 10)
 
-      const [
-        { count: projectCount },
-        { count: proofCount },
-        { count: taskCount },
-        { count: scheduledCount },
-        { count: invoiceCount },
-        { data: projectRows },
-        { data: proofRows },
-        { data: taskRows },
-        { data: calRows },
-        { data: invoiceRows },
-      ] = await Promise.all([
-        supabase.from('projects').select('*', { count: 'exact', head: true }).neq('archived', true),
-        supabase.from('proofs').select('*', { count: 'exact', head: true }).eq('status', 'Open'),
-        supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('status', 'Open'),
-        supabase.from('calendar_events').select('*', { count: 'exact', head: true }).gte('event_date', today),
-        supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('status', 'Open'),
+      // Use allSettled so a single failing query doesn't blank the whole dashboard.
+      // Count queries use select('id') — avoids 503s that HEAD requests can trigger.
+      const results = await Promise.allSettled([
+        supabase.from('projects').select('id', { count: 'exact' }).neq('archived', true),
+        supabase.from('proofs').select('id', { count: 'exact' }).eq('status', 'Open'),
+        supabase.from('tasks').select('id', { count: 'exact' }).eq('status', 'Open'),
+        supabase.from('calendar_events').select('id', { count: 'exact' }).gte('event_date', today),
+        supabase.from('invoices').select('id', { count: 'exact' }).eq('status', 'Open'),
 
         // Projects panel — latest 5
         supabase.from('projects')
@@ -83,7 +74,7 @@ export default function Dashboard() {
           .order('created_at', { ascending: false })
           .limit(5),
 
-        // Tasks — open, latest 5
+        // Tasks — open, sorted by priority
         supabase.from('tasks')
           .select(`
             id, note, status_note, updated_at,
@@ -111,18 +102,23 @@ export default function Dashboard() {
           .limit(5),
       ])
 
+      function val(i, key, fallback) {
+        const r = results[i]
+        return r.status === 'fulfilled' ? (r.value[key] ?? fallback) : fallback
+      }
+
       setStats({
-        projects:     projectCount  || 0,
-        proofs:       proofCount    || 0,
-        tasks:        taskCount     || 0,
-        scheduled:    scheduledCount|| 0,
-        openInvoices: invoiceCount  || 0,
+        projects:     val(0, 'count', 0),
+        proofs:       val(1, 'count', 0),
+        tasks:        val(2, 'count', 0),
+        scheduled:    val(3, 'count', 0),
+        openInvoices: val(4, 'count', 0),
       })
-      setProjects(projectRows       || [])
-      setProofsToReview(proofRows   || [])
-      setTasks(taskRows             || [])
-      setCalendar(calRows           || [])
-      setOpenInvoices(invoiceRows   || [])
+      setProjects(val(5, 'data', []))
+      setProofsToReview(val(6, 'data', []))
+      setTasks(val(7, 'data', []))
+      setCalendar(val(8, 'data', []))
+      setOpenInvoices(val(9, 'data', []))
       setLoading(false)
     }
 
