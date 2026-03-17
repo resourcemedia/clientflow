@@ -267,3 +267,62 @@ alter table calendar_events
 
 -- 4. Ensure calendar_events RLS is ready for auto-population from items
 --    (policy already exists from initial schema)
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Phase 5: Profiles, Tasks, and Product Catalog Update
+-- Run in: Supabase Dashboard → SQL Editor → New query → Run
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- ── PROFILES ─────────────────────────────────────────────────────────────────
+create table if not exists profiles (
+  id         uuid primary key references auth.users(id) on delete cascade,
+  name       text,
+  email      text,
+  role       text not null default 'team',  -- manager | team | client | client_team
+  client_id  uuid references clients(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+alter table profiles enable row level security;
+create policy "Authenticated full access" on profiles
+  for all to authenticated using (true) with check (true);
+
+-- ── TASKS ────────────────────────────────────────────────────────────────────
+create table if not exists tasks (
+  id          uuid primary key default uuid_generate_v4(),
+  project_id  uuid references projects(id) on delete cascade,
+  note        text,
+  assigned_to uuid references profiles(id) on delete set null,
+  status_note text,
+  status      text not null default 'Open',  -- Open | Done
+  sort_order  integer not null default 0,
+  created_by  uuid references profiles(id) on delete set null,
+  updated_by  uuid references profiles(id) on delete set null,
+  updated_at  timestamptz not null default now(),
+  created_at  timestamptz not null default now()
+);
+
+alter table tasks enable row level security;
+create policy "Authenticated full access" on tasks
+  for all to authenticated using (true) with check (true);
+
+-- ── PRODUCTS — replace catalog ───────────────────────────────────────────────
+-- Delete existing seed data (safe: projects.product_id is ON DELETE SET NULL)
+delete from products;
+
+-- Insert new catalog
+insert into products (name, type, order_num) values
+  ('Website',                     'ST', 1.0),
+  ('Mailchimp Template',          'ST', 1.1),
+  ('Set Up Social Media Accounts','ST', 1.2),
+  ('Initial Content',             'CO', 2.0),
+  ('Blog Post',                   'CO', 2.1),
+  ('eNewsletter',                 'CO', 2.2),
+  ('Facebook Posts',              'CO', 2.3),
+  ('Logo',                        'DS', 3.0),
+  ('Postcard',                    'DS', 3.1),
+  ('Brochure Layout',             'DS', 3.2),
+  ('Stationery',                  'DS', 3.3),
+  ('Bookkeeping',                 'OH', 4.0),
+  ('Taxes',                       'OH', 4.1),
+  ('Meetings',                    'OH', 4.2);

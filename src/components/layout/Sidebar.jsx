@@ -23,6 +23,7 @@ const NAV = [
     items: [
       { to: '/calendar',  label: 'Calendar',  icon: CalendarIcon },
       { to: '/proofs',    label: 'Proofs',    icon: FileIcon, badgeKey: 'proofs' },
+      { to: '/tasks',     label: 'Tasks',     icon: TasksIcon, badgeKey: 'tasks', badgeWarn: true },
     ]
   },
   {
@@ -38,14 +39,15 @@ export default function Sidebar() {
   const { theme, toggle } = useTheme()
   const { signOut } = useAuth()
   const loc = useLocation()
-  const [badges, setBadges] = useState({ projects: 0, proofs: 0 })
+  const [badges, setBadges] = useState({ projects: 0, proofs: 0, tasks: 0 })
 
   useEffect(() => {
     Promise.all([
       supabase.from('projects').select('*', { count: 'exact', head: true }).neq('inv_status', 'Paid'),
       supabase.from('proofs').select('*', { count: 'exact', head: true }).eq('status', 'Open'),
-    ]).then(([{ count: projects }, { count: proofs }]) => {
-      setBadges({ projects: projects || 0, proofs: proofs || 0 })
+      supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('status', 'Open'),
+    ]).then(([{ count: projects }, { count: proofs }, { count: tasks }]) => {
+      setBadges({ projects: projects || 0, proofs: proofs || 0, tasks: tasks || 0 })
     })
   }, [])
 
@@ -180,5 +182,15 @@ function SignOutIcon() {
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
     <polyline points="16 17 21 12 16 7"/>
     <line x1="21" y1="12" x2="9" y2="12"/>
+  </svg>
+}
+function TasksIcon(props) {
+  return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="9" y1="6"  x2="20" y2="6"/>
+    <line x1="9" y1="12" x2="20" y2="12"/>
+    <line x1="9" y1="18" x2="20" y2="18"/>
+    <polyline points="4 6 5 7 7 5"/>
+    <polyline points="4 12 5 13 7 11"/>
+    <polyline points="4 18 5 19 7 17"/>
   </svg>
 }

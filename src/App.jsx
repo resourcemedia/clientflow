@@ -9,6 +9,7 @@ import ProjectsPage from './pages/Projects'
 import ProjectDetailPage from './pages/ProjectDetail'
 import LoginPage from './pages/Login'
 import CalendarPage from './pages/Calendar'
+import TasksPage from './pages/Tasks'
 import { CampaignsPage, ProofsPage, TimeboardPage, BillingPage } from './pages/Placeholders'
 import './styles.css'
 
@@ -40,6 +41,7 @@ function AppShell() {
           <Route path="/campaigns"  element={<CampaignsPage />} />
           <Route path="/calendar"   element={<CalendarPage />} />
           <Route path="/proofs"     element={<ProofsPage />} />
+          <Route path="/tasks"      element={<TasksPage />} />
           <Route path="/timeboard"  element={<TimeboardPage />} />
           <Route path="/billing"    element={<BillingPage />} />
           <Route path="/login"      element={<Navigate to="/" replace />} />
