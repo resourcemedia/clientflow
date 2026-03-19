@@ -409,8 +409,8 @@ export default function TasksPage() {
         .order('created_at'),
       supabase
         .from('projects')
-        .select('id, name, product_type, client:clients(company,alias), product:products(name,type)')
-        .eq('archived', false)
+        .select('id, name, product_type, client:clients(company,alias)')
+        .neq('archived', true)
         .order('name'),
       supabase
         .from('profiles')

@@ -42,12 +42,16 @@ export default function Sidebar() {
   const [badges, setBadges] = useState({ projects: 0, proofs: 0, tasks: 0 })
 
   useEffect(() => {
-    Promise.all([
-      supabase.from('projects').select('*', { count: 'exact', head: true }).neq('inv_status', 'Paid'),
-      supabase.from('proofs').select('*', { count: 'exact', head: true }).eq('status', 'Open'),
-      supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('status', 'Open'),
-    ]).then(([{ count: projects }, { count: proofs }, { count: tasks }]) => {
-      setBadges({ projects: projects || 0, proofs: proofs || 0, tasks: tasks || 0 })
+    Promise.allSettled([
+      supabase.from('projects').select('id', { count: 'exact' }).neq('inv_status', 'Paid'),
+      supabase.from('proofs').select('id', { count: 'exact' }).eq('status', 'Open'),
+      supabase.from('tasks').select('id', { count: 'exact' }).eq('status', 'Open'),
+    ]).then(([projects, proofs, tasks]) => {
+      setBadges({
+        projects: projects.status === 'fulfilled' ? (projects.value.count || 0) : 0,
+        proofs:   proofs.status   === 'fulfilled' ? (proofs.value.count   || 0) : 0,
+        tasks:    tasks.status    === 'fulfilled' ? (tasks.value.count    || 0) : 0,
+      })
     })
   }, [])
 
