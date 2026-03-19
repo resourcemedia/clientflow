@@ -10,7 +10,8 @@ import ProjectDetailPage from './pages/ProjectDetail'
 import LoginPage from './pages/Login'
 import CalendarPage from './pages/Calendar'
 import TasksPage from './pages/Tasks'
-import { CampaignsPage, ProofsPage, TimeboardPage, BillingPage } from './pages/Placeholders'
+import ProofsPage from './pages/Proofs'
+import { CampaignsPage, TimeboardPage, BillingPage } from './pages/Placeholders'
 import './styles.css'
 
 function AppShell() {
