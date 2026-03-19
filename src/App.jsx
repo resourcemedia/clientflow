@@ -11,7 +11,8 @@ import LoginPage from './pages/Login'
 import CalendarPage from './pages/Calendar'
 import TasksPage from './pages/Tasks'
 import ProofsPage from './pages/Proofs'
-import { ItemsPage, CampaignsPage, TimeboardPage, BillingPage } from './pages/Placeholders'
+import Items from './pages/Items'
+import { CampaignsPage, TimeboardPage, BillingPage } from './pages/Placeholders'
 import './styles.css'
 
 function AppShell() {
@@ -39,7 +40,7 @@ function AppShell() {
           <Route path="/clients/:id" element={<ClientDetail />} />
           <Route path="/projects"      element={<ProjectsPage />} />
           <Route path="/projects/:id"  element={<ProjectDetailPage />} />
-          <Route path="/items"      element={<ItemsPage />} />
+          <Route path="/items"      element={<Items />} />
           <Route path="/campaigns"  element={<CampaignsPage />} />
           <Route path="/calendar"   element={<CalendarPage />} />
           <Route path="/proofs"     element={<ProofsPage />} />
