@@ -1,26 +1,32 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { DEMO_PROJECTS, DEMO_CLIENTS, PRIORITIES, PROOF_STATUSES, INV_STATUSES, COLLECT_STATUSES } from '../lib/demo-data'
-import { StatusBadge, Modal, EmptyState, StatCard, PillNav, FormGroup, fmt$ } from '../components/ui'
+import { StatusBadge, Modal, EmptyState, StatCard, PillNav, FormGroup, fmt$, Breadcrumb } from '../components/ui'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
+const PRODUCT_TYPES = ['ST', 'CO', 'DS', 'OH']
 
 export default function ProjectsPage() {
   const [projects, setProjects]           = useState([])
   const [clients, setClients]             = useState([])
   const [loading, setLoading]             = useState(true)
   const [tab, setTab]                     = useState('work')
-  const [showModal, setShowModal]         = useState(false)
   const [editProject, setEditProject]     = useState(null)
   const [search, setSearch]               = useState('')
   const [showArchived, setShowArchived]   = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [searchParams]                    = useSearchParams()
   const [clientFilter, setClientFilter]   = useState(searchParams.get('client') || '')
+  const [addingRow, setAddingRow]         = useState(null) // null | { client_id, name, product_type }
+  const addInputRef = useRef(null)
   const navigate = useNavigate()
 
   useEffect(() => { load() }, [])
+
+  useEffect(() => {
+    if (addingRow !== null) addInputRef.current?.focus()
+  }, [addingRow])
 
   async function load() {
     setLoading(true)
@@ -29,7 +35,7 @@ export default function ProjectsPage() {
       setClients(DEMO_CLIENTS)
     } else {
       const [{ data: p }, { data: c }] = await Promise.all([
-        supabase.from('projects').select('*, client:clients(company,alias)').order('project_number', { ascending: false }),
+        supabase.from('projects').select('*, client:clients(company,alias)').order('sort_order', { ascending: true, nullsFirst: false }).order('project_number', { ascending: false }),
         supabase.from('clients').select('id, company, alias').eq('status','active').order('company'),
       ])
       setProjects(p || [])
@@ -48,6 +54,53 @@ export default function ProjectsPage() {
     await supabase.from('projects').delete().eq('id', id)
     setProjects(ps => ps.filter(p => p.id !== id))
     setConfirmDelete(null)
+  }
+
+  function handleReorder(reordered) {
+    setProjects(reordered)
+    reordered.forEach((p, i) => {
+      supabase.from('projects').update({ sort_order: i }).eq('id', p.id).then(() => {})
+    })
+  }
+
+  function startAdd() {
+    setAddingRow({
+      client_id:    clientFilter || (clients[0]?.id || ''),
+      name:         '',
+      product_type: 'CO',
+    })
+  }
+
+  async function handleAddSave() {
+    const name = addingRow?.name?.trim()
+    if (!name) { setAddingRow(null); return }
+    if (isDemo) { setAddingRow(null); return }
+
+    // Auto-generate next project number
+    const nums = projects.map(p => parseInt(p.project_number, 10)).filter(n => !isNaN(n))
+    const nextNumber = nums.length ? String(Math.max(...nums) + 1) : '1000'
+
+    const { data } = await supabase
+      .from('projects')
+      .insert({
+        name,
+        client_id:    addingRow.client_id || null,
+        product_type: addingRow.product_type,
+        project_number: nextNumber,
+        priority:     'Normal',
+        proof_status: 'Open',
+        inv_status:   'Open',
+        collect_status: 'Open',
+      })
+      .select('*, client:clients(company,alias)')
+      .single()
+    if (data) setProjects(prev => [...prev, data])
+    setAddingRow(null)
+  }
+
+  function handleAddKeyDown(e) {
+    if (e.key === 'Enter')  handleAddSave()
+    if (e.key === 'Escape') setAddingRow(null)
   }
 
   const filtered = projects.filter(p => {
@@ -74,7 +127,10 @@ export default function ProjectsPage() {
   return (
     <div className="fade-in">
       <div className="topbar">
-        <div className="topbar-title">Projects</div>
+        <Breadcrumb segments={[
+          { label: 'Dashboard', onClick: () => navigate('/') },
+          { label: 'Projects' },
+        ]} />
         <PillNav tabs={TABS} active={tab} onChange={setTab} />
         <select
           value={clientFilter}
@@ -99,9 +155,6 @@ export default function ProjectsPage() {
         >
           {showArchived ? 'Archived' : 'Active'}
         </button>
-        <button className="btn btn-primary" onClick={() => { setEditProject(null); setShowModal(true) }}>
-          + Add project
-        </button>
       </div>
 
       <div className="page-content">
@@ -115,15 +168,24 @@ export default function ProjectsPage() {
         {tab === 'work' ? (
           <WorkView
             projects={filtered}
+            clients={clients}
             loading={loading}
             showArchived={showArchived}
             confirmDelete={confirmDelete}
-            onEdit={p => { setEditProject(p); setShowModal(true) }}
+            addingRow={addingRow}
+            setAddingRow={setAddingRow}
+            addInputRef={addInputRef}
+            clientFilter={clientFilter}
+            onEdit={p => setEditProject(p)}
             onArchive={handleArchive}
             onDeleteRequest={id => setConfirmDelete(id)}
             onDeleteCancel={() => setConfirmDelete(null)}
             onDeleteConfirm={handleDelete}
             onView={id => navigate(`/projects/${id}`)}
+            onReorder={handleReorder}
+            onStartAdd={startAdd}
+            onAddSave={handleAddSave}
+            onAddKeyDown={handleAddKeyDown}
           />
         ) : (
           <FinancialView
@@ -137,13 +199,13 @@ export default function ProjectsPage() {
         )}
       </div>
 
-      {showModal && (
+      {editProject && (
         <ProjectModal
           project={editProject}
           clients={clients}
           projects={projects}
-          onClose={() => setShowModal(false)}
-          onSaved={() => { setShowModal(false); load() }}
+          onClose={() => setEditProject(null)}
+          onSaved={() => { setEditProject(null); load() }}
         />
       )}
     </div>
@@ -163,13 +225,51 @@ function groupByClient(projects) {
 }
 
 // ── WORK VIEW ───────────────────────────────────────────────────────────
-function WorkView({ projects, loading, showArchived, confirmDelete, onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm, onView }) {
+function WorkView({
+  projects, clients, loading, showArchived, confirmDelete,
+  addingRow, setAddingRow, addInputRef, clientFilter,
+  onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm,
+  onView, onReorder, onStartAdd, onAddSave, onAddKeyDown,
+}) {
+  const [dragIdx, setDragIdx]         = useState(null)
+  const [dragOverIdx, setDragOverIdx] = useState(null)
+
+  function handleDragStart(e, idx) {
+    e.dataTransfer.effectAllowed = 'move'
+    setDragIdx(idx)
+  }
+
+  function handleDragOver(e, idx) {
+    e.preventDefault()
+    setDragOverIdx(idx)
+  }
+
+  function handleDrop(toIdx) {
+    if (dragIdx === null || dragIdx === toIdx) { reset(); return }
+    const reordered = [...projects]
+    const [moved] = reordered.splice(dragIdx, 1)
+    reordered.splice(toIdx, 0, moved)
+    onReorder(reordered)
+    reset()
+  }
+
+  function reset() { setDragIdx(null); setDragOverIdx(null) }
+
   if (loading) return <div className="card"><div className="empty-state text-dim">Loading…</div></div>
 
-  if (projects.length === 0) {
+  if (projects.length === 0 && addingRow === null) {
     return (
       <div className="card">
-        <EmptyState icon="📁" title={showArchived ? 'No archived projects' : 'No projects found'} sub={showArchived ? '' : 'Add a project to get started'} />
+        <EmptyState
+          icon="📁"
+          title={showArchived ? 'No archived projects' : 'No projects found'}
+          sub={showArchived ? '' : 'Add a project to get started'}
+        />
+        {!showArchived && (
+          <div style={{ textAlign: 'center', paddingBottom: 24 }}>
+            <button className="btn btn-ghost btn-sm" onClick={onStartAdd}>+ Add first project</button>
+          </div>
+        )}
       </div>
     )
   }
@@ -185,6 +285,7 @@ function WorkView({ projects, loading, showArchived, confirmDelete, onEdit, onAr
         <table>
           <thead>
             <tr>
+              <th style={{ width: 24 }}></th>
               <th>#</th><th>Project</th><th>Type</th>
               <th>Priority</th><th>Proof</th><th>Invoice</th><th>Collect</th>
               <th>Start</th><th></th>
@@ -195,7 +296,7 @@ function WorkView({ projects, loading, showArchived, confirmDelete, onEdit, onAr
               <>
                 {/* Client group header */}
                 <tr key={`group-${group.name}`} style={{ background: 'var(--bg3)', pointerEvents: 'none' }}>
-                  <td colSpan={9} style={{
+                  <td colSpan={10} style={{
                     padding: '7px 16px',
                     fontSize: 11,
                     fontWeight: 600,
@@ -208,9 +309,11 @@ function WorkView({ projects, loading, showArchived, confirmDelete, onEdit, onAr
                 </tr>
 
                 {/* Project rows */}
-                {group.projects.map(p => (
-                  confirmDelete === p.id ? (
+                {group.projects.map((p, idx) => {
+                  const globalIdx = projects.indexOf(p)
+                  return confirmDelete === p.id ? (
                     <tr key={p.id} style={{ background: 'var(--red-bg)' }}>
+                      <td></td>
                       <td colSpan={8} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
                         Delete <strong>{p.name}</strong>? This cannot be undone.
                       </td>
@@ -226,7 +329,26 @@ function WorkView({ projects, loading, showArchived, confirmDelete, onEdit, onAr
                       </td>
                     </tr>
                   ) : (
-                    <tr key={p.id} style={{ opacity: p.archived ? 0.55 : 1 }}>
+                    <tr
+                      key={p.id}
+                      draggable
+                      onDragStart={e => handleDragStart(e, globalIdx)}
+                      onDragOver={e => handleDragOver(e, globalIdx)}
+                      onDrop={() => handleDrop(globalIdx)}
+                      onDragEnd={reset}
+                      style={{
+                        opacity: dragIdx === globalIdx ? 0.4 : (p.archived ? 0.55 : 1),
+                        outline: dragOverIdx === globalIdx && dragIdx !== globalIdx
+                          ? '2px solid var(--accent)' : undefined,
+                        cursor: 'default',
+                      }}
+                    >
+                      <td style={{
+                        cursor: 'grab', color: 'var(--text3)',
+                        fontSize: 15, userSelect: 'none', paddingRight: 0,
+                      }}>
+                        ⠿
+                      </td>
                       <td className="text-mono text-dim">{p.project_number}</td>
                       <td className="td-main">{p.name}</td>
                       <td><StatusBadge status={p.product_type} /></td>
@@ -235,7 +357,7 @@ function WorkView({ projects, loading, showArchived, confirmDelete, onEdit, onAr
                       <td><StatusBadge status={p.inv_status} /></td>
                       <td><StatusBadge status={p.collect_status} /></td>
                       <td className="text-mono text-dim">{p.start_date?.slice(0,10) || '—'}</td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
+                      <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
                         <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onView(p.id)}>
                           View
                         </button>
@@ -247,17 +369,84 @@ function WorkView({ projects, loading, showArchived, confirmDelete, onEdit, onAr
                         <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onArchive(p)}>
                           {p.archived ? 'Restore' : 'Archive'}
                         </button>
-                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)' }} onClick={() => onDeleteRequest(p.id)}>
+                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)', marginRight: 4 }} onClick={() => onDeleteRequest(p.id)}>
                           Delete
+                        </button>
+                        <button className="btn btn-ghost btn-sm" title="Add new project" onClick={onStartAdd}>
+                          +
                         </button>
                       </td>
                     </tr>
                   )
-                ))}
+                })}
               </>
             ))}
+
+            {/* Inline add row */}
+            {addingRow !== null && (
+              <tr style={{ background: 'var(--accent-glow)' }}>
+                <td></td>
+                <td></td>
+                <td>
+                  <input
+                    ref={addInputRef}
+                    value={addingRow.name}
+                    onChange={e => setAddingRow(r => ({ ...r, name: e.target.value }))}
+                    placeholder="Project name…"
+                    onKeyDown={onAddKeyDown}
+                    style={{ width: '100%' }}
+                  />
+                </td>
+                <td>
+                  <select
+                    value={addingRow.product_type}
+                    onChange={e => setAddingRow(r => ({ ...r, product_type: e.target.value }))}
+                  >
+                    {PRODUCT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </td>
+                <td colSpan={4}>
+                  {!clientFilter && (
+                    <select
+                      value={addingRow.client_id}
+                      onChange={e => setAddingRow(r => ({ ...r, client_id: e.target.value }))}
+                      style={{ width: 160 }}
+                    >
+                      <option value="">No client</option>
+                      {clients.map(c => <option key={c.id} value={c.id}>{c.company}</option>)}
+                    </select>
+                  )}
+                </td>
+                <td></td>
+                <td style={{ whiteSpace: 'nowrap' }}>
+                  <button className="btn btn-primary btn-sm" style={{ marginRight: 4 }} onClick={onAddSave}>
+                    Save
+                  </button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setAddingRow(null)}>
+                    Cancel
+                  </button>
+                </td>
+              </tr>
+            )}
+
+            {/* Empty state + add button when no groups */}
+            {groups.length === 0 && addingRow === null && (
+              <tr>
+                <td colSpan={10} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>
+                  No projects found.{' '}
+                  <button className="btn btn-ghost btn-sm" onClick={onStartAdd}>+ Add first project</button>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
+
+        {/* Add button below table */}
+        {groups.length > 0 && addingRow === null && (
+          <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)' }}>
+            <button className="btn btn-ghost btn-sm" onClick={onStartAdd}>+ Add project</button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -318,20 +507,10 @@ function FinancialView({ projects, loading, totalEst, totalOwed, totalPaid, onVi
   )
 }
 
-// ── PROJECT MODAL ───────────────────────────────────────────────────────
+// ── PROJECT MODAL (edit only) ────────────────────────────────────────────
 function ProjectModal({ project, clients, projects, onClose, onSaved }) {
-  const isEdit = !!project
-
-  // Auto-generate next project number for new projects
-  const nextNumber = (() => {
-    const nums = projects
-      .map(p => parseInt(p.project_number, 10))
-      .filter(n => !isNaN(n))
-    return nums.length ? String(Math.max(...nums) + 1) : '1000'
-  })()
-
   const [form, setForm] = useState({
-    project_number: project?.project_number ?? nextNumber,
+    project_number: project?.project_number ?? '',
     name:           project?.name           || '',
     client_id:      project?.client_id      || (clients[0]?.id || ''),
     product_type:   project?.product_type   || 'CO',
@@ -352,7 +531,6 @@ function ProjectModal({ project, clients, projects, onClose, onSaved }) {
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
 
-  // Duplicate number check (warn but don't block)
   const isDupe = form.project_number.trim() !== '' && projects.some(
     p => p.project_number === form.project_number.trim() && p.id !== project?.id
   )
@@ -375,9 +553,7 @@ function ProjectModal({ project, clients, projects, onClose, onSaved }) {
     if (!payload.start_date) payload.start_date = null
     if (!payload.end_date)   payload.end_date   = null
 
-    const { error: err } = isEdit
-      ? await supabase.from('projects').update(payload).eq('id', project.id)
-      : await supabase.from('projects').insert(payload)
+    const { error: err } = await supabase.from('projects').update(payload).eq('id', project.id)
 
     setSaving(false)
     if (err) { setError(err.message); return }
@@ -386,14 +562,14 @@ function ProjectModal({ project, clients, projects, onClose, onSaved }) {
 
   return (
     <Modal
-      title={isEdit ? `Edit — ${project.name}` : 'Add new project'}
+      title={`Edit — ${project.name}`}
       onClose={onClose}
       footer={
         <>
           {error && <span style={{ color: 'var(--red)', fontSize: '0.82rem', flex: 1 }}>{error}</span>}
           <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
           <button className="btn btn-primary" onClick={save} disabled={saving}>
-            {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add project'}
+            {saving ? 'Saving…' : 'Save changes'}
           </button>
         </>
       }
@@ -421,7 +597,7 @@ function ProjectModal({ project, clients, projects, onClose, onSaved }) {
         </FormGroup>
         <FormGroup label="Product type">
           <select value={form.product_type} onChange={set('product_type')}>
-            {['ST','CO','DS','OH'].map(t => <option key={t} value={t}>{t}</option>)}
+            {PRODUCT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </FormGroup>
         <FormGroup label="Priority">

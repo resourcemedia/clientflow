@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { Breadcrumb } from '../components/ui'
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   addDays, addMonths, subMonths, isSameMonth, isSameDay,
@@ -31,6 +33,7 @@ function colorFor(channel) {
 }
 
 export default function CalendarPage() {
+  const navigate = useNavigate()
   const [events, setEvents]           = useState([])
   const [loading, setLoading]         = useState(true)
   const [current, setCurrent]         = useState(new Date())
@@ -80,7 +83,10 @@ export default function CalendarPage() {
   return (
     <div className="fade-in">
       <div className="topbar">
-        <div className="topbar-title">Content calendar</div>
+        <Breadcrumb segments={[
+          { label: 'Dashboard', onClick: () => navigate('/') },
+          { label: 'Calendar' },
+        ]} />
 
         {/* Channel filter pills */}
         <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>

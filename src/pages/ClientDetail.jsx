@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { DEMO_CLIENTS, DEMO_PROJECTS } from '../lib/demo-data'
-import { StatusBadge, StatCard, fmt$, initials } from '../components/ui'
+import { StatusBadge, StatCard, fmt$, initials, Breadcrumb } from '../components/ui'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 
@@ -43,18 +43,11 @@ export default function ClientDetail() {
     <div className="fade-in">
       {/* Topbar */}
       <div className="topbar">
-        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/clients')}>
-          ← Clients
-        </button>
-        <div className="flex-center gap-12 flex-1">
-          <div className="client-avatar-lg">{initials(client.alias || client.company)}</div>
-          <div>
-            <div className="topbar-title" style={{ fontSize: 18 }}>{client.company}</div>
-            <div style={{ fontSize: 12, color: 'var(--text3)' }}>
-              {client.email || 'No email'} · Added {client.created_at?.slice(0, 10)}
-            </div>
-          </div>
-        </div>
+        <Breadcrumb segments={[
+          { label: 'Dashboard', onClick: () => navigate('/') },
+          { label: 'Clients',   onClick: () => navigate('/clients') },
+          { label: client.company },
+        ]} />
         <StatusBadge status={client.status} />
         <button className="btn btn-ghost btn-sm">Edit</button>
       </div>

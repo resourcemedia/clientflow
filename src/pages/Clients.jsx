@@ -1,31 +1,39 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { DEMO_CLIENTS, CLIENT_STATUSES } from '../lib/demo-data'
-import { Badge, StatusBadge, Modal, EmptyState, StatCard, FormGroup, initials } from '../components/ui'
+import { Modal, FormGroup, initials, Breadcrumb } from '../components/ui'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 
 export default function ClientsPage() {
-  const [clients, setClients] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
+  const [clients, setClients]     = useState([])
+  const [loading, setLoading]     = useState(true)
   const [editClient, setEditClient] = useState(null)
-  const [search, setSearch] = useState('')
+  const [search, setSearch]       = useState('')
+  const [addingRow, setAddingRow] = useState(null) // null | {company:'', alias:''}
+  const [dragIdx, setDragIdx]     = useState(null)
+  const [dragOverIdx, setDragOverIdx] = useState(null)
+  const addInputRef = useRef(null)
   const navigate = useNavigate()
 
   useEffect(() => { loadClients() }, [])
+
+  useEffect(() => {
+    if (addingRow !== null) addInputRef.current?.focus()
+  }, [addingRow])
 
   async function loadClients() {
     setLoading(true)
     if (isDemo) {
       setClients(DEMO_CLIENTS)
     } else {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('clients')
         .select('*')
+        .order('sort_order', { ascending: true, nullsFirst: false })
         .order('company')
-      if (!error) setClients(data || [])
+      setClients(data || [])
     }
     setLoading(false)
   }
@@ -35,100 +43,206 @@ export default function ClientsPage() {
     (c.alias || '').toLowerCase().includes(search.toLowerCase())
   )
 
-  const active = clients.filter(c => c.status === 'active').length
+  // ── inline add ──────────────────────────────────────────────────────────
+  function startAdd() {
+    setAddingRow({ company: '', alias: '' })
+  }
 
-  function openAdd()  { setEditClient(null); setShowModal(true) }
-  function openEdit(c) { setEditClient(c); setShowModal(true) }
+  async function handleAddSave() {
+    const company = addingRow?.company?.trim()
+    if (!company) { setAddingRow(null); return }
+    if (isDemo)   { setAddingRow(null); return }
+    const { data } = await supabase
+      .from('clients')
+      .insert({ company, alias: addingRow.alias?.trim() || null, status: 'active' })
+      .select()
+      .single()
+    if (data) setClients(prev => [...prev, data])
+    setAddingRow(null)
+  }
 
+  function handleAddKeyDown(e) {
+    if (e.key === 'Enter')  handleAddSave()
+    if (e.key === 'Escape') setAddingRow(null)
+  }
+
+  // ── drag-and-drop ───────────────────────────────────────────────────────
+  function handleDragStart(e, idx) {
+    e.dataTransfer.effectAllowed = 'move'
+    setDragIdx(idx)
+  }
+
+  function handleDragOver(e, idx) {
+    e.preventDefault()
+    setDragOverIdx(idx)
+  }
+
+  async function handleDrop(toIdx) {
+    if (dragIdx === null || dragIdx === toIdx) { reset(); return }
+    const reordered = [...filtered]
+    const [moved] = reordered.splice(dragIdx, 1)
+    reordered.splice(toIdx, 0, moved)
+    // Merge reordered filtered back into full clients list preserving non-filtered
+    setClients(reordered)
+    reset()
+    reordered.forEach((c, i) => {
+      supabase.from('clients').update({ sort_order: i }).eq('id', c.id).then(() => {})
+    })
+  }
+
+  function reset() { setDragIdx(null); setDragOverIdx(null) }
+
+  // ── render ───────────────────────────────────────────────────────────────
   return (
     <div className="fade-in">
-      {/* Topbar */}
       <div className="topbar">
-        <div className="topbar-title">Clients</div>
+        <Breadcrumb segments={[
+          { label: 'Dashboard', onClick: () => navigate('/') },
+          { label: 'Clients' },
+        ]} />
         <input
           type="text"
-          placeholder="Search clients…"
+          placeholder="Filter clients…"
           value={search}
           onChange={e => setSearch(e.target.value)}
           style={{ width: 220 }}
         />
-        <button className="btn btn-primary" onClick={openAdd}>+ Add client</button>
+        <button className="btn btn-ghost" onClick={startAdd}>+ Add client</button>
       </div>
 
       <div className="page-content">
-        {/* Stats */}
-        <div className="stat-grid mb-24">
-          <StatCard label="Total clients"   value={clients.length}       color="blue" />
-          <StatCard label="Active"           value={active}               color="green" />
-          <StatCard label="Inactive"         value={clients.length - active} color="amber" />
-          <StatCard label="With Facebook"    value={clients.filter(c => c.facebook_url).length} color="accent" />
-        </div>
-
-        {/* Table */}
         <div className="card">
-          <div className="card-header">
-            <span className="card-title">All clients</span>
-            <span className="text-dim text-sm">{filtered.length} showing</span>
-          </div>
           <div className="table-wrap">
             {loading ? (
               <div className="empty-state"><div className="text-dim">Loading…</div></div>
-            ) : filtered.length === 0 ? (
-              <EmptyState icon="👤" title="No clients found" sub="Add your first client to get started" action={
-                <button className="btn btn-primary" onClick={openAdd}>+ Add client</button>
-              } />
             ) : (
               <table>
                 <thead>
                   <tr>
+                    <th style={{ width: 24 }}></th>
                     <th>Client</th>
-                    <th>Alias</th>
-                    <th>Facebook</th>
-                    <th>Google Drive</th>
-                    <th>Status</th>
-                    <th>Added</th>
+                    <th>Projects</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map(client => (
-                    <tr key={client.id} onClick={() => navigate(`/clients/${client.id}`)}>
+                  {filtered.map((client, idx) => (
+                    <tr
+                      key={client.id}
+                      draggable
+                      onDragStart={e => handleDragStart(e, idx)}
+                      onDragOver={e => handleDragOver(e, idx)}
+                      onDrop={() => handleDrop(idx)}
+                      onDragEnd={reset}
+                      style={{
+                        opacity: dragIdx === idx ? 0.4 : 1,
+                        outline: dragOverIdx === idx && dragIdx !== idx
+                          ? '2px solid var(--accent)' : undefined,
+                        cursor: 'default',
+                      }}
+                    >
+                      {/* Drag handle */}
+                      <td style={{
+                        cursor: 'grab', color: 'var(--text3)',
+                        fontSize: 15, userSelect: 'none', paddingRight: 0,
+                      }}>
+                        ⠿
+                      </td>
+
+                      {/* Client name */}
                       <td>
                         <div className="flex-center gap-12">
-                          <div className="client-avatar" style={{
-                            width: 34, height: 34, borderRadius: 8,
+                          <div style={{
+                            width: 32, height: 32, borderRadius: 8,
                             background: 'var(--accent-glow)',
                             border: '1px solid var(--accent)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 12, fontWeight: 700, color: 'var(--accent2)',
-                            flexShrink: 0
+                            fontSize: 11, fontWeight: 700, color: 'var(--accent2)', flexShrink: 0,
                           }}>
                             {initials(client.alias || client.company)}
                           </div>
                           <div>
                             <div className="td-main">{client.company}</div>
-                            <div className="text-dim text-xs">{client.email || '—'}</div>
+                            {client.alias && <div className="text-dim text-xs">{client.alias}</div>}
                           </div>
                         </div>
                       </td>
-                      <td>{client.alias || '—'}</td>
-                      <td>
-                        {client.facebook_url
-                          ? <Badge variant="blue">Linked</Badge>
-                          : <Badge variant="gray">Not set</Badge>}
-                      </td>
-                      <td>
-                        {client.google_drive_url
-                          ? <Badge variant="green">Linked</Badge>
-                          : <Badge variant="gray">Not set</Badge>}
-                      </td>
-                      <td><StatusBadge status={client.status} /></td>
-                      <td className="text-mono text-dim">{client.created_at?.slice(0, 10) || '—'}</td>
-                      <td onClick={e => e.stopPropagation()}>
-                        <button className="btn btn-ghost btn-sm" onClick={() => openEdit(client)}>Edit</button>
+
+                      {/* Projects placeholder */}
+                      <td style={{ color: 'var(--text3)', fontSize: 13 }}>—</td>
+
+                      {/* Actions */}
+                      <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ marginRight: 4 }}
+                          onClick={() => navigate(`/projects?client=${client.id}`)}
+                        >
+                          View
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ marginRight: 4 }}
+                          onClick={() => setEditClient(client)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          title="Add new client"
+                          onClick={startAdd}
+                        >
+                          +
+                        </button>
                       </td>
                     </tr>
                   ))}
+
+                  {/* Inline add row */}
+                  {addingRow !== null && (
+                    <tr style={{ background: 'var(--accent-glow)' }}>
+                      <td></td>
+                      <td>
+                        <input
+                          ref={addInputRef}
+                          value={addingRow.company}
+                          onChange={e => setAddingRow(r => ({ ...r, company: e.target.value }))}
+                          placeholder="Client name…"
+                          onKeyDown={handleAddKeyDown}
+                          style={{ width: '100%' }}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          value={addingRow.alias}
+                          onChange={e => setAddingRow(r => ({ ...r, alias: e.target.value }))}
+                          placeholder="Alias (optional)"
+                          onKeyDown={handleAddKeyDown}
+                          style={{ width: 160 }}
+                        />
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <button className="btn btn-primary btn-sm" style={{ marginRight: 4 }} onClick={handleAddSave}>
+                          Save
+                        </button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => setAddingRow(null)}>
+                          Cancel
+                        </button>
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* Empty state row */}
+                  {filtered.length === 0 && addingRow === null && (
+                    <tr>
+                      <td colSpan={4} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>
+                        No clients found.{' '}
+                        <button className="btn btn-ghost btn-sm" onClick={startAdd}>
+                          + Add first client
+                        </button>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             )}
@@ -136,30 +250,29 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      {/* Add / Edit Modal */}
-      {showModal && (
+      {/* Edit modal */}
+      {editClient && (
         <ClientModal
           client={editClient}
-          onClose={() => setShowModal(false)}
-          onSaved={() => { setShowModal(false); loadClients() }}
+          onClose={() => setEditClient(null)}
+          onSaved={() => { setEditClient(null); loadClients() }}
         />
       )}
     </div>
   )
 }
 
-// ── CLIENT MODAL ────────────────────────────────────────────────────────
+// ── CLIENT EDIT MODAL ────────────────────────────────────────────────────
 function ClientModal({ client, onClose, onSaved }) {
-  const isEdit = !!client
   const [form, setForm] = useState({
-    company: client?.company || '',
-    alias: client?.alias || '',
-    email: client?.email || '',
-    facebook_url: client?.facebook_url || '',
-    google_drive_url: client?.google_drive_url || '',
-    status: client?.status || 'active',
+    company:           client?.company           || '',
+    alias:             client?.alias             || '',
+    email:             client?.email             || '',
+    facebook_url:      client?.facebook_url      || '',
+    google_drive_url:  client?.google_drive_url  || '',
+    status:            client?.status            || 'active',
     transition_status: client?.transition_status || '',
-    notes: client?.notes || '',
+    notes:             client?.notes             || '',
   })
   const [saving, setSaving] = useState(false)
 
@@ -171,29 +284,24 @@ function ClientModal({ client, onClose, onSaved }) {
     if (!form.company.trim()) return
     setSaving(true)
     if (isDemo) {
-      // In demo mode just close — no real save
       setTimeout(() => { setSaving(false); onSaved() }, 400)
       return
     }
     const payload = { ...form, updated_at: new Date().toISOString() }
-    if (isEdit) {
-      await supabase.from('clients').update(payload).eq('id', client.id)
-    } else {
-      await supabase.from('clients').insert(payload)
-    }
+    await supabase.from('clients').update(payload).eq('id', client.id)
     setSaving(false)
     onSaved()
   }
 
   return (
     <Modal
-      title={isEdit ? `Edit — ${client.company}` : 'Add new client'}
+      title={`Edit — ${client.company}`}
       onClose={onClose}
       footer={
         <>
           <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
           <button className="btn btn-primary" onClick={save} disabled={saving}>
-            {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add client'}
+            {saving ? 'Saving…' : 'Save changes'}
           </button>
         </>
       }
@@ -223,7 +331,7 @@ function ClientModal({ client, onClose, onSaved }) {
           <input value={form.transition_status} onChange={set('transition_status')} placeholder="e.g. In Progress" />
         </FormGroup>
         <FormGroup label="Notes" full>
-          <textarea value={form.notes} onChange={set('notes')} placeholder="Internal notes about this client…" rows={3} />
+          <textarea value={form.notes} onChange={set('notes')} placeholder="Internal notes…" rows={3} />
         </FormGroup>
       </div>
     </Modal>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { PillNav } from '../components/ui'
+import { PillNav, Breadcrumb } from '../components/ui'
 
 const STATUS_TABS = [
   { id: 'Open', label: 'Open' },
@@ -380,6 +380,7 @@ function CheckIcon({ done }) {
 
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 export default function TasksPage() {
+  const navigate = useNavigate()
   const [tasks,        setTasks]        = useState([])
   const [projects,     setProjects]     = useState([])
   const [profiles,     setProfiles]     = useState([])
@@ -529,7 +530,10 @@ export default function TasksPage() {
   return (
     <div className="fade-in">
       <div className="topbar">
-        <div className="topbar-title">Tasks</div>
+        <Breadcrumb segments={[
+          { label: 'Dashboard', onClick: () => navigate('/') },
+          { label: 'Tasks' },
+        ]} />
         <PillNav tabs={STATUS_TABS} active={statusFilter} onChange={setStatusFilter} />
         <button
           className="btn btn-primary"

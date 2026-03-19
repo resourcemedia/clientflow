@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { StatusBadge, Modal, FormGroup, fmt$ } from '../components/ui'
+import { StatusBadge, Modal, FormGroup, fmt$, Breadcrumb } from '../components/ui'
 
 const ITEM_STATUSES  = ['Open', 'In Progress', 'Review', 'Revise', 'Approved', 'Complete', 'No Go']
 const PROOF_STATUSES = ['Open', 'In Progress', 'Review', 'Revise', 'Approved', 'Complete', 'No Go']
@@ -18,6 +18,7 @@ export default function ProjectDetailPage() {
   const [project, setProject]   = useState(null)
   const [items, setItems]       = useState([])
   const [loading, setLoading]   = useState(true)
+  const [userRole, setUserRole] = useState('manager') // 'manager' | 'team' | 'client' | 'client_team'
 
   // view state machine
   const [view, setView]                 = useState('items') // 'items' | 'proofs' | 'proof-detail'
@@ -31,7 +32,14 @@ export default function ProjectDetailPage() {
   const [itemModal, setItemModal]   = useState(null) // null | 'new' | item object
   const [confirmDelete, setConfirmDelete] = useState(null) // null | { type, id, label }
 
-  useEffect(() => { loadProject() }, [id])
+  useEffect(() => { loadProject(); loadRole() }, [id])
+
+  async function loadRole() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+    if (data?.role) setUserRole(data.role)
+  }
 
   async function loadProject() {
     setLoading(true)
@@ -198,28 +206,24 @@ export default function ProjectDetailPage() {
     <div className="fade-in">
       {/* Topbar breadcrumb */}
       <div className="topbar">
-        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/projects')}>← Projects</button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, fontFamily: 'Fraunces, serif', fontSize: 17, fontWeight: 600 }}>
-          <span style={{ color: 'var(--text2)', fontWeight: 400, fontFamily: 'DM Sans, sans-serif', fontSize: 14 }}>{clientName}</span>
-          <span style={{ color: 'var(--text3)' }}>|</span>
-          <span>{projectLabel}</span>
-          {view === 'proofs' && selectedItem && (
-            <>
-              <span style={{ color: 'var(--text3)' }}>|</span>
-              <span style={{ color: 'var(--text2)', fontWeight: 400, fontFamily: 'DM Sans, sans-serif', fontSize: 14 }}>
-                {selectedItem.item_number} {selectedItem.name}
-              </span>
-            </>
-          )}
-          {view === 'proof-detail' && selectedProof && (
-            <>
-              <span style={{ color: 'var(--text3)' }}>|</span>
-              <span style={{ color: 'var(--text2)', fontWeight: 400, fontFamily: 'DM Sans, sans-serif', fontSize: 14 }}>
-                Proof {versionLabel(selectedItem.item_number, selectedProof.version)}
-              </span>
-            </>
-          )}
-        </div>
+        <Breadcrumb segments={[
+          { label: 'Projects', onClick: () => navigate('/projects') },
+          project.client?.id
+            ? { label: clientName, onClick: () => navigate(`/clients/${project.client.id}`) }
+            : { label: clientName },
+          view !== 'items'
+            ? { label: projectLabel, onClick: () => setView('items') }
+            : { label: projectLabel },
+          ...(view === 'proofs' && selectedItem
+            ? [{ label: `${selectedItem.item_number} ${selectedItem.name}` }]
+            : []),
+          ...(view === 'proof-detail' && selectedItem && selectedProof
+            ? [
+                { label: `${selectedItem.item_number} ${selectedItem.name}`, onClick: () => setView('proofs') },
+                { label: `Proof ${versionLabel(selectedItem.item_number, selectedProof.version)}` },
+              ]
+            : []),
+        ]} />
       </div>
 
       <div className="page-content">
@@ -265,6 +269,7 @@ export default function ProjectDetailPage() {
           <ProofDetailSection
             item={selectedItem}
             proof={selectedProof}
+            userRole={userRole}
             onBack={() => setView('proofs')}
             onSave={handleSaveProofDetail}
           />
@@ -458,11 +463,19 @@ function ProofsSection({ clientName, projectLabel, item, proofs, confirmDelete, 
 }
 
 // ── PROOF DETAIL SECTION ────────────────────────────────────────────────────
-function ProofDetailSection({ item, proof, onBack, onSave }) {
+function ProofDetailSection({ item, proof, userRole, onBack, onSave }) {
   const [form, setForm]     = useState({ ...proof })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved]   = useState(false)
   const [error, setError]   = useState('')
+
+  const isClient      = userRole === 'client' || userRole === 'client_team'
+  const isManager     = !isClient
+  const hasProofLink  = !!(form.proof_link)
+  const hasSocialMedia = !!(form.image_url || form.post_copy)
+  // Client sees proof link only if no social media content, and vice versa
+  const showProofLink   = isManager || !hasSocialMedia
+  const showSocialMedia = isManager || !hasProofLink
 
   function set(field) {
     return e => { setForm(f => ({ ...f, [field]: e.target.value })); setSaved(false) }
@@ -477,6 +490,7 @@ function ProofDetailSection({ item, proof, onBack, onSave }) {
     else setSaved(true)
   }
 
+  const inputStyle = { background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.55rem 0.75rem', color: 'var(--text)', fontSize: '0.875rem' }
   const vLabel = versionLabel(item.item_number, proof.version)
 
   return (
@@ -490,59 +504,70 @@ function ProofDetailSection({ item, proof, onBack, onSave }) {
       </div>
 
       <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 720 }}>
-        {/* Proof Link */}
-        <div>
-          <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text2)', marginBottom: 6, fontWeight: 500 }}>
-            Proof Link
-          </label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input
-              value={form.proof_link || ''}
-              onChange={set('proof_link')}
-              placeholder="Google Drive URL, webpage, PDF link…"
-              style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.55rem 0.75rem', color: 'var(--text)', fontSize: '0.875rem' }}
-            />
-            <button
-              className="btn btn-ghost btn-sm"
-              disabled={!form.proof_link}
-              onClick={() => form.proof_link && window.open(form.proof_link, '_blank', 'noreferrer')}
-            >
-              View
-            </button>
-          </div>
-        </div>
-
-        {/* Proof Image URL + preview */}
-        <div>
-          <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text2)', marginBottom: 6, fontWeight: 500 }}>
-            Proof Image URL
-          </label>
-          <input
-            value={form.image_url || ''}
-            onChange={set('image_url')}
-            placeholder="Paste image URL…"
-            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.55rem 0.75rem', color: 'var(--text)', fontSize: '0.875rem' }}
-          />
-          {form.image_url && (
-            <div style={{ marginTop: 8, border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', maxWidth: 420 }}>
-              <img src={form.image_url} alt="Proof" style={{ width: '100%', display: 'block' }} onError={e => { e.target.style.display = 'none' }} />
+        {/* Proof Link — hidden from clients when social media is present */}
+        {showProofLink && (
+          <div>
+            <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text2)', marginBottom: 6, fontWeight: 500 }}>
+              Proof Link
+            </label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                value={form.proof_link || ''}
+                onChange={set('proof_link')}
+                placeholder="Google Drive URL, webpage, PDF link…"
+                readOnly={isClient}
+                style={{ flex: 1, ...inputStyle }}
+              />
+              <button
+                className="btn btn-ghost btn-sm"
+                disabled={!form.proof_link}
+                onClick={() => form.proof_link && window.open(form.proof_link, '_blank', 'noreferrer')}
+              >
+                Open
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Post copy */}
-        <div>
-          <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text2)', marginBottom: 6, fontWeight: 500 }}>
-            Text (For Social Media Posts)
-          </label>
-          <textarea
-            value={form.post_copy || ''}
-            onChange={set('post_copy')}
-            placeholder="Enter social media post copy…"
-            rows={4}
-            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.55rem 0.75rem', color: 'var(--text)', fontSize: '0.875rem', resize: 'vertical', fontFamily: 'inherit' }}
-          />
-        </div>
+        {/* Social media block — hidden from clients when proof link is present */}
+        {showSocialMedia && (
+          <>
+            {/* Proof Image URL + preview */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text2)', marginBottom: 6, fontWeight: 500 }}>
+                Proof Image
+              </label>
+              {isManager ? (
+                <input
+                  value={form.image_url || ''}
+                  onChange={set('image_url')}
+                  placeholder="Paste image URL…"
+                  style={{ width: '100%', ...inputStyle }}
+                />
+              ) : null}
+              {form.image_url && (
+                <div style={{ marginTop: isManager ? 8 : 0, border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', maxWidth: 420 }}>
+                  <img src={form.image_url} alt="Proof" style={{ width: '100%', display: 'block' }} onError={e => { e.target.style.display = 'none' }} />
+                </div>
+              )}
+            </div>
+
+            {/* Post copy */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text2)', marginBottom: 6, fontWeight: 500 }}>
+                Post Copy
+              </label>
+              <textarea
+                value={form.post_copy || ''}
+                onChange={set('post_copy')}
+                placeholder="Enter social media post copy…"
+                readOnly={isClient}
+                rows={4}
+                style={{ width: '100%', ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
+              />
+            </div>
+          </>
+        )}
 
         {/* Status */}
         <div style={{ maxWidth: 220 }}>
@@ -552,7 +577,7 @@ function ProofDetailSection({ item, proof, onBack, onSave }) {
           <select
             value={form.status}
             onChange={set('status')}
-            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.55rem 0.75rem', color: 'var(--text)', fontSize: '0.875rem' }}
+            style={{ width: '100%', ...inputStyle }}
           >
             {PROOF_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
@@ -568,7 +593,7 @@ function ProofDetailSection({ item, proof, onBack, onSave }) {
             onChange={set('client_comments')}
             placeholder="Client feedback and revision notes…"
             rows={3}
-            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.55rem 0.75rem', color: 'var(--text)', fontSize: '0.875rem', resize: 'vertical', fontFamily: 'inherit' }}
+            style={{ width: '100%', ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
           />
         </div>
 

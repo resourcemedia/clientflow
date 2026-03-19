@@ -114,6 +114,24 @@ export function StatCard({ label, value, delta, color = 'accent', deltaDown }) {
   )
 }
 
+// ── BREADCRUMB ─────────────────────────────────────────────────────────
+// segments: [{ label, onClick? }]  — last segment is current (no onClick)
+export function Breadcrumb({ segments }) {
+  return (
+    <div className="breadcrumb">
+      {segments.map((seg, i) => (
+        <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          {i > 0 && <span className="breadcrumb-sep">|</span>}
+          {seg.onClick
+            ? <button className="breadcrumb-link" onClick={seg.onClick}>{seg.label}</button>
+            : <span className="breadcrumb-current">{seg.label}</span>
+          }
+        </span>
+      ))}
+    </div>
+  )
+}
+
 // ── FORMAT HELPERS ─────────────────────────────────────────────────────
 export function fmt$( n ) {
   if (n == null) return '—'
