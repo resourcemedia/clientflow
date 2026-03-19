@@ -28,19 +28,21 @@ export default function ClientsPage() {
     if (isDemo) {
       setClients(DEMO_CLIENTS)
     } else {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('clients')
         .select('*')
         .order('sort_order', { ascending: true, nullsFirst: false })
         .order('company')
+      if (error) console.error('clients load error:', error)
       setClients(data || [])
     }
     setLoading(false)
   }
 
+  const q = search.toLowerCase()
   const filtered = clients.filter(c =>
-    c.company.toLowerCase().includes(search.toLowerCase()) ||
-    (c.alias || '').toLowerCase().includes(search.toLowerCase())
+    (c.company || '').toLowerCase().includes(q) ||
+    (c.alias   || '').toLowerCase().includes(q)
   )
 
   // ── inline add ──────────────────────────────────────────────────────────
