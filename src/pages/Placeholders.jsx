@@ -1,4 +1,7 @@
 // Placeholder pages — will be built as full modules in future sessions
+export function ItemsPage() {
+  return <ComingSoon title="Items" icon="📋" next="cross-project items list with status, scheduled dates, and proof counts" />
+}
 export function CampaignsPage() {
   return <ComingSoon title="Campaigns" icon="📣" next="campaign builder with benefit / proof / CTA and channel selection" />
 }

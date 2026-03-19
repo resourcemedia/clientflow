@@ -5,34 +5,15 @@ import { useAuth } from '../../lib/auth'
 import { supabase } from '../../lib/supabase'
 
 const NAV = [
-  {
-    section: 'Overview',
-    items: [
-      { to: '/', label: 'Dashboard', exact: true, icon: GridIcon },
-    ]
-  },
-  {
-    section: 'Clients',
-    items: [
-      { to: '/clients',  label: 'Clients',  icon: UsersIcon },
-      { to: '/projects', label: 'Projects', icon: FolderIcon, badgeKey: 'projects', badgeWarn: true },
-    ]
-  },
-  {
-    section: 'Marketing',
-    items: [
-      { to: '/calendar',  label: 'Calendar',  icon: CalendarIcon },
-      { to: '/proofs',    label: 'Proofs',    icon: FileIcon, badgeKey: 'proofs' },
-      { to: '/tasks',     label: 'Tasks',     icon: TasksIcon, badgeKey: 'tasks', badgeWarn: true },
-    ]
-  },
-  {
-    section: 'Operations',
-    items: [
-      { to: '/timeboard', label: 'Time board', icon: ClockIcon },
-      { to: '/billing',   label: 'Billing',    icon: DollarIcon },
-    ]
-  },
+  { to: '/',          label: 'Dashboard', exact: true, icon: GridIcon },
+  { to: '/clients',   label: 'Clients',               icon: UsersIcon },
+  { to: '/projects',  label: 'Projects',               icon: FolderIcon,  badgeKey: 'projects', badgeWarn: true },
+  { to: '/items',     label: 'Items',                  icon: ListIcon },
+  { to: '/proofs',    label: 'Proofs',                 icon: FileIcon,    badgeKey: 'proofs' },
+  { to: '/tasks',     label: 'Tasks',                  icon: TasksIcon,   badgeKey: 'tasks', badgeWarn: true },
+  { to: '/calendar',  label: 'Calendar',               icon: CalendarIcon },
+  { to: '/timeboard', label: 'Time board',              icon: ClockIcon },
+  { to: '/billing',   label: 'Billing',                icon: DollarIcon },
 ]
 
 export default function Sidebar() {
@@ -67,34 +48,29 @@ export default function Sidebar() {
       </div>
 
       {/* Nav */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
-        {NAV.map(section => (
-          <div className="nav-section" key={section.section}>
-            <div className="nav-label">{section.section}</div>
-            {section.items.map(item => {
-              const Icon = item.icon
-              const isActive = item.exact
-                ? loc.pathname === item.to
-                : loc.pathname.startsWith(item.to)
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={`nav-item ${isActive ? 'active' : ''}`}
-                  style={{ textDecoration: 'none' }}
-                >
-                  <Icon className="nav-icon" />
-                  {item.label}
-                  {item.badgeKey && badges[item.badgeKey] > 0 && (
-                    <span className={`nav-badge${item.badgeWarn ? ' warn' : ''}`}>
-                      {badges[item.badgeKey]}
-                    </span>
-                  )}
-                </NavLink>
-              )
-            })}
-          </div>
-        ))}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+        {NAV.map(item => {
+          const Icon = item.icon
+          const isActive = item.exact
+            ? loc.pathname === item.to
+            : loc.pathname.startsWith(item.to)
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={`nav-item ${isActive ? 'active' : ''}`}
+              style={{ textDecoration: 'none' }}
+            >
+              <Icon className="nav-icon" />
+              {item.label}
+              {item.badgeKey && badges[item.badgeKey] > 0 && (
+                <span className={`nav-badge${item.badgeWarn ? ' warn' : ''}`}>
+                  {badges[item.badgeKey]}
+                </span>
+              )}
+            </NavLink>
+          )
+        })}
       </div>
 
       {/* Footer */}
@@ -186,6 +162,16 @@ function SignOutIcon() {
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
     <polyline points="16 17 21 12 16 7"/>
     <line x1="21" y1="12" x2="9" y2="12"/>
+  </svg>
+}
+function ListIcon(props) {
+  return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="8" y1="6"  x2="21" y2="6"/>
+    <line x1="8" y1="12" x2="21" y2="12"/>
+    <line x1="8" y1="18" x2="21" y2="18"/>
+    <line x1="3" y1="6"  x2="3.01" y2="6"/>
+    <line x1="3" y1="12" x2="3.01" y2="12"/>
+    <line x1="3" y1="18" x2="3.01" y2="18"/>
   </svg>
 }
 function TasksIcon(props) {
