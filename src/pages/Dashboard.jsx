@@ -62,14 +62,14 @@ export default function Dashboard() {
 
         // Projects panel — latest 5
         supabase.from('projects')
-          .select('id, name, client:clients(company,alias), product:products(name,type)')
+          .select('id, name, product_type, client:clients(company,alias)')
           .neq('archived', true)
           .order('created_at', { ascending: false })
           .limit(5),
 
         // Proofs to review — Open status, latest 5
         supabase.from('proofs')
-          .select('id, version, status, item:project_items(name, item_number, project:projects(name, client:clients(company,alias), product:products(name,type)))')
+          .select('id, version, status, item:project_items(name, item_number, project:projects(name, product_type, client:clients(company,alias)))')
           .eq('status', 'Open')
           .order('created_at', { ascending: false })
           .limit(5),
@@ -78,7 +78,7 @@ export default function Dashboard() {
         supabase.from('tasks')
           .select(`
             id, note, status_note, updated_at,
-            project:projects(name, client:clients(company,alias), product:products(name,type)),
+            project:projects(name, product_type, client:clients(company,alias)),
             assignee:profiles!tasks_assigned_to_fkey(name),
             updater:profiles!tasks_updated_by_fkey(name)
           `)
@@ -132,8 +132,7 @@ export default function Dashboard() {
   }
 
   function productLabel(project) {
-    if (!project?.product) return '—'
-    return `${project.product.type} | ${project.product.name}`
+    return project?.product_type || '—'
   }
 
   return (
