@@ -15,10 +15,6 @@ export default function ProductsPage() {
 
   useEffect(() => { loadProducts() }, [])
 
-  useEffect(() => {
-    if (addingRow !== null) addInputRef.current?.focus()
-  }, [addingRow])
-
   async function loadProducts() {
     setLoading(true)
     const { data, error } = await supabase
@@ -34,6 +30,7 @@ export default function ProductsPage() {
   // ── inline add ──────────────────────────────────────────────────────────
   function startAdd() {
     setAddingRow({ type: '', name: '' })
+    setTimeout(() => addInputRef.current?.focus(), 0)
   }
 
   async function handleAddSave() {
@@ -166,7 +163,7 @@ export default function ProductsPage() {
                           onChange={e => setAddingRow(r => ({ ...r, type: e.target.value }))}
                           placeholder="e.g. ST, CO, DS, OH"
                           onKeyDown={handleAddKeyDown}
-                          style={{ width: 64 }}
+                          style={{ width: 64, fontSize: 14, fontWeight: 400, textTransform: 'none' }}
                         />
                       </td>
                       <td>
