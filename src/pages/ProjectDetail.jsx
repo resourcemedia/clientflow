@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { StatusBadge, Modal, FormGroup, fmt$, Breadcrumb } from '../components/ui'
+import { StatusBadge, Modal, FormGroup, Breadcrumb } from '../components/ui'
 
 const ITEM_STATUSES  = ['Open', 'In Progress', 'Review', 'Revise', 'Approved', 'Complete', 'No Go']
 const PROOF_STATUSES = ['Open', 'In Progress', 'Review', 'Revise', 'Approved', 'Complete', 'No Go']
@@ -228,7 +228,6 @@ export default function ProjectDetailPage() {
 
       <div className="page-content">
         {/* Project header card */}
-        <ProjectHeader project={project} clientName={clientName} />
 
         {/* Items view */}
         {view === 'items' && (
@@ -289,38 +288,6 @@ export default function ProjectDetailPage() {
   )
 }
 
-// ── PROJECT HEADER ──────────────────────────────────────────────────────────
-function ProjectHeader({ project, clientName }) {
-  return (
-    <div className="card mb-24">
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem', padding: '16px 20px' }}>
-        <HeaderField label="Project #"  value={project.project_number || '—'} mono />
-        <HeaderField label="Name"       value={project.name} />
-        <HeaderField label="Client"     value={clientName} />
-        <HeaderField label="Type"       value={<StatusBadge status={project.product_type} />} />
-        <HeaderField label="Priority"   value={<StatusBadge status={project.priority} />} />
-        <HeaderField label="Start"      value={project.start_date?.slice(0,10) || '—'} mono />
-        <HeaderField label="End"        value={project.end_date?.slice(0,10)   || '—'} mono />
-        <HeaderField label="Est"        value={fmt$(project.est_amount)}  mono />
-        <HeaderField label="Owed"       value={fmt$(project.client_owed)} mono color="var(--amber)" />
-        <HeaderField label="Paid"       value={fmt$(project.client_paid)} mono color="var(--green)" />
-      </div>
-    </div>
-  )
-}
-
-function HeaderField({ label, value, mono, color }) {
-  return (
-    <div>
-      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 4 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 13, fontFamily: mono ? 'DM Mono, monospace' : undefined, color: color || 'var(--text)' }}>
-        {value}
-      </div>
-    </div>
-  )
-}
 
 // ── ITEMS SECTION ───────────────────────────────────────────────────────────
 function ItemsSection({ clientName, projectLabel, items, confirmDelete, onViewProofs, onAddItem, onEditItem, onDeleteRequest, onDeleteCancel, onDeleteConfirm }) {
