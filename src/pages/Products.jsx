@@ -38,7 +38,7 @@ export default function ProductsPage() {
     if (!name) { setAddingRow(null); return }
     const { data, error } = await supabase
       .from('products')
-      .insert({ type: addingRow.type?.trim() || null, name, order_num: products.length })
+      .insert({ type: addingRow.type?.trim() || null, name, order_num: products.length + 1 })
       .select()
       .single()
     if (error) console.error('product insert error:', error)
@@ -74,10 +74,11 @@ export default function ProductsPage() {
     const reordered = [...products]
     const [moved] = reordered.splice(dragIdx, 1)
     reordered.splice(toIdx, 0, moved)
-    setProducts(reordered)
+    const numbered = reordered.map((p, i) => ({ ...p, order_num: i + 1 }))
+    setProducts(numbered)
     reset()
-    reordered.forEach((p, i) => {
-      supabase.from('products').update({ order_num: i }).eq('id', p.id).then(() => {})
+    numbered.forEach(p => {
+      supabase.from('products').update({ order_num: p.order_num }).eq('id', p.id).then(() => {})
     })
   }
 
