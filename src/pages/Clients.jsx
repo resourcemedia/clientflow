@@ -123,7 +123,6 @@ export default function ClientsPage() {
                   <tr>
                     <th style={{ width: 24 }}></th>
                     <th>Client</th>
-                    <th>Projects</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -170,9 +169,6 @@ export default function ClientsPage() {
                         </div>
                       </td>
 
-                      {/* Projects placeholder */}
-                      <td style={{ color: 'var(--text3)', fontSize: 13 }}>—</td>
-
                       {/* Actions */}
                       <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
                         <button
@@ -214,15 +210,6 @@ export default function ClientsPage() {
                           style={{ width: '100%' }}
                         />
                       </td>
-                      <td>
-                        <input
-                          value={addingRow.alias}
-                          onChange={e => setAddingRow(r => ({ ...r, alias: e.target.value }))}
-                          placeholder="Alias (optional)"
-                          onKeyDown={handleAddKeyDown}
-                          style={{ width: 160 }}
-                        />
-                      </td>
                       <td style={{ whiteSpace: 'nowrap' }}>
                         <button className="btn btn-primary btn-sm" style={{ marginRight: 4 }} onClick={handleAddSave}>
                           Save
@@ -237,7 +224,7 @@ export default function ClientsPage() {
                   {/* Empty state row */}
                   {filtered.length === 0 && addingRow === null && (
                     <tr>
-                      <td colSpan={4} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>
+                      <td colSpan={3} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>
                         No clients found.{' '}
                         <button className="btn btn-ghost btn-sm" onClick={startAdd}>
                           + Add first client
