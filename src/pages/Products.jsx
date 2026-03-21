@@ -104,6 +104,7 @@ export default function ProductsPage() {
                 <thead>
                   <tr>
                     <th style={{ width: 24 }}></th>
+                    <th style={{ width: 60 }}>#</th>
                     <th style={{ width: 80 }}>Category</th>
                     <th>Name</th>
                     <th style={{ width: 80 }}></th>
@@ -130,6 +131,9 @@ export default function ProductsPage() {
                         fontSize: 15, userSelect: 'none', paddingRight: 0,
                       }}>
                         ⠿
+                      </td>
+                      <td style={{ color: 'var(--text3)', fontSize: 13 }}>
+                        {product.order_num ?? '—'}
                       </td>
                       <td>
                         <span style={{
@@ -169,6 +173,7 @@ export default function ProductsPage() {
                   {/* Inline add row */}
                   {addingRow !== null && (
                     <tr style={{ background: 'var(--accent-glow)' }}>
+                      <td></td>
                       <td></td>
                       <td>
                         <input
