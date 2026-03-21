@@ -10,6 +10,7 @@ const PRODUCT_TYPES = ['ST', 'CO', 'DS', 'OH']
 export default function ProjectsPage() {
   const [projects, setProjects]           = useState([])
   const [clients, setClients]             = useState([])
+  const [productMap, setProductMap]       = useState({}) // { type: name }
   const [loading, setLoading]             = useState(true)
   const [tab, setTab]                     = useState('work')
   const [editProject, setEditProject]     = useState(null)
@@ -34,12 +35,16 @@ export default function ProjectsPage() {
       setProjects(DEMO_PROJECTS)
       setClients(DEMO_CLIENTS)
     } else {
-      const [{ data: p }, { data: c }] = await Promise.all([
+      const [{ data: p }, { data: c }, { data: prods }] = await Promise.all([
         supabase.from('projects').select('*, client:clients(company,alias)').order('sort_order', { ascending: true, nullsFirst: false }).order('project_number', { ascending: false }),
         supabase.from('clients').select('id, company, alias').eq('status','active').order('company'),
+        supabase.from('products').select('type, name').order('order_num', { nullsFirst: false }),
       ])
       setProjects(p || [])
       setClients(c || [])
+      const map = {}
+      ;(prods || []).forEach(prod => { if (prod.type) map[prod.type] = prod.name })
+      setProductMap(map)
     }
     setLoading(false)
   }
@@ -286,7 +291,7 @@ function WorkView({
           <thead>
             <tr>
               <th style={{ width: 24 }}></th>
-              <th>#</th><th>Project</th><th></th>
+              <th>#</th><th>Client</th><th>Product</th><th>Project</th><th></th>
             </tr>
           </thead>
           <tbody>
@@ -294,7 +299,7 @@ function WorkView({
               <>
                 {/* Client group header */}
                 <tr key={`group-${group.name}`} style={{ background: 'var(--bg3)', pointerEvents: 'none' }}>
-                  <td colSpan={4} style={{
+                  <td colSpan={6} style={{
                     padding: '7px 16px',
                     fontSize: 11,
                     fontWeight: 600,
@@ -312,7 +317,7 @@ function WorkView({
                   return confirmDelete === p.id ? (
                     <tr key={p.id} style={{ background: 'var(--red-bg)' }}>
                       <td></td>
-                      <td colSpan={2} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
+                      <td colSpan={4} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
                         Delete <strong>{p.name}</strong>? This cannot be undone.
                       </td>
                       <td style={{ whiteSpace: 'nowrap' }}>
@@ -348,6 +353,12 @@ function WorkView({
                         ⠿
                       </td>
                       <td className="text-mono text-dim">{p.project_number}</td>
+                      <td style={{ color: 'var(--text2)', fontSize: 13 }}>{p.client?.company || '—'}</td>
+                      <td style={{ color: 'var(--text2)', fontSize: 13, whiteSpace: 'nowrap' }}>
+                        {p.product_type
+                          ? `${p.product_type}${productMap[p.product_type] ? ` | ${productMap[p.product_type]}` : ''}`
+                          : '—'}
+                      </td>
                       <td className="td-main">{p.name}</td>
                       <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
                         <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onView(p.id)}>
@@ -377,6 +388,8 @@ function WorkView({
             {/* Inline add row */}
             {addingRow !== null && (
               <tr style={{ background: 'var(--accent-glow)' }}>
+                <td></td>
+                <td></td>
                 <td></td>
                 <td></td>
                 <td>
@@ -415,7 +428,7 @@ function WorkView({
             {/* Empty state + add button when no groups */}
             {groups.length === 0 && addingRow === null && (
               <tr>
-                <td colSpan={4} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>
+                <td colSpan={6} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>
                   No projects found.{' '}
                   <button className="btn btn-ghost btn-sm" onClick={onStartAdd}>+ Add first project</button>
                 </td>
