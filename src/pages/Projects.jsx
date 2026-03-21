@@ -174,6 +174,7 @@ export default function ProjectsPage() {
           <WorkView
             projects={filtered}
             clients={clients}
+            productMap={productMap}
             loading={loading}
             showArchived={showArchived}
             confirmDelete={confirmDelete}
@@ -231,7 +232,7 @@ function groupByClient(projects) {
 
 // ── WORK VIEW ───────────────────────────────────────────────────────────
 function WorkView({
-  projects, clients, loading, showArchived, confirmDelete,
+  projects, clients, productMap, loading, showArchived, confirmDelete,
   addingRow, setAddingRow, addInputRef, clientFilter,
   onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm,
   onView, onReorder, onStartAdd, onAddSave, onAddKeyDown,
