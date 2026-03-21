@@ -46,6 +46,13 @@ export default function ProductsPage() {
     setAddingRow(null)
   }
 
+  async function handleDelete(product) {
+    if (!window.confirm(`Delete "${product.name}"?`)) return
+    const { error } = await supabase.from('products').delete().eq('id', product.id)
+    if (error) { console.error('product delete error:', error); return }
+    setProducts(prev => prev.filter(p => p.id !== product.id))
+  }
+
   function handleAddKeyDown(e) {
     if (e.key === 'Enter')  handleAddSave()
     if (e.key === 'Escape') setAddingRow(null)
@@ -147,6 +154,13 @@ export default function ProductsPage() {
                           onClick={() => setEditProduct(product)}
                         >
                           Edit
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ marginLeft: 4, color: 'var(--red)' }}
+                          onClick={() => handleDelete(product)}
+                        >
+                          Delete
                         </button>
                       </td>
                     </tr>
