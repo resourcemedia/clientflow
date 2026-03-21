@@ -7,7 +7,7 @@ export default function ProductsPage() {
   const [products, setProducts]   = useState([])
   const [loading, setLoading]     = useState(true)
   const [editProduct, setEditProduct] = useState(null)
-  const [addingRow, setAddingRow] = useState(null) // null | { category: '', name: '' }
+  const [addingRow, setAddingRow] = useState(null) // null | { type: '', name: '' }
   const [dragIdx, setDragIdx]     = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
   const addInputRef = useRef(null)
@@ -33,17 +33,18 @@ export default function ProductsPage() {
 
   // ── inline add ──────────────────────────────────────────────────────────
   function startAdd() {
-    setAddingRow({ category: '', name: '' })
+    setAddingRow({ type: '', name: '' })
   }
 
   async function handleAddSave() {
     const name = addingRow?.name?.trim()
     if (!name) { setAddingRow(null); return }
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('products')
-      .insert({ category: addingRow.category?.trim() || null, name })
+      .insert({ type: addingRow.type?.trim() || null, name })
       .select()
       .single()
+    if (error) console.error('product insert error:', error)
     if (data) setProducts(prev => [...prev, data])
     setAddingRow(null)
   }
@@ -131,7 +132,7 @@ export default function ProductsPage() {
                           fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
                           color: 'var(--text2)', textTransform: 'uppercase',
                         }}>
-                          {product.category || '—'}
+                          {product.type || '—'}
                         </span>
                       </td>
                       <td className="td-main">{product.name}</td>
@@ -161,9 +162,9 @@ export default function ProductsPage() {
                       <td>
                         <input
                           ref={addInputRef}
-                          value={addingRow.category}
-                          onChange={e => setAddingRow(r => ({ ...r, category: e.target.value }))}
-                          placeholder="e.g. ST"
+                          value={addingRow.type}
+                          onChange={e => setAddingRow(r => ({ ...r, type: e.target.value }))}
+                          placeholder="e.g. ST, CO, DS, OH"
                           onKeyDown={handleAddKeyDown}
                           style={{ width: 64 }}
                         />
@@ -221,8 +222,8 @@ export default function ProductsPage() {
 // ── PRODUCT EDIT MODAL ────────────────────────────────────────────────────
 function ProductModal({ product, onClose, onSaved }) {
   const [form, setForm] = useState({
-    category: product?.category || '',
-    name:     product?.name     || '',
+    type: product?.type || '',
+    name: product?.name || '',
   })
   const [saving, setSaving] = useState(false)
 
@@ -234,8 +235,8 @@ function ProductModal({ product, onClose, onSaved }) {
     if (!form.name.trim()) return
     setSaving(true)
     await supabase.from('products').update({
-      category: form.category.trim() || null,
-      name:     form.name.trim(),
+      type: form.type.trim() || null,
+      name: form.name.trim(),
     }).eq('id', product.id)
     setSaving(false)
     onSaved()
@@ -255,8 +256,8 @@ function ProductModal({ product, onClose, onSaved }) {
       }
     >
       <div className="form-grid">
-        <FormGroup label="Category">
-          <input value={form.category} onChange={set('category')} placeholder="e.g. ST" />
+        <FormGroup label="Type">
+          <input value={form.type} onChange={set('type')} placeholder="e.g. ST, CO, DS, OH" />
         </FormGroup>
         <FormGroup label="Product name" full>
           <input value={form.name} onChange={set('name')} placeholder="e.g. Social Media" />
