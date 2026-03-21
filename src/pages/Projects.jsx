@@ -286,9 +286,7 @@ function WorkView({
           <thead>
             <tr>
               <th style={{ width: 24 }}></th>
-              <th>#</th><th>Project</th><th>Type</th>
-              <th>Priority</th><th>Proof</th><th>Invoice</th><th>Collect</th>
-              <th>Start</th><th></th>
+              <th>#</th><th>Project</th><th></th>
             </tr>
           </thead>
           <tbody>
@@ -296,7 +294,7 @@ function WorkView({
               <>
                 {/* Client group header */}
                 <tr key={`group-${group.name}`} style={{ background: 'var(--bg3)', pointerEvents: 'none' }}>
-                  <td colSpan={10} style={{
+                  <td colSpan={4} style={{
                     padding: '7px 16px',
                     fontSize: 11,
                     fontWeight: 600,
@@ -314,7 +312,7 @@ function WorkView({
                   return confirmDelete === p.id ? (
                     <tr key={p.id} style={{ background: 'var(--red-bg)' }}>
                       <td></td>
-                      <td colSpan={8} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
+                      <td colSpan={2} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
                         Delete <strong>{p.name}</strong>? This cannot be undone.
                       </td>
                       <td style={{ whiteSpace: 'nowrap' }}>
@@ -351,12 +349,6 @@ function WorkView({
                       </td>
                       <td className="text-mono text-dim">{p.project_number}</td>
                       <td className="td-main">{p.name}</td>
-                      <td><StatusBadge status={p.product_type} /></td>
-                      <td><StatusBadge status={p.priority} /></td>
-                      <td><StatusBadge status={p.proof_status} /></td>
-                      <td><StatusBadge status={p.inv_status} /></td>
-                      <td><StatusBadge status={p.collect_status} /></td>
-                      <td className="text-mono text-dim">{p.start_date?.slice(0,10) || '—'}</td>
                       <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
                         <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onView(p.id)}>
                           View
@@ -388,36 +380,27 @@ function WorkView({
                 <td></td>
                 <td></td>
                 <td>
-                  <input
-                    ref={addInputRef}
-                    value={addingRow.name}
-                    onChange={e => setAddingRow(r => ({ ...r, name: e.target.value }))}
-                    placeholder="Project name…"
-                    onKeyDown={onAddKeyDown}
-                    style={{ width: '100%' }}
-                  />
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input
+                      ref={addInputRef}
+                      value={addingRow.name}
+                      onChange={e => setAddingRow(r => ({ ...r, name: e.target.value }))}
+                      placeholder="Project name…"
+                      onKeyDown={onAddKeyDown}
+                      style={{ flex: 1 }}
+                    />
+                    {!clientFilter && (
+                      <select
+                        value={addingRow.client_id}
+                        onChange={e => setAddingRow(r => ({ ...r, client_id: e.target.value }))}
+                        style={{ width: 140 }}
+                      >
+                        <option value="">No client</option>
+                        {clients.map(c => <option key={c.id} value={c.id}>{c.company}</option>)}
+                      </select>
+                    )}
+                  </div>
                 </td>
-                <td>
-                  <select
-                    value={addingRow.product_type}
-                    onChange={e => setAddingRow(r => ({ ...r, product_type: e.target.value }))}
-                  >
-                    {PRODUCT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </td>
-                <td colSpan={4}>
-                  {!clientFilter && (
-                    <select
-                      value={addingRow.client_id}
-                      onChange={e => setAddingRow(r => ({ ...r, client_id: e.target.value }))}
-                      style={{ width: 160 }}
-                    >
-                      <option value="">No client</option>
-                      {clients.map(c => <option key={c.id} value={c.id}>{c.company}</option>)}
-                    </select>
-                  )}
-                </td>
-                <td></td>
                 <td style={{ whiteSpace: 'nowrap' }}>
                   <button className="btn btn-primary btn-sm" style={{ marginRight: 4 }} onClick={onAddSave}>
                     Save
@@ -432,7 +415,7 @@ function WorkView({
             {/* Empty state + add button when no groups */}
             {groups.length === 0 && addingRow === null && (
               <tr>
-                <td colSpan={10} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>
+                <td colSpan={4} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>
                   No projects found.{' '}
                   <button className="btn btn-ghost btn-sm" onClick={onStartAdd}>+ Add first project</button>
                 </td>
