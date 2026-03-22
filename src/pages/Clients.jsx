@@ -135,11 +135,12 @@ export default function ClientsPage() {
                       onDragOver={e => handleDragOver(e, idx)}
                       onDrop={() => handleDrop(idx)}
                       onDragEnd={reset}
+                      onClick={() => navigate(`/projects?client=${client.id}`)}
                       style={{
                         opacity: dragIdx === idx ? 0.4 : 1,
                         outline: dragOverIdx === idx && dragIdx !== idx
                           ? '2px solid var(--accent)' : undefined,
-                        cursor: 'default',
+                        cursor: 'pointer',
                       }}
                     >
                       {/* Drag handle */}
@@ -176,14 +177,15 @@ export default function ClientsPage() {
                           style={{ marginRight: 4 }}
                           onClick={() => navigate(`/projects?client=${client.id}`)}
                         >
-                          View
+                          Projects
                         </button>
                         <button
                           className="btn btn-ghost btn-sm"
                           style={{ marginRight: 4 }}
+                          title="Edit client"
                           onClick={() => setEditClient(client)}
                         >
-                          Edit
+                          ✏️
                         </button>
                         <button
                           className="btn btn-ghost btn-sm"
