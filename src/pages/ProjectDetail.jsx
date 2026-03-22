@@ -232,8 +232,7 @@ export default function ProjectDetailPage() {
         {/* Items view */}
         {view === 'items' && (
           <ItemsSection
-            clientName={clientName}
-            projectLabel={projectLabel}
+            clientId={project.client?.id || project.client_id}
             items={items}
             confirmDelete={confirmDelete}
             onViewProofs={handleViewProofs}
@@ -290,17 +289,17 @@ export default function ProjectDetailPage() {
 
 
 // ── ITEMS SECTION ───────────────────────────────────────────────────────────
-function ItemsSection({ clientName, projectLabel, items, confirmDelete, onViewProofs, onAddItem, onEditItem, onDeleteRequest, onDeleteCancel, onDeleteConfirm }) {
+function ItemsSection({ clientId, items, confirmDelete, onViewProofs, onAddItem, onEditItem, onDeleteRequest, onDeleteCancel, onDeleteConfirm }) {
+  const navigate = useNavigate()
   return (
     <div className="card">
       <div className="card-header">
-        <span className="card-title" style={{ fontSize: 13, color: 'var(--text2)', fontWeight: 400 }}>
-          <span style={{ fontWeight: 600, color: 'var(--text)' }}>{clientName}</span>
-          <span style={{ margin: '0 6px', color: 'var(--text3)' }}>|</span>
-          {projectLabel}
-          <span style={{ margin: '0 6px', color: 'var(--text3)' }}>|</span>
-          Items
-        </span>
+        <button
+          className="btn btn-ghost btn-sm"
+          onClick={() => navigate(clientId ? `/projects?client=${clientId}` : '/projects')}
+        >
+          ← Projects
+        </button>
         <button className="btn btn-primary btn-sm" onClick={onAddItem}>+ Add item</button>
       </div>
       <div className="table-wrap">
