@@ -335,23 +335,24 @@ function ItemsSection({ clientId, project, items, confirmDelete, onViewProofs, o
                     </td>
                   </tr>
                 ) : (
-                  <tr key={item.id}>
+                  <tr key={item.id} onClick={() => onViewProofs(item)} style={{ cursor: 'pointer' }}>
                     <td className="text-mono text-dim">{item.item_number}</td>
                     <td className="text-mono text-dim" style={{ whiteSpace: 'nowrap' }}>{project?.project_number || '—'}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>{project?.product_type || '—'}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>{project?.name || '—'}</td>
                     <td className="td-main">{item.name}</td>
-                    <td className="text-mono text-dim">{item.scheduled_date?.slice(0,10) || '—'}</td>
+                    <td className="text-mono text-dim">
+                      {item.scheduled_date
+                        ? (() => { const [y,m,d] = item.scheduled_date.slice(0,10).split('-'); return `${m}/${d}/${y.slice(2)}` })()
+                        : '—'}
+                    </td>
                     <td><StatusBadge status={item.status} /></td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onViewProofs(item)}>
-                        View Proofs
+                    <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
+                      <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} title="Edit item" onClick={() => onEditItem(item)}>
+                        ✏️
                       </button>
-                      <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onEditItem(item)}>
-                        Edit
-                      </button>
-                      <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)' }} onClick={() => onDeleteRequest(item)}>
-                        Delete
+                      <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)' }} title="Delete item" onClick={() => onDeleteRequest(item)}>
+                        🗑️
                       </button>
                     </td>
                   </tr>
