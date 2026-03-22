@@ -397,7 +397,6 @@ function ProofsSection({ clientName, projectLabel, item, proofs, confirmDelete, 
               <tr>
                 <th style={{ width: 70 }}>Version</th>
                 <th style={{ width: 120 }}>Status</th>
-                <th>Link</th>
                 <th style={{ width: 1 }}></th>
               </tr>
             </thead>
@@ -405,7 +404,7 @@ function ProofsSection({ clientName, projectLabel, item, proofs, confirmDelete, 
               {proofs.map(proof => (
                 confirmDelete?.type === 'proof' && confirmDelete.id === proof.id ? (
                   <tr key={proof.id} style={{ background: 'var(--red-bg)' }}>
-                    <td colSpan={3} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
+                    <td colSpan={2} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
                       Delete proof <strong>{versionLabel(item.item_number, proof.version)}</strong>? This cannot be undone.
                     </td>
                     <td style={{ whiteSpace: 'nowrap' }}>
@@ -414,19 +413,12 @@ function ProofsSection({ clientName, projectLabel, item, proofs, confirmDelete, 
                     </td>
                   </tr>
                 ) : (
-                  <tr key={proof.id}>
+                  <tr key={proof.id} onClick={() => onViewProof(proof)} style={{ cursor: 'pointer' }}>
                     <td className="text-mono" style={{ fontWeight: 600 }}>{versionLabel(item.item_number, proof.version)}</td>
                     <td><StatusBadge status={proof.status} /></td>
-                    <td style={{ maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {proof.proof_link
-                        ? <a href={proof.proof_link} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontSize: 12 }}>{proof.proof_link}</a>
-                        : <span style={{ color: 'var(--text3)', fontSize: 12 }}>No link</span>
-                      }
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onViewProof(proof)}>View</button>
-                      <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onEditProof(proof)}>Edit</button>
-                      <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)' }} onClick={() => onDeleteRequest(proof)}>Delete</button>
+                    <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
+                      <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} title="Edit proof" onClick={() => onEditProof(proof)}>✏️</button>
+                      <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)' }} title="Delete proof" onClick={() => onDeleteRequest(proof)}>🗑️</button>
                     </td>
                   </tr>
                 )
