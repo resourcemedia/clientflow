@@ -233,6 +233,7 @@ export default function ProjectDetailPage() {
         {view === 'items' && (
           <ItemsSection
             clientId={project.client?.id || project.client_id}
+            project={project}
             items={items}
             confirmDelete={confirmDelete}
             onViewProofs={handleViewProofs}
@@ -289,7 +290,7 @@ export default function ProjectDetailPage() {
 
 
 // ── ITEMS SECTION ───────────────────────────────────────────────────────────
-function ItemsSection({ clientId, items, confirmDelete, onViewProofs, onAddItem, onEditItem, onDeleteRequest, onDeleteCancel, onDeleteConfirm }) {
+function ItemsSection({ clientId, project, items, confirmDelete, onViewProofs, onAddItem, onEditItem, onDeleteRequest, onDeleteCancel, onDeleteConfirm }) {
   const navigate = useNavigate()
   return (
     <div className="card">
@@ -312,7 +313,10 @@ function ItemsSection({ clientId, items, confirmDelete, onViewProofs, onAddItem,
             <thead>
               <tr>
                 <th style={{ width: 50 }}>#</th>
-                <th>Name</th>
+                <th style={{ width: 80 }}>Project #</th>
+                <th style={{ width: 80 }}>Product</th>
+                <th>Project Name</th>
+                <th>Item Name</th>
                 <th style={{ width: 120 }}>Scheduled</th>
                 <th style={{ width: 110 }}>Status</th>
                 <th style={{ width: 1 }}></th>
@@ -322,7 +326,7 @@ function ItemsSection({ clientId, items, confirmDelete, onViewProofs, onAddItem,
               {items.map(item => (
                 confirmDelete?.type === 'item' && confirmDelete.id === item.id ? (
                   <tr key={item.id} style={{ background: 'var(--red-bg)' }}>
-                    <td colSpan={4} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
+                    <td colSpan={7} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
                       Delete <strong>{item.item_number} {item.name}</strong>? This cannot be undone.
                     </td>
                     <td style={{ whiteSpace: 'nowrap' }}>
@@ -333,6 +337,9 @@ function ItemsSection({ clientId, items, confirmDelete, onViewProofs, onAddItem,
                 ) : (
                   <tr key={item.id}>
                     <td className="text-mono text-dim">{item.item_number}</td>
+                    <td className="text-mono text-dim">{project?.project_number || '—'}</td>
+                    <td style={{ color: 'var(--text2)', fontSize: 13 }}>{project?.product_type || '—'}</td>
+                    <td style={{ color: 'var(--text2)', fontSize: 13 }}>{project?.name || '—'}</td>
                     <td className="td-main">{item.name}</td>
                     <td className="text-mono text-dim">{item.scheduled_date?.slice(0,10) || '—'}</td>
                     <td><StatusBadge status={item.status} /></td>
