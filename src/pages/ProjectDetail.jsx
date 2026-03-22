@@ -313,9 +313,9 @@ function ItemsSection({ clientId, project, items, confirmDelete, onViewProofs, o
             <thead>
               <tr>
                 <th style={{ width: 50 }}>#</th>
-                <th style={{ width: 80 }}>Project #</th>
-                <th style={{ width: 80 }}>Product</th>
-                <th>Project Name</th>
+                <th style={{ width: 1, whiteSpace: 'nowrap' }}>Project #</th>
+                <th style={{ width: 1, whiteSpace: 'nowrap' }}>Product</th>
+                <th style={{ width: 1, whiteSpace: 'nowrap' }}>Project Name</th>
                 <th>Item Name</th>
                 <th style={{ width: 120 }}>Scheduled</th>
                 <th style={{ width: 110 }}>Status</th>
@@ -337,9 +337,9 @@ function ItemsSection({ clientId, project, items, confirmDelete, onViewProofs, o
                 ) : (
                   <tr key={item.id}>
                     <td className="text-mono text-dim">{item.item_number}</td>
-                    <td className="text-mono text-dim">{project?.project_number || '—'}</td>
-                    <td style={{ color: 'var(--text2)', fontSize: 13 }}>{project?.product_type || '—'}</td>
-                    <td style={{ color: 'var(--text2)', fontSize: 13 }}>{project?.name || '—'}</td>
+                    <td className="text-mono text-dim" style={{ whiteSpace: 'nowrap' }}>{project?.project_number || '—'}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{project?.product_type || '—'}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{project?.name || '—'}</td>
                     <td className="td-main">{item.name}</td>
                     <td className="text-mono text-dim">{item.scheduled_date?.slice(0,10) || '—'}</td>
                     <td><StatusBadge status={item.status} /></td>
