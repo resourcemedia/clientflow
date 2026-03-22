@@ -248,6 +248,7 @@ export default function ProjectDetailPage() {
         {/* Proofs view */}
         {view === 'proofs' && selectedItem && (
           <ProofsSection
+            project={project}
             item={selectedItem}
             proofs={proofsCache[selectedItem.id] || []}
             confirmDelete={confirmDelete}
@@ -368,7 +369,7 @@ function ItemsSection({ clientId, project, items, confirmDelete, onViewProofs, o
 }
 
 // ── PROOFS SECTION ──────────────────────────────────────────────────────────
-function ProofsSection({ item, proofs, confirmDelete, onBack, onAddProof, onViewProof, onEditProof, onDeleteRequest, onDeleteCancel, onDeleteConfirm }) {
+function ProofsSection({ project, item, proofs, confirmDelete, onBack, onAddProof, onViewProof, onEditProof, onDeleteRequest, onDeleteCancel, onDeleteConfirm }) {
   return (
     <div className="card">
       <div className="card-header">
@@ -386,6 +387,8 @@ function ProofsSection({ item, proofs, confirmDelete, onBack, onAddProof, onView
               <tr>
                 <th style={{ width: 70 }}>Version</th>
                 <th style={{ width: 120 }}>Status</th>
+                <th style={{ width: 1, whiteSpace: 'nowrap' }}>Project</th>
+                <th style={{ width: 1, whiteSpace: 'nowrap' }}>Item</th>
                 <th style={{ width: 1 }}></th>
               </tr>
             </thead>
@@ -393,7 +396,7 @@ function ProofsSection({ item, proofs, confirmDelete, onBack, onAddProof, onView
               {proofs.map(proof => (
                 confirmDelete?.type === 'proof' && confirmDelete.id === proof.id ? (
                   <tr key={proof.id} style={{ background: 'var(--red-bg)' }}>
-                    <td colSpan={2} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
+                    <td colSpan={4} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
                       Delete proof <strong>{versionLabel(item.item_number, proof.version)}</strong>? This cannot be undone.
                     </td>
                     <td style={{ whiteSpace: 'nowrap' }}>
@@ -405,6 +408,8 @@ function ProofsSection({ item, proofs, confirmDelete, onBack, onAddProof, onView
                   <tr key={proof.id} onClick={() => onViewProof(proof)} style={{ cursor: 'pointer' }}>
                     <td className="text-mono" style={{ fontWeight: 600 }}>{versionLabel(item.item_number, proof.version)}</td>
                     <td><StatusBadge status={proof.status} /></td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{project?.name || '—'}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{item.item_number} {item.name}</td>
                     <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
                       <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} title="Edit proof" onClick={() => onEditProof(proof)}>✏️</button>
                       <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)' }} title="Delete proof" onClick={() => onDeleteRequest(proof)}>🗑️</button>
