@@ -248,8 +248,6 @@ export default function ProjectDetailPage() {
         {/* Proofs view */}
         {view === 'proofs' && selectedItem && (
           <ProofsSection
-            clientName={clientName}
-            projectLabel={projectLabel}
             item={selectedItem}
             proofs={proofsCache[selectedItem.id] || []}
             confirmDelete={confirmDelete}
@@ -370,21 +368,12 @@ function ItemsSection({ clientId, project, items, confirmDelete, onViewProofs, o
 }
 
 // ── PROOFS SECTION ──────────────────────────────────────────────────────────
-function ProofsSection({ clientName, projectLabel, item, proofs, confirmDelete, onBack, onAddProof, onViewProof, onEditProof, onDeleteRequest, onDeleteCancel, onDeleteConfirm }) {
+function ProofsSection({ item, proofs, confirmDelete, onBack, onAddProof, onViewProof, onEditProof, onDeleteRequest, onDeleteCancel, onDeleteConfirm }) {
   return (
     <div className="card">
       <div className="card-header">
-        <span className="card-title" style={{ fontSize: 13, color: 'var(--text2)', fontWeight: 400 }}>
-          <span style={{ fontWeight: 600, color: 'var(--text)' }}>{clientName}</span>
-          <span style={{ margin: '0 6px', color: 'var(--text3)' }}>|</span>
-          {projectLabel}
-          <span style={{ margin: '0 6px', color: 'var(--text3)' }}>|</span>
-          <span style={{ fontWeight: 600, color: 'var(--text)' }}>{item.item_number} {item.name}</span>
-        </span>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-ghost btn-sm" onClick={onBack}>← Items</button>
-          <button className="btn btn-primary btn-sm" onClick={onAddProof}>+ Add proof</button>
-        </div>
+        <button className="btn btn-ghost btn-sm" onClick={onBack}>← Items</button>
+        <button className="btn btn-primary btn-sm" onClick={onAddProof}>+ Add proof</button>
       </div>
       <div className="table-wrap">
         {proofs.length === 0 ? (
