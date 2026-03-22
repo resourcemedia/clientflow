@@ -411,6 +411,7 @@ function ProofsSection({ project, item, proofs, confirmDelete, onBack, onAddProo
                     <td>{versionLabel(item.item_number, proof.version)}</td>
                     <td><StatusBadge status={proof.status} /></td>
                     <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
+                      <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onViewProof(proof)}>View Proof</button>
                       <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} title="Edit proof" onClick={() => onEditProof(proof)}>✏️</button>
                       <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)' }} title="Delete proof" onClick={() => onDeleteRequest(proof)}>🗑️</button>
                     </td>
