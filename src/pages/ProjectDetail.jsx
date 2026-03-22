@@ -385,10 +385,10 @@ function ProofsSection({ project, item, proofs, confirmDelete, onBack, onAddProo
           <table>
             <thead>
               <tr>
-                <th style={{ width: 70 }}>Version</th>
-                <th style={{ width: 120 }}>Status</th>
                 <th style={{ width: 1, whiteSpace: 'nowrap' }}>Project</th>
                 <th style={{ width: 1, whiteSpace: 'nowrap' }}>Item</th>
+                <th style={{ width: 70 }}>Version</th>
+                <th style={{ width: 120 }}>Status</th>
                 <th style={{ width: 1 }}></th>
               </tr>
             </thead>
@@ -406,10 +406,10 @@ function ProofsSection({ project, item, proofs, confirmDelete, onBack, onAddProo
                   </tr>
                 ) : (
                   <tr key={proof.id} onClick={() => onViewProof(proof)} style={{ cursor: 'pointer' }}>
-                    <td className="text-mono" style={{ fontWeight: 600 }}>{versionLabel(item.item_number, proof.version)}</td>
-                    <td><StatusBadge status={proof.status} /></td>
                     <td style={{ whiteSpace: 'nowrap' }}>{project?.name || '—'}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>{item.item_number} {item.name}</td>
+                    <td className="text-mono" style={{ fontWeight: 600 }}>{versionLabel(item.item_number, proof.version)}</td>
+                    <td><StatusBadge status={proof.status} /></td>
                     <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
                       <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} title="Edit proof" onClick={() => onEditProof(proof)}>✏️</button>
                       <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)' }} title="Delete proof" onClick={() => onDeleteRequest(proof)}>🗑️</button>
