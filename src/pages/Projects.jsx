@@ -313,7 +313,7 @@ function WorkView({
                 </tr>
 
                 {/* Project rows */}
-                {group.projects.map((p, idx) => {
+                {group.projects.map((p) => {
                   const globalIdx = projects.indexOf(p)
                   return confirmDelete === p.id ? (
                     <tr key={p.id} style={{ background: 'var(--red-bg)' }}>
@@ -340,11 +340,12 @@ function WorkView({
                       onDragOver={e => handleDragOver(e, globalIdx)}
                       onDrop={() => handleDrop(globalIdx)}
                       onDragEnd={reset}
+                      onClick={() => onView(p.id)}
                       style={{
                         opacity: dragIdx === globalIdx ? 0.4 : (p.archived ? 0.55 : 1),
                         outline: dragOverIdx === globalIdx && dragIdx !== globalIdx
                           ? '2px solid var(--accent)' : undefined,
-                        cursor: 'default',
+                        cursor: 'pointer',
                       }}
                     >
                       <td style={{
@@ -363,18 +364,18 @@ function WorkView({
                       <td className="td-main">{p.name}</td>
                       <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
                         <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onView(p.id)}>
-                          View
+                          Items
                         </button>
                         {!showArchived && (
-                          <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onEdit(p)}>
-                            Edit
+                          <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} title="Edit project" onClick={() => onEdit(p)}>
+                            ✏️
                           </button>
                         )}
                         <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onArchive(p)}>
                           {p.archived ? 'Restore' : 'Archive'}
                         </button>
-                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)', marginRight: 4 }} onClick={() => onDeleteRequest(p.id)}>
-                          Delete
+                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)', marginRight: 4 }} title="Delete project" onClick={() => onDeleteRequest(p.id)}>
+                          🗑️
                         </button>
                         <button className="btn btn-ghost btn-sm" title="Add new project" onClick={onStartAdd}>
                           +
