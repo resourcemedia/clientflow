@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { DEMO_PROJECTS, DEMO_CLIENTS, PRIORITIES, PROOF_STATUSES, INV_STATUSES, COLLECT_STATUSES } from '../lib/demo-data'
-import { StatusBadge, Modal, EmptyState, StatCard, PillNav, FormGroup, fmt$, Breadcrumb } from '../components/ui'
+import { StatusBadge, Modal, EmptyState, PillNav, FormGroup, fmt$, Breadcrumb } from '../components/ui'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 const PRODUCT_TYPES = ['ST', 'CO', 'DS', 'OH']
@@ -122,7 +122,6 @@ export default function ProjectsPage() {
   const totalEst  = filtered.reduce((s, p) => s + (p.est_amount  || 0), 0)
   const totalOwed = filtered.reduce((s, p) => s + (p.client_owed || 0), 0)
   const totalPaid = filtered.reduce((s, p) => s + (p.client_paid || 0), 0)
-  const openCount = filtered.filter(p => p.inv_status !== 'Paid').length
 
   const TABS = [
     { id: 'work',      label: 'Work view' },
@@ -163,14 +162,7 @@ export default function ProjectsPage() {
       </div>
 
       <div className="page-content">
-        <div className="stat-grid mb-24">
-          <StatCard label={showArchived ? 'Archived projects' : 'Total projects'} value={filtered.length} color="blue" />
-          <StatCard label="Open invoices"   value={openCount}       color="amber"  />
-          <StatCard label="Total estimated" value={fmt$(totalEst)}  color="accent" />
-          <StatCard label="Outstanding"     value={fmt$(totalOwed)} color={totalOwed > 0 ? 'amber' : 'green'} />
-        </div>
-
-        {tab === 'work' ? (
+{tab === 'work' ? (
           <WorkView
             projects={filtered}
             clients={clients}
