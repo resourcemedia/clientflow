@@ -17,6 +17,7 @@ export default function ProjectDetailPage() {
 
   const [project, setProject]   = useState(null)
   const [items, setItems]       = useState([])
+  const [productMap, setProductMap] = useState({}) // { type: name }
   const [loading, setLoading]   = useState(true)
   const [userRole, setUserRole] = useState('manager') // 'manager' | 'team' | 'client' | 'client_team'
 
@@ -43,12 +44,16 @@ export default function ProjectDetailPage() {
 
   async function loadProject() {
     setLoading(true)
-    const [{ data: proj }, { data: itemRows }] = await Promise.all([
+    const [{ data: proj }, { data: itemRows }, { data: productRows }] = await Promise.all([
       supabase.from('projects').select('*, client:clients(id,company,alias)').eq('id', id).single(),
       supabase.from('project_items').select('*').eq('project_id', id).order('sort_order').order('item_number'),
+      supabase.from('products').select('type, name'),
     ])
     setProject(proj)
     setItems(itemRows || [])
+    const map = {}
+    for (const p of (productRows || [])) { if (p.type) map[p.type] = p.name }
+    setProductMap(map)
     setLoading(false)
   }
 
@@ -249,6 +254,7 @@ export default function ProjectDetailPage() {
         {view === 'proofs' && selectedItem && (
           <ProofsSection
             project={project}
+            productMap={productMap}
             item={selectedItem}
             proofs={proofsCache[selectedItem.id] || []}
             confirmDelete={confirmDelete}
@@ -369,7 +375,7 @@ function ItemsSection({ clientId, project, items, confirmDelete, onViewProofs, o
 }
 
 // ── PROOFS SECTION ──────────────────────────────────────────────────────────
-function ProofsSection({ project, item, proofs, confirmDelete, onBack, onAddProof, onViewProof, onEditProof, onDeleteRequest, onDeleteCancel, onDeleteConfirm }) {
+function ProofsSection({ project, productMap, item, proofs, confirmDelete, onBack, onAddProof, onViewProof, onEditProof, onDeleteRequest, onDeleteCancel, onDeleteConfirm }) {
   return (
     <div className="card">
       <div className="card-header">
@@ -409,7 +415,11 @@ function ProofsSection({ project, item, proofs, confirmDelete, onBack, onAddProo
                 ) : (
                   <tr key={proof.id} onClick={() => onViewProof(proof)} style={{ cursor: 'pointer' }}>
                     <td className="text-mono text-dim" style={{ whiteSpace: 'nowrap' }}>{project?.project_number || '—'}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{project?.product_type || '—'}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      {project?.product_type
+                        ? `${project.product_type}${productMap[project.product_type] ? ` | ${productMap[project.product_type]}` : ''}`
+                        : '—'}
+                    </td>
                     <td style={{ whiteSpace: 'nowrap' }}>{project?.name || '—'}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>{item.item_number} {item.name}</td>
                     <td>{versionLabel(item.item_number, proof.version)}</td>
