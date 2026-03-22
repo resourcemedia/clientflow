@@ -385,6 +385,8 @@ function ProofsSection({ project, item, proofs, confirmDelete, onBack, onAddProo
           <table>
             <thead>
               <tr>
+                <th style={{ width: 1, whiteSpace: 'nowrap' }}>#</th>
+                <th style={{ width: 1, whiteSpace: 'nowrap' }}>Product</th>
                 <th style={{ width: 1, whiteSpace: 'nowrap' }}>Project</th>
                 <th style={{ width: 1, whiteSpace: 'nowrap' }}>Item</th>
                 <th style={{ width: 70 }}>Version</th>
@@ -396,7 +398,7 @@ function ProofsSection({ project, item, proofs, confirmDelete, onBack, onAddProo
               {proofs.map(proof => (
                 confirmDelete?.type === 'proof' && confirmDelete.id === proof.id ? (
                   <tr key={proof.id} style={{ background: 'var(--red-bg)' }}>
-                    <td colSpan={4} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
+                    <td colSpan={6} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
                       Delete proof <strong>{versionLabel(item.item_number, proof.version)}</strong>? This cannot be undone.
                     </td>
                     <td style={{ whiteSpace: 'nowrap' }}>
@@ -406,6 +408,8 @@ function ProofsSection({ project, item, proofs, confirmDelete, onBack, onAddProo
                   </tr>
                 ) : (
                   <tr key={proof.id} onClick={() => onViewProof(proof)} style={{ cursor: 'pointer' }}>
+                    <td className="text-mono text-dim" style={{ whiteSpace: 'nowrap' }}>{project?.project_number || '—'}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{project?.product_type || '—'}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>{project?.name || '—'}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>{item.item_number} {item.name}</td>
                     <td>{versionLabel(item.item_number, proof.version)}</td>
