@@ -348,6 +348,9 @@ function ItemsSection({ clientId, project, items, confirmDelete, onViewProofs, o
                     </td>
                     <td><StatusBadge status={item.status} /></td>
                     <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
+                      <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onViewProofs(item)}>
+                        Proofs
+                      </button>
                       <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} title="Edit item" onClick={() => onEditItem(item)}>
                         ✏️
                       </button>
