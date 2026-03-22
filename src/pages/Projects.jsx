@@ -237,6 +237,7 @@ function WorkView({
   onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm,
   onView, onReorder, onStartAdd, onAddSave, onAddKeyDown,
 }) {
+  const navigate = useNavigate()
   const [dragIdx, setDragIdx]         = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
 
@@ -285,7 +286,9 @@ function WorkView({
   return (
     <div className="card">
       <div className="card-header">
-        <span className="card-title">{showArchived ? 'Archived projects' : 'All projects'}</span>
+        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/clients')}>
+          ← Clients
+        </button>
       </div>
       <div className="table-wrap">
         <table>
