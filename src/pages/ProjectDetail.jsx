@@ -239,6 +239,7 @@ export default function ProjectDetailPage() {
           <ItemsSection
             clientId={project.client?.id || project.client_id}
             project={project}
+            productMap={productMap}
             items={items}
             confirmDelete={confirmDelete}
             onViewProofs={handleViewProofs}
@@ -295,7 +296,7 @@ export default function ProjectDetailPage() {
 
 
 // ── ITEMS SECTION ───────────────────────────────────────────────────────────
-function ItemsSection({ clientId, project, items, confirmDelete, onViewProofs, onAddItem, onEditItem, onDeleteRequest, onDeleteCancel, onDeleteConfirm }) {
+function ItemsSection({ clientId, project, productMap, items, confirmDelete, onViewProofs, onAddItem, onEditItem, onDeleteRequest, onDeleteCancel, onDeleteConfirm }) {
   const navigate = useNavigate()
   return (
     <div className="card">
@@ -343,7 +344,11 @@ function ItemsSection({ clientId, project, items, confirmDelete, onViewProofs, o
                   <tr key={item.id} onClick={() => onViewProofs(item)} style={{ cursor: 'pointer' }}>
                     <td className="text-mono text-dim">{item.item_number}</td>
                     <td className="text-mono text-dim" style={{ whiteSpace: 'nowrap' }}>{project?.project_number || '—'}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{project?.product_type || '—'}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      {project?.product_type
+                        ? `${project.product_type}${productMap[project.product_type] ? ` | ${productMap[project.product_type]}` : ''}`
+                        : '—'}
+                    </td>
                     <td style={{ whiteSpace: 'nowrap' }}>{project?.name || '—'}</td>
                     <td className="td-main">{item.name}</td>
                     <td className="text-mono text-dim">
