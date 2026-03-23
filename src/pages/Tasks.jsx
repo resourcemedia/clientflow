@@ -24,9 +24,10 @@ function fmtUpdated(updatedAt, updaterName) {
   return `${mo}/${dy}/${yr}${by}`
 }
 
-function productLabel(project) {
-  if (!project?.product) return '—'
-  return `${project.product.type} | ${project.product.name}`
+function productLabel(project, productMap) {
+  if (!project?.product_type) return '—'
+  const name = productMap?.[project.product_type]
+  return name ? `${project.product_type} | ${name}` : project.product_type
 }
 
 function clientLabel(project) {
@@ -60,7 +61,7 @@ function DragHandle() {
 }
 
 // ── EXISTING TASK ROW ─────────────────────────────────────────────────────────
-function TaskRow({ task, idx, profiles, projects, onSave, onAddBelow, onDragStart, onDragOver, onDrop, isDragging, isDragTarget }) {
+function TaskRow({ task, idx, profiles, projects, productMap, onSave, onAddBelow, onDelete, onDragStart, onDragOver, onDrop, isDragging, isDragTarget }) {
   const [editField, setEditField]   = useState(null)
   const [noteVal,   setNoteVal]     = useState(task.note || '')
   const [snoteVal,  setSnoteVal]    = useState(task.status_note || '')
@@ -130,7 +131,7 @@ function TaskRow({ task, idx, profiles, projects, onSave, onAddBelow, onDragStar
 
       {/* product */}
       <td style={{ whiteSpace: 'nowrap', color: 'var(--text3)', fontSize: 12 }}>
-        {productLabel(task.project)}
+        {productLabel(task.project, productMap)}
       </td>
 
       {/* project */}
@@ -232,18 +233,18 @@ function TaskRow({ task, idx, profiles, projects, onSave, onAddBelow, onDragStar
         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
           <button
             className="btn btn-ghost btn-icon btn-sm"
-            onClick={toggleDone}
-            title={task.status === 'Done' ? 'Mark Open' : 'Mark Done'}
-            style={{ color: task.status === 'Done' ? 'var(--green)' : 'var(--text3)' }}
-          >
-            <CheckIcon done={task.status === 'Done'} />
-          </button>
-          <button
-            className="btn btn-ghost btn-icon btn-sm"
             onClick={onAddBelow}
             title="Add task below"
             style={{ color: 'var(--text3)' }}
           >+</button>
+          <button
+            className="btn btn-ghost btn-icon btn-sm"
+            onClick={() => onDelete(task.id)}
+            title="Delete task"
+            style={{ color: 'var(--red)' }}
+          >
+            <TrashIcon />
+          </button>
         </div>
       </td>
     </tr>
@@ -378,6 +379,15 @@ function CheckIcon({ done }) {
     : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/></svg>
 }
 
+function TrashIcon() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="3 6 5 6 21 6"/>
+    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+    <path d="M10 11v6M14 11v6"/>
+    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+  </svg>
+}
+
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 export default function TasksPage() {
   const navigate = useNavigate()
@@ -388,20 +398,20 @@ export default function TasksPage() {
   const [statusFilter, setStatusFilter] = useState('Open')
   const [newRows,      setNewRows]      = useState([])
   const [dragIdx,      setDragIdx]      = useState(null)
+  const [productMap,   setProductMap]   = useState({})
   const dragOver = useRef(null)
 
   useEffect(() => { load() }, [])
 
   async function load() {
     setLoading(true)
-    const [{ data: taskRows }, { data: projectRows }, { data: profileRows }] = await Promise.all([
+    const [{ data: taskRows }, { data: projectRows }, { data: profileRows }, { data: productRows }] = await Promise.all([
       supabase
         .from('tasks')
         .select(`
           *,
           project:projects(id, name, product_type,
-            client:clients(company, alias),
-            product:products(name, type)
+            client:clients(company, alias)
           ),
           updater:profiles!tasks_updated_by_fkey(name)
         `)
@@ -416,10 +426,17 @@ export default function TasksPage() {
         .from('profiles')
         .select('id, name, role')
         .order('name'),
+      supabase
+        .from('products')
+        .select('type, name')
+        .order('order_num', { nullsFirst: false }),
     ])
     setTasks(taskRows || [])
     setProjects(projectRows || [])
     setProfiles(profileRows || [])
+    const map = {}
+    ;(productRows || []).forEach(p => { if (p.type) map[p.type] = p.name })
+    setProductMap(map)
     setLoading(false)
   }
 
@@ -437,8 +454,7 @@ export default function TasksPage() {
       .select(`
         *,
         project:projects(id, name, product_type,
-          client:clients(company, alias),
-          product:products(name, type)
+          client:clients(company, alias)
         ),
         updater:profiles!tasks_updated_by_fkey(name)
       `)
@@ -454,14 +470,19 @@ export default function TasksPage() {
       .select(`
         *,
         project:projects(id, name, product_type,
-          client:clients(company, alias),
-          product:products(name, type)
+          client:clients(company, alias)
         ),
         updater:profiles!tasks_updated_by_fkey(name)
       `)
       .single()
     if (data) setTasks(ts => [...ts, data])
     return data
+  }
+
+  // ── DELETE ─────────────────────────────────────────────────────────────────
+  async function deleteTask(taskId) {
+    await supabase.from('tasks').delete().eq('id', taskId)
+    setTasks(ts => ts.filter(t => t.id !== taskId))
   }
 
   // ── INLINE ADD ─────────────────────────────────────────────────────────────
@@ -582,8 +603,10 @@ export default function TasksPage() {
                         idx={idx}
                         profiles={profiles}
                         projects={projects}
+                        productMap={productMap}
                         onSave={saveTask}
                         onAddBelow={() => addRowAfter(task)}
+                        onDelete={deleteTask}
                         isDragging={dragIdx === idx}
                         isDragTarget={dragOver.current === idx && dragIdx !== null && dragIdx !== idx}
                         onDragStart={() => handleDragStart(idx)}
