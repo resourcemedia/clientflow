@@ -421,9 +421,9 @@ export default function ProjectsPage() {
       setClients(DEMO_CLIENTS)
     } else {
       const [{ data: p }, { data: c }, { data: prods }, { data: profs }] = await Promise.all([
-        supabase.from('projects').select('*, client:clients(company,alias)').order('sort_order', { ascending: true, nullsFirst: false }).order('project_number', { ascending: false }),
+        supabase.from('projects').select('*, client:clients(company,alias), product:products(id,type,name)').order('sort_order', { ascending: true, nullsFirst: false }).order('project_number', { ascending: false }),
         supabase.from('clients').select('id, company, alias').eq('status','active').order('company'),
-        supabase.from('products').select('type, name').order('order_num', { nullsFirst: false }),
+        supabase.from('products').select('id, type, name').order('order_num', { nullsFirst: false }),
         supabase.from('profiles').select('id, name').order('name'),
       ])
       setProjects(p || [])
@@ -828,9 +828,9 @@ function WorkView({
                         <td className="text-mono text-dim">{p.project_number}</td>
                         <td style={{ color: 'var(--text2)', fontSize: 13 }}>{p.client?.company || '—'}</td>
                         <td style={{ color: 'var(--text2)', fontSize: 13, whiteSpace: 'nowrap' }}>
-                          {p.product_type
-                            ? `${p.product_type}${productMap[p.product_type] ? ` | ${productMap[p.product_type]}` : ''}`
-                            : '—'}
+                          {p.product
+                            ? `${p.product.type}${p.product.name ? ` | ${p.product.name}` : ''}`
+                            : p.product_type || '—'}
                         </td>
                         <td className="td-main">{p.name}</td>
                         <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
@@ -1001,7 +1001,8 @@ function ProjectModal({ project, clients, projects, products, onClose, onSaved }
     project_number: project?.project_number ?? '',
     name:           project?.name           || '',
     client_id:      project?.client_id      || (clients[0]?.id || ''),
-    product_type:   project?.product_type   || 'CO',
+    product_id:     project?.product_id      || '',
+    product_type:   project?.product_type   || '',
     priority:       project?.priority       || 'Normal',
     area:           project?.area           || '',
     est_status:     project?.est_status     || 'Open',
@@ -1038,6 +1039,7 @@ function ProjectModal({ project, clients, projects, products, onClose, onSaved }
     const payload = { ...form }
     NUMERIC.forEach(k => { payload[k] = payload[k] === '' ? null : Number(payload[k]) })
     if (!payload.client_id)  payload.client_id  = null
+    if (!payload.product_id) payload.product_id = null
     if (!payload.start_date) payload.start_date = null
     if (!payload.end_date)   payload.end_date   = null
 
@@ -1084,10 +1086,10 @@ function ProjectModal({ project, clients, projects, products, onClose, onSaved }
           </select>
         </FormGroup>
         <FormGroup label="Product">
-          <select value={form.product_type} onChange={set('product_type')}>
+          <select value={form.product_id} onChange={set('product_id')}>
             <option value="">— Select product —</option>
             {products.map(p => (
-              <option key={p.type} value={p.type}>
+              <option key={p.id} value={p.id}>
                 {p.type}{p.name ? ` | ${p.name}` : ''}
               </option>
             ))}
