@@ -1,16 +1,397 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { DEMO_PROJECTS, DEMO_CLIENTS, PRIORITIES, PROOF_STATUSES, INV_STATUSES, COLLECT_STATUSES } from '../lib/demo-data'
-import { StatusBadge, Modal, EmptyState, PillNav, FormGroup, fmt$, Breadcrumb } from '../components/ui'
+import { StatusBadge, Modal, EmptyState, PillNav, FormGroup, fmt$, initials } from '../components/ui'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 const PRODUCT_TYPES = ['ST', 'CO', 'DS', 'OH']
+
+// ── SHARED HELPERS ───────────────────────────────────────────────────────
+function Avatar({ name, size = 26 }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%',
+      background: 'var(--accent)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: size * 0.42, fontWeight: 600, color: '#fff',
+      flexShrink: 0, userSelect: 'none',
+    }}>
+      {initials(name)}
+    </div>
+  )
+}
+
+function DragDots() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" style={{ color: 'var(--text3)', cursor: 'grab' }}>
+      <circle cx="3.5" cy="2.5" r="1.1"/><circle cx="8.5" cy="2.5" r="1.1"/>
+      <circle cx="3.5" cy="6"   r="1.1"/><circle cx="8.5" cy="6"   r="1.1"/>
+      <circle cx="3.5" cy="9.5" r="1.1"/><circle cx="8.5" cy="9.5" r="1.1"/>
+    </svg>
+  )
+}
+
+function CheckIcon({ done }) {
+  return done
+    ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+    : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/></svg>
+}
+
+function fmtUpdated(updatedAt, updaterName) {
+  if (!updatedAt) return ''
+  const d  = new Date(updatedAt)
+  const mo = d.getMonth() + 1
+  const dy = d.getDate()
+  const yr = String(d.getFullYear()).slice(2)
+  const by = updaterName ? ` by ${initials(updaterName)}` : ''
+  return `${mo}/${dy}/${yr}${by}`
+}
+
+// ── DRAWER TASK ROW ──────────────────────────────────────────────────────
+function DrawerTaskRow({ task, profiles, onSave, onAdd, onDragStart, onDragOver, onDrop, isDragging, isDragTarget }) {
+  const [editField, setEditField] = useState(null)
+  const [noteVal,   setNoteVal]   = useState(task.note || '')
+  const [snoteVal,  setSnoteVal]  = useState(task.status_note || '')
+  const [assignOpen, setAssignOpen] = useState(false)
+  const assignRef = useRef(null)
+
+  useEffect(() => {
+    if (!assignOpen) return
+    function handleClick(e) {
+      if (assignRef.current && !assignRef.current.contains(e.target)) setAssignOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [assignOpen])
+
+  function commitNote() {
+    setEditField(null)
+    if (noteVal.trim() !== (task.note || '').trim()) onSave(task.id, { note: noteVal.trim() })
+  }
+
+  function commitStatusNote() {
+    setEditField(null)
+    if (snoteVal.trim() !== (task.status_note || '').trim()) onSave(task.id, { status_note: snoteVal.trim() })
+  }
+
+  const assignee = profiles.find(p => p.id === task.assigned_to)
+
+  return (
+    <tr
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      style={{
+        opacity: isDragging ? 0.4 : 1,
+        background: isDragTarget ? 'var(--accent-glow)' : undefined,
+        transition: 'background 0.1s',
+      }}
+    >
+      {/* drag handle */}
+      <td style={{ padding: '7px 4px 7px 12px', width: 24, cursor: 'grab' }}>
+        <DragDots />
+      </td>
+
+      {/* add below */}
+      <td style={{ width: 22, padding: '7px 0' }}>
+        <button
+          className="btn btn-ghost btn-icon btn-sm"
+          title="Add task below"
+          onClick={e => { e.stopPropagation(); onAdd() }}
+          style={{ color: 'var(--text3)', padding: '1px 4px', fontSize: 14 }}
+        >+</button>
+      </td>
+
+      {/* task text */}
+      <td className="td-main" style={{ minWidth: 140 }}>
+        {editField === 'note' ? (
+          <input
+            autoFocus
+            value={noteVal}
+            onChange={e => setNoteVal(e.target.value)}
+            onBlur={commitNote}
+            onKeyDown={e => { if (e.key === 'Enter') commitNote(); if (e.key === 'Escape') { setNoteVal(task.note || ''); setEditField(null) } }}
+            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
+          />
+        ) : (
+          <span
+            onClick={() => { setNoteVal(task.note || ''); setEditField('note') }}
+            style={{ cursor: 'text', display: 'block', minHeight: 20 }}
+          >
+            {task.note || <span style={{ color: 'var(--text3)' }}>Click to add…</span>}
+          </span>
+        )}
+      </td>
+
+      {/* status note */}
+      <td style={{ minWidth: 120 }}>
+        {editField === 'status_note' ? (
+          <input
+            autoFocus
+            value={snoteVal}
+            onChange={e => setSnoteVal(e.target.value)}
+            onBlur={commitStatusNote}
+            onKeyDown={e => { if (e.key === 'Enter') commitStatusNote(); if (e.key === 'Escape') { setSnoteVal(task.status_note || ''); setEditField(null) } }}
+            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
+          />
+        ) : (
+          <span
+            onClick={() => { setSnoteVal(task.status_note || ''); setEditField('status_note') }}
+            style={{ cursor: 'text', display: 'block', minHeight: 20, color: task.status_note ? 'var(--text2)' : 'var(--text3)', fontSize: 13 }}
+          >
+            {task.status_note || 'Add note…'}
+          </span>
+        )}
+      </td>
+
+      {/* assigned */}
+      <td style={{ position: 'relative' }} ref={assignRef}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          {assignee
+            ? <Avatar name={assignee.name} size={24} />
+            : <div style={{ width: 24, height: 24, borderRadius: '50%', border: '1.5px dashed var(--border2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: 13 }}>?</div>
+          }
+          <button
+            className="btn btn-ghost btn-icon btn-sm"
+            onClick={e => { e.stopPropagation(); setAssignOpen(v => !v) }}
+            style={{ padding: '1px 3px', fontSize: 13, lineHeight: 1, color: 'var(--text3)' }}
+          >+</button>
+        </div>
+        {assignOpen && (
+          <div style={{
+            position: 'absolute', top: '100%', left: 0, zIndex: 200,
+            background: 'var(--bg2)', border: '1px solid var(--border)',
+            borderRadius: 8, boxShadow: 'var(--shadow-lg)',
+            minWidth: 150, padding: '4px 0',
+          }}>
+            <div
+              onClick={() => { onSave(task.id, { assigned_to: null }); setAssignOpen(false) }}
+              style={{ padding: '7px 12px', cursor: 'pointer', fontSize: 13, color: 'var(--text3)' }}
+            >— Unassigned</div>
+            {profiles.map(p => (
+              <div
+                key={p.id}
+                onClick={() => { onSave(task.id, { assigned_to: p.id }); setAssignOpen(false) }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '6px 12px', cursor: 'pointer', fontSize: 13,
+                  background: p.id === task.assigned_to ? 'var(--accent-glow)' : undefined,
+                  color: p.id === task.assigned_to ? 'var(--accent2)' : 'var(--text2)',
+                }}
+              >
+                <Avatar name={p.name} size={20} />
+                {p.name}
+              </div>
+            ))}
+          </div>
+        )}
+      </td>
+
+      {/* updated */}
+      <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--text3)', whiteSpace: 'nowrap' }}>
+        {fmtUpdated(task.updated_at, task.updater?.name)}
+      </td>
+
+      {/* done toggle */}
+      <td style={{ padding: '7px 10px 7px 4px' }}>
+        <button
+          className="btn btn-ghost btn-icon btn-sm"
+          onClick={e => { e.stopPropagation(); onSave(task.id, { status: task.status === 'Done' ? 'Open' : 'Done' }) }}
+          title={task.status === 'Done' ? 'Mark Open' : 'Mark Done'}
+          style={{ color: task.status === 'Done' ? 'var(--green)' : 'var(--text3)' }}
+        >
+          <CheckIcon done={task.status === 'Done'} />
+        </button>
+      </td>
+    </tr>
+  )
+}
+
+// ── TASK DRAWER ──────────────────────────────────────────────────────────
+function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onReorder }) {
+  const [dragIdx,    setDragIdx]    = useState(null)
+  const [dragOverIdx, setDragOverIdx] = useState(null)
+  const [addingRow,  setAddingRow]  = useState(null) // null | { note, status_note, assigned_to }
+  const addInputRef = useRef(null)
+
+  useEffect(() => {
+    if (addingRow !== null) addInputRef.current?.focus()
+  }, [addingRow])
+
+  function startAdd() {
+    setAddingRow({ note: '', status_note: '', assigned_to: null })
+  }
+
+  async function commitAdd() {
+    const note = addingRow?.note?.trim()
+    if (!note) { setAddingRow(null); return }
+    await onAddTask(projectId, {
+      note,
+      status_note: addingRow.status_note?.trim() || null,
+      assigned_to: addingRow.assigned_to || null,
+    })
+    setAddingRow(null)
+  }
+
+  function handleDragStart(e, idx) {
+    e.dataTransfer.effectAllowed = 'move'
+    setDragIdx(idx)
+  }
+
+  function handleDragOver(e, idx) {
+    e.preventDefault()
+    setDragOverIdx(idx)
+  }
+
+  function handleDrop(toIdx) {
+    if (dragIdx === null || dragIdx === toIdx) { setDragIdx(null); setDragOverIdx(null); return }
+    const reordered = [...tasks]
+    const [moved] = reordered.splice(dragIdx, 1)
+    reordered.splice(toIdx, 0, moved)
+    onReorder(projectId, reordered)
+    setDragIdx(null)
+    setDragOverIdx(null)
+  }
+
+  const [assignOpen, setAssignOpen] = useState(false)
+  const addAssignRef = useRef(null)
+  const addAssignee  = profiles.find(p => p.id === addingRow?.assigned_to)
+
+  useEffect(() => {
+    if (!assignOpen) return
+    function handleClick(e) {
+      if (addAssignRef.current && !addAssignRef.current.contains(e.target)) setAssignOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [assignOpen])
+
+  return (
+    <div style={{ background: 'var(--bg3)', borderTop: '2px solid var(--border2)' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr style={{ background: 'var(--bg3)' }}>
+            <th style={{ width: 24, padding: '6px 4px 6px 12px' }} />
+            <th style={{ width: 22, padding: '6px 0' }} />
+            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)' }}>Task</th>
+            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)' }}>Note</th>
+            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)' }}>Assigned</th>
+            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)' }}>Updated</th>
+            <th style={{ width: 40 }} />
+          </tr>
+        </thead>
+        <tbody>
+          {tasks.length === 0 && addingRow === null && (
+            <tr>
+              <td colSpan={7} style={{ padding: '12px 16px', color: 'var(--text3)', fontSize: 13 }}>
+                No tasks yet.
+              </td>
+            </tr>
+          )}
+          {tasks.map((task, idx) => (
+            <DrawerTaskRow
+              key={task.id}
+              task={task}
+              profiles={profiles}
+              onSave={(taskId, updates) => onSaveTask(projectId, taskId, updates)}
+              onAdd={() => setAddingRow({ note: '', status_note: '', assigned_to: null })}
+              isDragging={dragIdx === idx}
+              isDragTarget={dragOverIdx === idx && dragIdx !== null && dragIdx !== idx}
+              onDragStart={e => handleDragStart(e, idx)}
+              onDragOver={e => handleDragOver(e, idx)}
+              onDrop={() => handleDrop(idx)}
+            />
+          ))}
+
+          {/* inline add row */}
+          {addingRow !== null && (
+            <tr style={{ background: 'var(--accent-glow)' }}>
+              <td style={{ padding: '7px 4px 7px 12px', width: 24 }} />
+              <td style={{ width: 22 }} />
+              <td className="td-main">
+                <input
+                  ref={addInputRef}
+                  value={addingRow.note}
+                  onChange={e => setAddingRow(r => ({ ...r, note: e.target.value }))}
+                  placeholder="Task description…"
+                  onKeyDown={e => { if (e.key === 'Enter') commitAdd(); if (e.key === 'Escape') setAddingRow(null) }}
+                  style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
+                />
+              </td>
+              <td>
+                <input
+                  value={addingRow.status_note}
+                  onChange={e => setAddingRow(r => ({ ...r, status_note: e.target.value }))}
+                  placeholder="Note…"
+                  onKeyDown={e => { if (e.key === 'Enter') commitAdd(); if (e.key === 'Escape') setAddingRow(null) }}
+                  style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
+                />
+              </td>
+              <td style={{ position: 'relative' }} ref={addAssignRef}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  {addAssignee
+                    ? <Avatar name={addAssignee.name} size={24} />
+                    : <div style={{ width: 24, height: 24, borderRadius: '50%', border: '1.5px dashed var(--border2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: 13 }}>?</div>
+                  }
+                  <button
+                    className="btn btn-ghost btn-icon btn-sm"
+                    onClick={() => setAssignOpen(v => !v)}
+                    style={{ padding: '1px 3px', fontSize: 13, lineHeight: 1, color: 'var(--text3)' }}
+                  >+</button>
+                </div>
+                {assignOpen && (
+                  <div style={{
+                    position: 'absolute', top: '100%', left: 0, zIndex: 200,
+                    background: 'var(--bg2)', border: '1px solid var(--border)',
+                    borderRadius: 8, boxShadow: 'var(--shadow-lg)',
+                    minWidth: 150, padding: '4px 0',
+                  }}>
+                    {profiles.map(p => (
+                      <div
+                        key={p.id}
+                        onClick={() => { setAddingRow(r => ({ ...r, assigned_to: p.id })); setAssignOpen(false) }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 13, color: 'var(--text2)' }}
+                      >
+                        <Avatar name={p.name} size={20} />
+                        {p.name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </td>
+              <td />
+              <td style={{ padding: '7px 10px 7px 4px', whiteSpace: 'nowrap' }}>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button className="btn btn-primary btn-sm" onClick={commitAdd}>Save</button>
+                  <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setAddingRow(null)} style={{ color: 'var(--text3)' }}>✕</button>
+                </div>
+              </td>
+            </tr>
+          )}
+
+          {/* add task button */}
+          <tr>
+            <td colSpan={7} style={{ padding: '8px 12px', borderTop: '1px solid var(--border)' }}>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={startAdd}
+                style={{ color: 'var(--text3)', fontSize: 12 }}
+              >+ Add task</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  )
+}
 
 export default function ProjectsPage() {
   const [projects, setProjects]           = useState([])
   const [clients, setClients]             = useState([])
   const [productMap, setProductMap]       = useState({}) // { type: name }
+  const [profiles, setProfiles]           = useState([])
   const [loading, setLoading]             = useState(true)
   const [tab, setTab]                     = useState('work')
   const [editProject, setEditProject]     = useState(null)
@@ -20,6 +401,9 @@ export default function ProjectsPage() {
   const [searchParams]                    = useSearchParams()
   const [clientFilter, setClientFilter]   = useState(searchParams.get('client') || '')
   const [addingRow, setAddingRow]         = useState(null) // null | { client_id, name, product_type }
+  const [expandedRows, setExpandedRows]   = useState({}) // { [projectId]: true }
+  const [projectTasks, setProjectTasks]   = useState({}) // { [projectId]: Task[] }
+  const [loadedProjects, setLoadedProjects] = useState(new Set())
   const addInputRef = useRef(null)
   const navigate = useNavigate()
 
@@ -35,18 +419,71 @@ export default function ProjectsPage() {
       setProjects(DEMO_PROJECTS)
       setClients(DEMO_CLIENTS)
     } else {
-      const [{ data: p }, { data: c }, { data: prods }] = await Promise.all([
+      const [{ data: p }, { data: c }, { data: prods }, { data: profs }] = await Promise.all([
         supabase.from('projects').select('*, client:clients(company,alias)').order('sort_order', { ascending: true, nullsFirst: false }).order('project_number', { ascending: false }),
         supabase.from('clients').select('id, company, alias').eq('status','active').order('company'),
         supabase.from('products').select('type, name').order('order_num', { nullsFirst: false }),
+        supabase.from('profiles').select('id, name').order('name'),
       ])
       setProjects(p || [])
       setClients(c || [])
+      setProfiles(profs || [])
       const map = {}
       ;(prods || []).forEach(prod => { if (prod.type) map[prod.type] = prod.name })
       setProductMap(map)
     }
     setLoading(false)
+  }
+
+  async function toggleExpand(projectId) {
+    const isOpen = expandedRows[projectId]
+    setExpandedRows(prev => ({ ...prev, [projectId]: !isOpen }))
+    if (!isOpen && !loadedProjects.has(projectId) && !isDemo) {
+      const { data } = await supabase
+        .from('tasks')
+        .select('*, updater:profiles!tasks_updated_by_fkey(name)')
+        .eq('project_id', projectId)
+        .order('sort_order')
+        .order('created_at')
+      setProjectTasks(prev => ({ ...prev, [projectId]: data || [] }))
+      setLoadedProjects(prev => new Set([...prev, projectId]))
+    }
+  }
+
+  async function saveProjectTask(projectId, taskId, updates) {
+    if (isDemo) return
+    const { data } = await supabase
+      .from('tasks')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', taskId)
+      .select('*, updater:profiles!tasks_updated_by_fkey(name)')
+      .single()
+    if (data) setProjectTasks(prev => ({
+      ...prev,
+      [projectId]: (prev[projectId] || []).map(t => t.id === taskId ? data : t),
+    }))
+  }
+
+  async function addProjectTask(projectId, payload) {
+    if (isDemo) return
+    const tasks = projectTasks[projectId] || []
+    const maxOrder = tasks.reduce((m, t) => Math.max(m, t.sort_order || 0), 0)
+    const { data } = await supabase
+      .from('tasks')
+      .insert({ ...payload, project_id: projectId, status: 'Open', sort_order: maxOrder + 1 })
+      .select('*, updater:profiles!tasks_updated_by_fkey(name)')
+      .single()
+    if (data) setProjectTasks(prev => ({
+      ...prev,
+      [projectId]: [...(prev[projectId] || []), data],
+    }))
+  }
+
+  function reorderProjectTasks(projectId, reordered) {
+    setProjectTasks(prev => ({ ...prev, [projectId]: reordered }))
+    reordered.forEach((t, i) => {
+      supabase.from('tasks').update({ sort_order: i }).eq('id', t.id).then(() => {})
+    })
   }
 
   async function handleArchive(project) {
@@ -131,10 +568,11 @@ export default function ProjectsPage() {
   return (
     <div className="fade-in">
       <div className="topbar">
-        <Breadcrumb segments={[
-          { label: 'Dashboard', onClick: () => navigate('/') },
-          { label: 'Projects' },
-        ]} />
+        <div className="breadcrumb">
+          <button className="breadcrumb-link" onClick={() => navigate('/clients')}>← Clients</button>
+          <span className="breadcrumb-sep">|</span>
+          <span className="breadcrumb-current">Projects</span>
+        </div>
         <PillNav tabs={TABS} active={tab} onChange={setTab} />
         <select
           value={clientFilter}
@@ -167,6 +605,7 @@ export default function ProjectsPage() {
             projects={filtered}
             clients={clients}
             productMap={productMap}
+            profiles={profiles}
             loading={loading}
             showArchived={showArchived}
             confirmDelete={confirmDelete}
@@ -174,6 +613,12 @@ export default function ProjectsPage() {
             setAddingRow={setAddingRow}
             addInputRef={addInputRef}
             clientFilter={clientFilter}
+            expandedRows={expandedRows}
+            projectTasks={projectTasks}
+            onToggleExpand={toggleExpand}
+            onSaveTask={saveProjectTask}
+            onAddTask={addProjectTask}
+            onReorderTasks={reorderProjectTasks}
             onEdit={p => setEditProject(p)}
             onArchive={handleArchive}
             onDeleteRequest={id => setConfirmDelete(id)}
@@ -224,12 +669,12 @@ function groupByClient(projects) {
 
 // ── WORK VIEW ───────────────────────────────────────────────────────────
 function WorkView({
-  projects, clients, productMap, loading, showArchived, confirmDelete,
+  projects, clients, productMap, profiles, loading, showArchived, confirmDelete,
   addingRow, setAddingRow, addInputRef, clientFilter,
+  expandedRows, projectTasks, onToggleExpand, onSaveTask, onAddTask, onReorderTasks,
   onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm,
   onView, onReorder, onStartAdd, onAddSave, onAddKeyDown,
 }) {
-  const navigate = useNavigate()
   const [dragIdx, setDragIdx]         = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
 
@@ -254,6 +699,10 @@ function WorkView({
 
   function reset() { setDragIdx(null); setDragOverIdx(null) }
 
+  const clientName = clientFilter
+    ? clients.find(c => c.id === clientFilter)?.company || ''
+    : ''
+
   if (loading) return <div className="card"><div className="empty-state text-dim">Loading…</div></div>
 
   if (projects.length === 0 && addingRow === null) {
@@ -277,25 +726,25 @@ function WorkView({
 
   return (
     <div className="card">
-      <div className="card-header">
-        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/clients')}>
-          ← Clients
-        </button>
-      </div>
+      {clientName && (
+        <div className="card-header">
+          <span className="breadcrumb-current">{clientName}</span>
+        </div>
+      )}
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
-              <th style={{ width: 24 }}></th>
+              <th style={{ width: 28 }}></th>{/* toggle */}
+              <th style={{ width: 24 }}></th>{/* drag */}
               <th>#</th><th>Client</th><th>Product</th><th>Project</th><th></th>
             </tr>
           </thead>
-          <tbody>
-            {groups.map(group => (
-              <>
+          {groups.map(group => (
+              <tbody key={`group-${group.name}`}>
                 {/* Client group header */}
-                <tr key={`group-${group.name}`} style={{ background: 'var(--bg3)', pointerEvents: 'none' }}>
-                  <td colSpan={6} style={{
+                <tr style={{ background: 'var(--bg3)', pointerEvents: 'none' }}>
+                  <td colSpan={7} style={{
                     padding: '7px 16px',
                     fontSize: 11,
                     fontWeight: 600,
@@ -309,82 +758,125 @@ function WorkView({
 
                 {/* Project rows */}
                 {group.projects.map((p) => {
-                  const globalIdx = projects.indexOf(p)
+                  const globalIdx  = projects.indexOf(p)
+                  const isExpanded = expandedRows[p.id]
+                  const tasks      = projectTasks[p.id] || []
+
                   return confirmDelete === p.id ? (
-                    <tr key={p.id} style={{ background: 'var(--red-bg)' }}>
-                      <td></td>
-                      <td colSpan={4} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
-                        Delete <strong>{p.name}</strong>? This cannot be undone.
-                      </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <button
-                          className="btn btn-sm"
-                          style={{ background: 'var(--red)', color: '#fff', marginRight: 6 }}
-                          onClick={() => onDeleteConfirm(p.id)}
-                        >
-                          Delete
-                        </button>
-                        <button className="btn btn-ghost btn-sm" onClick={onDeleteCancel}>Cancel</button>
-                      </td>
-                    </tr>
-                  ) : (
-                    <tr
-                      key={p.id}
-                      draggable
-                      onDragStart={e => handleDragStart(e, globalIdx)}
-                      onDragOver={e => handleDragOver(e, globalIdx)}
-                      onDrop={() => handleDrop(globalIdx)}
-                      onDragEnd={reset}
-                      onClick={() => onView(p.id)}
-                      style={{
-                        opacity: dragIdx === globalIdx ? 0.4 : (p.archived ? 0.55 : 1),
-                        outline: dragOverIdx === globalIdx && dragIdx !== globalIdx
-                          ? '2px solid var(--accent)' : undefined,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <td style={{
-                        cursor: 'grab', color: 'var(--text3)',
-                        fontSize: 15, userSelect: 'none', paddingRight: 0,
-                      }}>
-                        ⠿
-                      </td>
-                      <td className="text-mono text-dim">{p.project_number}</td>
-                      <td style={{ color: 'var(--text2)', fontSize: 13 }}>{p.client?.company || '—'}</td>
-                      <td style={{ color: 'var(--text2)', fontSize: 13, whiteSpace: 'nowrap' }}>
-                        {p.product_type
-                          ? `${p.product_type}${productMap[p.product_type] ? ` | ${productMap[p.product_type]}` : ''}`
-                          : '—'}
-                      </td>
-                      <td className="td-main">{p.name}</td>
-                      <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
-                        <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onView(p.id)}>
-                          Items
-                        </button>
-                        {!showArchived && (
-                          <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} title="Edit project" onClick={() => onEdit(p)}>
-                            ✏️
+                    <Fragment key={p.id}>
+                      <tr style={{ background: 'var(--red-bg)' }}>
+                        <td></td>
+                        <td></td>
+                        <td colSpan={4} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
+                          Delete <strong>{p.name}</strong>? This cannot be undone.
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <button
+                            className="btn btn-sm"
+                            style={{ background: 'var(--red)', color: '#fff', marginRight: 6 }}
+                            onClick={() => onDeleteConfirm(p.id)}
+                          >
+                            Delete
                           </button>
-                        )}
-                        <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onArchive(p)}>
-                          {p.archived ? 'Restore' : 'Archive'}
-                        </button>
-                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)', marginRight: 4 }} title="Delete project" onClick={() => onDeleteRequest(p.id)}>
-                          🗑️
-                        </button>
-                        <button className="btn btn-ghost btn-sm" title="Add new project" onClick={onStartAdd}>
-                          +
-                        </button>
-                      </td>
-                    </tr>
+                          <button className="btn btn-ghost btn-sm" onClick={onDeleteCancel}>Cancel</button>
+                        </td>
+                      </tr>
+                    </Fragment>
+                  ) : (
+                    <Fragment key={p.id}>
+                      <tr
+                        draggable
+                        onDragStart={e => handleDragStart(e, globalIdx)}
+                        onDragOver={e => handleDragOver(e, globalIdx)}
+                        onDrop={() => handleDrop(globalIdx)}
+                        onDragEnd={reset}
+                        onClick={() => onView(p.id)}
+                        style={{
+                          opacity: dragIdx === globalIdx ? 0.4 : (p.archived ? 0.55 : 1),
+                          outline: dragOverIdx === globalIdx && dragIdx !== globalIdx
+                            ? '2px solid var(--accent)' : undefined,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {/* expand toggle */}
+                        <td
+                          onClick={e => { e.stopPropagation(); onToggleExpand(p.id) }}
+                          style={{ padding: '8px 4px 8px 10px', width: 28, cursor: 'pointer', color: 'var(--text3)' }}
+                        >
+                          <svg
+                            width="10" height="10" viewBox="0 0 10 10" fill="currentColor"
+                            style={{
+                              transition: 'transform 0.15s',
+                              transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                              display: 'block',
+                            }}
+                          >
+                            <path d="M3 1.5l4 3.5-4 3.5V1.5z"/>
+                          </svg>
+                        </td>
+
+                        {/* drag handle */}
+                        <td style={{
+                          cursor: 'grab', color: 'var(--text3)',
+                          fontSize: 15, userSelect: 'none', paddingRight: 0,
+                        }}>
+                          ⠿
+                        </td>
+                        <td className="text-mono text-dim">{p.project_number}</td>
+                        <td style={{ color: 'var(--text2)', fontSize: 13 }}>{p.client?.company || '—'}</td>
+                        <td style={{ color: 'var(--text2)', fontSize: 13, whiteSpace: 'nowrap' }}>
+                          {p.product_type
+                            ? `${p.product_type}${productMap[p.product_type] ? ` | ${productMap[p.product_type]}` : ''}`
+                            : '—'}
+                        </td>
+                        <td className="td-main">{p.name}</td>
+                        <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
+                          <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onView(p.id)}>
+                            Items
+                          </button>
+                          {!showArchived && (
+                            <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} title="Edit project" onClick={() => onEdit(p)}>
+                              ✏️
+                            </button>
+                          )}
+                          <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onArchive(p)}>
+                            {p.archived ? 'Restore' : 'Archive'}
+                          </button>
+                          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)', marginRight: 4 }} title="Delete project" onClick={() => onDeleteRequest(p.id)}>
+                            🗑️
+                          </button>
+                          <button className="btn btn-ghost btn-sm" title="Add new project" onClick={onStartAdd}>
+                            +
+                          </button>
+                        </td>
+                      </tr>
+
+                      {/* task drawer row */}
+                      {isExpanded && (
+                        <tr key={`drawer-${p.id}`}>
+                          <td colSpan={7} style={{ padding: 0 }}>
+                            <TaskDrawer
+                              projectId={p.id}
+                              tasks={tasks}
+                              profiles={profiles}
+                              onSaveTask={onSaveTask}
+                              onAddTask={onAddTask}
+                              onReorder={onReorderTasks}
+                            />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   )
                 })}
-              </>
+              </tbody>
             ))}
 
+          <tbody>
             {/* Inline add row */}
             {addingRow !== null && (
               <tr style={{ background: 'var(--accent-glow)' }}>
+                <td></td>
                 <td></td>
                 <td></td>
                 <td></td>
@@ -425,7 +917,7 @@ function WorkView({
             {/* Empty state + add button when no groups */}
             {groups.length === 0 && addingRow === null && (
               <tr>
-                <td colSpan={6} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>
+                <td colSpan={7} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>
                   No projects found.{' '}
                   <button className="btn btn-ghost btn-sm" onClick={onStartAdd}>+ Add first project</button>
                 </td>
