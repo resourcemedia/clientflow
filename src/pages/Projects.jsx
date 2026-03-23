@@ -738,7 +738,7 @@ function WorkView({
         <table>
           <thead>
             <tr>
-              <th style={{ width: 28 }}></th>{/* toggle */}
+              <th style={{ width: 80 }}></th>{/* toggle */}
               <th style={{ width: 24 }}></th>{/* drag */}
               <th>#</th><th>Client</th><th>Product</th><th>Project</th><th></th>
             </tr>
@@ -803,19 +803,26 @@ function WorkView({
                       >
                         {/* expand toggle */}
                         <td
-                          onClick={e => { e.stopPropagation(); onToggleExpand(p.id) }}
-                          style={{ padding: '8px 4px 8px 10px', width: 28, cursor: 'pointer', color: 'var(--text3)' }}
+                          onClick={e => e.stopPropagation()}
+                          style={{ padding: '8px 4px 8px 10px', whiteSpace: 'nowrap' }}
                         >
-                          <svg
-                            width="10" height="10" viewBox="0 0 10 10" fill="currentColor"
-                            style={{
-                              transition: 'transform 0.15s',
-                              transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                              display: 'block',
-                            }}
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => onToggleExpand(p.id)}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
                           >
-                            <path d="M3 1.5l4 3.5-4 3.5V1.5z"/>
-                          </svg>
+                            <svg
+                              width="9" height="9" viewBox="0 0 10 10" fill="currentColor"
+                              style={{
+                                transition: 'transform 0.15s',
+                                transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                                flexShrink: 0,
+                              }}
+                            >
+                              <path d="M3 1.5l4 3.5-4 3.5V1.5z"/>
+                            </svg>
+                            Tasks
+                          </button>
                         </td>
 
                         {/* drag handle */}
