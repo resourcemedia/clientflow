@@ -210,6 +210,120 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDragStart, onDragOver,
 }
 
 // ── TASK DRAWER ──────────────────────────────────────────────────────────
+// ── ITEM DRAWER ──────────────────────────────────────────────────────────────
+function ItemDrawer({ projectId, items, onAddItem }) {
+  const [addingRow, setAddingRow] = useState(null) // null | { name, scheduled_date }
+  const addInputRef = useRef(null)
+
+  useEffect(() => {
+    if (addingRow !== null) addInputRef.current?.focus()
+  }, [addingRow])
+
+  function startAdd() {
+    setAddingRow({ name: '', scheduled_date: '' })
+  }
+
+  async function commitAdd() {
+    const name = addingRow?.name?.trim()
+    if (!name) { setAddingRow(null); return }
+    await onAddItem(projectId, {
+      name,
+      scheduled_date: addingRow.scheduled_date || null,
+    })
+    setAddingRow(null)
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter')  commitAdd()
+    if (e.key === 'Escape') setAddingRow(null)
+  }
+
+  const thStyle = { padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)' }
+
+  return (
+    <div style={{ background: 'var(--bg3)', borderTop: '2px solid var(--border2)' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr style={{ background: 'var(--bg3)' }}>
+            <th style={{ width: 24, padding: '6px 4px 6px 12px' }} />
+            <th style={{ ...thStyle, width: 180 }}>Item</th>
+            <th style={{ ...thStyle, width: 80 }}>Order</th>
+            <th style={{ ...thStyle, width: 120 }}>Scheduled</th>
+            <th style={{ width: 40 }} />
+          </tr>
+        </thead>
+        <tbody>
+          {items.length === 0 && addingRow === null && (
+            <tr>
+              <td colSpan={5} style={{ padding: '12px 16px', color: 'var(--text3)', fontSize: 13 }}>
+                No items yet.
+              </td>
+            </tr>
+          )}
+          {items.map(item => {
+            const isOverdue = item.scheduled_date && item.scheduled_date < new Date().toISOString().slice(0, 10)
+            return (
+              <tr key={item.id} style={{ borderTop: '1px solid var(--border)' }}>
+                <td style={{ padding: '7px 4px 7px 12px', width: 24 }} />
+                <td style={{ padding: '7px 12px', fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{item.name}</td>
+                <td style={{ padding: '7px 12px', fontSize: 12, color: 'var(--text3)', fontFamily: 'DM Mono, monospace' }}>{item.item_number || '—'}</td>
+                <td style={{ padding: '7px 12px', fontSize: 12, fontFamily: 'DM Mono, monospace', color: isOverdue ? 'var(--red)' : 'var(--text3)', fontWeight: isOverdue ? 600 : 400 }}>
+                  {item.scheduled_date
+                    ? (() => { const [y,m,d] = item.scheduled_date.split('-'); return `${m}/${d}/${y.slice(2)}` })()
+                    : '—'}
+                </td>
+                <td />
+              </tr>
+            )
+          })}
+
+          {/* inline add row */}
+          {addingRow !== null && (
+            <tr style={{ background: 'var(--accent-glow)', borderTop: '1px solid var(--border)' }}>
+              <td style={{ padding: '7px 4px 7px 12px', width: 24 }} />
+              <td style={{ padding: '7px 12px' }}>
+                <input
+                  ref={addInputRef}
+                  value={addingRow.name}
+                  onChange={e => setAddingRow(r => ({ ...r, name: e.target.value }))}
+                  placeholder="Item name…"
+                  onKeyDown={handleKeyDown}
+                  style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
+                />
+              </td>
+              <td />
+              <td style={{ padding: '7px 12px' }}>
+                <input
+                  type="date"
+                  value={addingRow.scheduled_date}
+                  onChange={e => setAddingRow(r => ({ ...r, scheduled_date: e.target.value }))}
+                  onKeyDown={handleKeyDown}
+                  style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
+                />
+              </td>
+              <td style={{ padding: '7px 10px 7px 4px', whiteSpace: 'nowrap' }}>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button className="btn btn-primary btn-sm" onClick={commitAdd}>Save</button>
+                  <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setAddingRow(null)} style={{ color: 'var(--text3)' }}>✕</button>
+                </div>
+              </td>
+            </tr>
+          )}
+
+          {/* add item button */}
+          <tr>
+            <td colSpan={5} style={{ padding: '8px 12px', borderTop: '1px solid var(--border)' }}>
+              <button className="btn btn-ghost btn-sm" onClick={startAdd} style={{ color: 'var(--text3)', fontSize: 12 }}>
+                + Add item
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onReorder }) {
   const [dragIdx,    setDragIdx]    = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
@@ -402,10 +516,12 @@ export default function ProjectsPage() {
   const [searchParams]                    = useSearchParams()
   const [clientFilter, setClientFilter]   = useState(searchParams.get('client') || '')
   const [addingRow, setAddingRow]         = useState(null) // null | { client_id, name, product_type }
-  const [expandedRows, setExpandedRows]       = useState({}) // { [projectId]: true }
+  const [expandedRows, setExpandedRows]         = useState({}) // { [projectId]: true }
   const [expandedItemRows, setExpandedItemRows] = useState({}) // { [projectId]: true }
-  const [projectTasks, setProjectTasks]   = useState({}) // { [projectId]: Task[] }
-  const [loadedProjects, setLoadedProjects] = useState(new Set())
+  const [projectTasks, setProjectTasks]         = useState({}) // { [projectId]: Task[] }
+  const [projectItems, setProjectItems]         = useState({}) // { [projectId]: Item[] }
+  const [loadedProjects, setLoadedProjects]     = useState(new Set())
+  const [loadedItemProjects, setLoadedItemProjects] = useState(new Set())
   const addInputRef = useRef(null)
   const navigate = useNavigate()
 
@@ -453,8 +569,28 @@ export default function ProjectsPage() {
     }
   }
 
-  function toggleItemExpand(projectId) {
-    setExpandedItemRows(prev => ({ ...prev, [projectId]: !prev[projectId] }))
+  async function toggleItemExpand(projectId) {
+    const isOpen = expandedItemRows[projectId]
+    setExpandedItemRows(prev => ({ ...prev, [projectId]: !isOpen }))
+    if (!isOpen && !loadedItemProjects.has(projectId) && !isDemo) {
+      const { data } = await supabase
+        .from('project_items')
+        .select('id, item_number, name, scheduled_date, status, sort_order')
+        .eq('project_id', projectId)
+        .order('sort_order', { ascending: true, nullsFirst: false })
+        .order('item_number')
+      setProjectItems(prev => ({ ...prev, [projectId]: data || [] }))
+      setLoadedItemProjects(prev => new Set([...prev, projectId]))
+    }
+  }
+
+  async function addProjectItem(projectId, payload) {
+    const { data } = await supabase
+      .from('project_items')
+      .insert({ ...payload, project_id: projectId })
+      .select('id, item_number, name, scheduled_date, status, sort_order')
+      .single()
+    if (data) setProjectItems(prev => ({ ...prev, [projectId]: [...(prev[projectId] || []), data] }))
   }
 
   async function saveProjectTask(projectId, taskId, updates) {
@@ -623,8 +759,10 @@ export default function ProjectsPage() {
             expandedRows={expandedRows}
             expandedItemRows={expandedItemRows}
             projectTasks={projectTasks}
+            projectItems={projectItems}
             onToggleExpand={toggleExpand}
             onToggleItemExpand={toggleItemExpand}
+            onAddItem={addProjectItem}
             onSaveTask={saveProjectTask}
             onAddTask={addProjectTask}
             onReorderTasks={reorderProjectTasks}
@@ -681,7 +819,7 @@ function groupByClient(projects) {
 function WorkView({
   projects, clients, productMap, profiles, loading, showArchived, confirmDelete,
   addingRow, setAddingRow, addInputRef, clientFilter,
-  expandedRows, expandedItemRows, projectTasks, onToggleExpand, onToggleItemExpand, onSaveTask, onAddTask, onReorderTasks,
+  expandedRows, expandedItemRows, projectTasks, projectItems, onToggleExpand, onToggleItemExpand, onSaveTask, onAddTask, onReorderTasks, onAddItem,
   onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm,
   onView, onReorder, onStartAdd, onAddSave, onAddKeyDown,
 }) {
@@ -904,7 +1042,12 @@ function WorkView({
                       {/* items drawer row */}
                       {expandedItemRows[p.id] && (
                         <tr key={`items-drawer-${p.id}`}>
-                          <td colSpan={7} style={{ padding: 0, background: 'var(--bg2)' }}>
+                          <td colSpan={7} style={{ padding: 0 }}>
+                            <ItemDrawer
+                              projectId={p.id}
+                              items={projectItems[p.id] || []}
+                              onAddItem={onAddItem}
+                            />
                           </td>
                         </tr>
                       )}
