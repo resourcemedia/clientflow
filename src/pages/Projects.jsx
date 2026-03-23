@@ -402,7 +402,8 @@ export default function ProjectsPage() {
   const [searchParams]                    = useSearchParams()
   const [clientFilter, setClientFilter]   = useState(searchParams.get('client') || '')
   const [addingRow, setAddingRow]         = useState(null) // null | { client_id, name, product_type }
-  const [expandedRows, setExpandedRows]   = useState({}) // { [projectId]: true }
+  const [expandedRows, setExpandedRows]       = useState({}) // { [projectId]: true }
+  const [expandedItemRows, setExpandedItemRows] = useState({}) // { [projectId]: true }
   const [projectTasks, setProjectTasks]   = useState({}) // { [projectId]: Task[] }
   const [loadedProjects, setLoadedProjects] = useState(new Set())
   const addInputRef = useRef(null)
@@ -450,6 +451,10 @@ export default function ProjectsPage() {
       setProjectTasks(prev => ({ ...prev, [projectId]: data || [] }))
       setLoadedProjects(prev => new Set([...prev, projectId]))
     }
+  }
+
+  function toggleItemExpand(projectId) {
+    setExpandedItemRows(prev => ({ ...prev, [projectId]: !prev[projectId] }))
   }
 
   async function saveProjectTask(projectId, taskId, updates) {
@@ -616,8 +621,10 @@ export default function ProjectsPage() {
             addInputRef={addInputRef}
             clientFilter={clientFilter}
             expandedRows={expandedRows}
+            expandedItemRows={expandedItemRows}
             projectTasks={projectTasks}
             onToggleExpand={toggleExpand}
+            onToggleItemExpand={toggleItemExpand}
             onSaveTask={saveProjectTask}
             onAddTask={addProjectTask}
             onReorderTasks={reorderProjectTasks}
@@ -674,7 +681,7 @@ function groupByClient(projects) {
 function WorkView({
   projects, clients, productMap, profiles, loading, showArchived, confirmDelete,
   addingRow, setAddingRow, addInputRef, clientFilter,
-  expandedRows, projectTasks, onToggleExpand, onSaveTask, onAddTask, onReorderTasks,
+  expandedRows, expandedItemRows, projectTasks, onToggleExpand, onToggleItemExpand, onSaveTask, onAddTask, onReorderTasks,
   onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm,
   onView, onReorder, onStartAdd, onAddSave, onAddKeyDown,
 }) {
@@ -801,7 +808,7 @@ function WorkView({
                           cursor: 'pointer',
                         }}
                       >
-                        {/* expand toggle */}
+                        {/* expand toggles */}
                         <td
                           onClick={e => e.stopPropagation()}
                           style={{ padding: '8px 4px 8px 10px', whiteSpace: 'nowrap' }}
@@ -809,7 +816,7 @@ function WorkView({
                           <button
                             className="btn btn-ghost btn-sm"
                             onClick={() => onToggleExpand(p.id)}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginRight: 4 }}
                           >
                             <svg
                               width="9" height="9" viewBox="0 0 10 10" fill="currentColor"
@@ -822,6 +829,23 @@ function WorkView({
                               <path d="M3 1.5l4 3.5-4 3.5V1.5z"/>
                             </svg>
                             Tasks
+                          </button>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => onToggleItemExpand(p.id)}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          >
+                            <svg
+                              width="9" height="9" viewBox="0 0 10 10" fill="currentColor"
+                              style={{
+                                transition: 'transform 0.15s',
+                                transform: expandedItemRows[p.id] ? 'rotate(90deg)' : 'rotate(0deg)',
+                                flexShrink: 0,
+                              }}
+                            >
+                              <path d="M3 1.5l4 3.5-4 3.5V1.5z"/>
+                            </svg>
+                            Items
                           </button>
                         </td>
 
@@ -873,6 +897,14 @@ function WorkView({
                               onAddTask={onAddTask}
                               onReorder={onReorderTasks}
                             />
+                          </td>
+                        </tr>
+                      )}
+
+                      {/* items drawer row */}
+                      {expandedItemRows[p.id] && (
+                        <tr key={`items-drawer-${p.id}`}>
+                          <td colSpan={7} style={{ padding: 0, background: 'var(--bg2)' }}>
                           </td>
                         </tr>
                       )}
