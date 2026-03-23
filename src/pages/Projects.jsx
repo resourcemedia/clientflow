@@ -211,13 +211,35 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDragStart, onDragOver,
 
 // ── TASK DRAWER ──────────────────────────────────────────────────────────
 // ── ITEM DRAWER ──────────────────────────────────────────────────────────────
-function ItemDrawer({ projectId, items, onAddItem }) {
-  const [addingRow, setAddingRow] = useState(null) // null | { name, scheduled_date }
+function ItemDrawer({ projectId, items, onAddItem, onReorder }) {
+  const [addingRow,   setAddingRow]   = useState(null) // null | { name, scheduled_date }
+  const [dragIdx,     setDragIdx]     = useState(null)
+  const [dragOverIdx, setDragOverIdx] = useState(null)
   const addInputRef = useRef(null)
 
   useEffect(() => {
     if (addingRow !== null) addInputRef.current?.focus()
   }, [addingRow])
+
+  function handleDragStart(e, idx) {
+    e.dataTransfer.effectAllowed = 'move'
+    setDragIdx(idx)
+  }
+
+  function handleDragOver(e, idx) {
+    e.preventDefault()
+    setDragOverIdx(idx)
+  }
+
+  function handleDrop(toIdx) {
+    if (dragIdx === null || dragIdx === toIdx) { setDragIdx(null); setDragOverIdx(null); return }
+    const reordered = [...items]
+    const [moved] = reordered.splice(dragIdx, 1)
+    reordered.splice(toIdx, 0, moved)
+    onReorder(projectId, reordered)
+    setDragIdx(null)
+    setDragOverIdx(null)
+  }
 
   function startAdd() {
     setAddingRow({ name: '', scheduled_date: '' })
@@ -260,11 +282,24 @@ function ItemDrawer({ projectId, items, onAddItem }) {
               </td>
             </tr>
           )}
-          {items.map(item => {
+          {items.map((item, idx) => {
             const isOverdue = item.scheduled_date && item.scheduled_date < new Date().toISOString().slice(0, 10)
             return (
-              <tr key={item.id} style={{ borderTop: '1px solid var(--border)' }}>
-                <td style={{ padding: '7px 4px 7px 12px', width: 24 }} />
+              <tr
+                key={item.id}
+                draggable
+                onDragStart={e => handleDragStart(e, idx)}
+                onDragOver={e => handleDragOver(e, idx)}
+                onDrop={() => handleDrop(idx)}
+                onDragEnd={() => { setDragIdx(null); setDragOverIdx(null) }}
+                style={{
+                  borderTop: '1px solid var(--border)',
+                  opacity: dragIdx === idx ? 0.4 : 1,
+                  outline: dragOverIdx === idx && dragIdx !== idx ? '2px solid var(--accent)' : undefined,
+                  cursor: 'default',
+                }}
+              >
+                <td style={{ padding: '7px 4px 7px 12px', width: 24, cursor: 'grab', color: 'var(--text3)', fontSize: 14, userSelect: 'none' }}>⠿</td>
                 <td style={{ padding: '7px 12px', fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{item.name}</td>
                 <td style={{ padding: '7px 12px', fontSize: 12, color: 'var(--text3)', fontFamily: 'DM Mono, monospace' }}>{item.item_number || '—'}</td>
                 <td style={{ padding: '7px 12px', fontSize: 12, fontFamily: 'DM Mono, monospace', color: isOverdue ? 'var(--red)' : 'var(--text3)', fontWeight: isOverdue ? 600 : 400 }}>
@@ -629,6 +664,13 @@ export default function ProjectsPage() {
     })
   }
 
+  function reorderProjectItems(projectId, reordered) {
+    setProjectItems(prev => ({ ...prev, [projectId]: reordered }))
+    reordered.forEach((item, i) => {
+      supabase.from('project_items').update({ sort_order: i }).eq('id', item.id).then(() => {})
+    })
+  }
+
   async function handleArchive(project) {
     const newVal = !project.archived
     await supabase.from('projects').update({ archived: newVal }).eq('id', project.id)
@@ -763,6 +805,7 @@ export default function ProjectsPage() {
             onToggleExpand={toggleExpand}
             onToggleItemExpand={toggleItemExpand}
             onAddItem={addProjectItem}
+            onReorderItems={reorderProjectItems}
             onSaveTask={saveProjectTask}
             onAddTask={addProjectTask}
             onReorderTasks={reorderProjectTasks}
@@ -819,7 +862,7 @@ function groupByClient(projects) {
 function WorkView({
   projects, clients, productMap, profiles, loading, showArchived, confirmDelete,
   addingRow, setAddingRow, addInputRef, clientFilter,
-  expandedRows, expandedItemRows, projectTasks, projectItems, onToggleExpand, onToggleItemExpand, onSaveTask, onAddTask, onReorderTasks, onAddItem,
+  expandedRows, expandedItemRows, projectTasks, projectItems, onToggleExpand, onToggleItemExpand, onSaveTask, onAddTask, onReorderTasks, onAddItem, onReorderItems,
   onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm,
   onView, onReorder, onStartAdd, onAddSave, onAddKeyDown,
 }) {
@@ -1047,6 +1090,7 @@ function WorkView({
                               projectId={p.id}
                               items={projectItems[p.id] || []}
                               onAddItem={onAddItem}
+                              onReorder={onReorderItems}
                             />
                           </td>
                         </tr>
