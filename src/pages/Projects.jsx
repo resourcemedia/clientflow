@@ -391,6 +391,7 @@ export default function ProjectsPage() {
   const [projects, setProjects]           = useState([])
   const [clients, setClients]             = useState([])
   const [productMap, setProductMap]       = useState({}) // { type: name }
+  const [products, setProducts]           = useState([]) // [{ type, name }]
   const [profiles, setProfiles]           = useState([])
   const [loading, setLoading]             = useState(true)
   const [tab, setTab]                     = useState('work')
@@ -431,6 +432,7 @@ export default function ProjectsPage() {
       const map = {}
       ;(prods || []).forEach(prod => { if (prod.type) map[prod.type] = prod.name })
       setProductMap(map)
+      setProducts(prods || [])
     }
     setLoading(false)
   }
@@ -647,6 +649,7 @@ export default function ProjectsPage() {
           project={editProject}
           clients={clients}
           projects={projects}
+          products={products}
           onClose={() => setEditProject(null)}
           onSaved={() => { setEditProject(null); load() }}
         />
@@ -993,7 +996,7 @@ function FinancialView({ projects, loading, totalEst, totalOwed, totalPaid, onVi
 }
 
 // ── PROJECT MODAL (edit only) ────────────────────────────────────────────
-function ProjectModal({ project, clients, projects, onClose, onSaved }) {
+function ProjectModal({ project, clients, projects, products, onClose, onSaved }) {
   const [form, setForm] = useState({
     project_number: project?.project_number ?? '',
     name:           project?.name           || '',
@@ -1080,9 +1083,14 @@ function ProjectModal({ project, clients, projects, onClose, onSaved }) {
             {clients.map(c => <option key={c.id} value={c.id}>{c.company}</option>)}
           </select>
         </FormGroup>
-        <FormGroup label="Product type">
+        <FormGroup label="Product">
           <select value={form.product_type} onChange={set('product_type')}>
-            {PRODUCT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+            <option value="">— Select product —</option>
+            {products.map(p => (
+              <option key={p.type} value={p.type}>
+                {p.type}{p.name ? ` | ${p.name}` : ''}
+              </option>
+            ))}
           </select>
         </FormGroup>
         <FormGroup label="Priority">
