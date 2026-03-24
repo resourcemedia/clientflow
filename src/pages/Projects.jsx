@@ -38,6 +38,15 @@ function CheckIcon({ done }) {
     : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/></svg>
 }
 
+function TrashIcon() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="3 6 5 6 21 6"/>
+    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+    <path d="M10 11v6"/><path d="M14 11v6"/>
+    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+  </svg>
+}
+
 function fmtUpdated(updatedAt, updaterName) {
   if (!updatedAt) return ''
   const d  = new Date(updatedAt)
@@ -49,7 +58,7 @@ function fmtUpdated(updatedAt, updaterName) {
 }
 
 // ── DRAWER TASK ROW ──────────────────────────────────────────────────────
-function DrawerTaskRow({ task, profiles, onSave, onAdd, onDragStart, onDragOver, onDrop, isDragging, isDragTarget }) {
+function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, onDragOver, onDrop, isDragging, isDragTarget }) {
   const [editField, setEditField] = useState(null)
   const [noteVal,   setNoteVal]   = useState(task.note || '')
   const [snoteVal,  setSnoteVal]  = useState(task.status_note || '')
@@ -195,7 +204,7 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDragStart, onDragOver,
       </td>
 
       {/* done toggle */}
-      <td style={{ padding: '7px 10px 7px 4px' }}>
+      <td style={{ padding: '7px 4px 7px 4px' }}>
         <button
           className="btn btn-ghost btn-icon btn-sm"
           onClick={e => { e.stopPropagation(); onSave(task.id, { status: task.status === 'Done' ? 'Open' : 'Done' }) }}
@@ -203,6 +212,18 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDragStart, onDragOver,
           style={{ color: task.status === 'Done' ? 'var(--green)' : 'var(--text3)' }}
         >
           <CheckIcon done={task.status === 'Done'} />
+        </button>
+      </td>
+
+      {/* delete */}
+      <td style={{ padding: '7px 10px 7px 4px' }}>
+        <button
+          className="btn btn-ghost btn-icon btn-sm"
+          onClick={e => { e.stopPropagation(); onDelete(task.id) }}
+          title="Delete task"
+          style={{ color: 'var(--text3)' }}
+        >
+          <TrashIcon />
         </button>
       </td>
     </tr>
@@ -359,7 +380,7 @@ function ItemDrawer({ projectId, items, onAddItem, onReorder }) {
   )
 }
 
-function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onReorder }) {
+function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDeleteTask, onReorder }) {
   const [dragIdx,    setDragIdx]    = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
   const [addingRow,  setAddingRow]  = useState(null) // null | { note, status_note, assigned_to }
@@ -429,12 +450,13 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onReord
             <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)' }}>Assigned</th>
             <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)' }}>Updated</th>
             <th style={{ width: 40 }} />
+            <th style={{ width: 32 }} />
           </tr>
         </thead>
         <tbody>
           {tasks.length === 0 && addingRow === null && (
             <tr>
-              <td colSpan={7} style={{ padding: '12px 16px', color: 'var(--text3)', fontSize: 13 }}>
+              <td colSpan={8} style={{ padding: '12px 16px', color: 'var(--text3)', fontSize: 13 }}>
                 No tasks yet.
               </td>
             </tr>
@@ -446,6 +468,7 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onReord
               profiles={profiles}
               onSave={(taskId, updates) => onSaveTask(projectId, taskId, updates)}
               onAdd={() => setAddingRow({ note: '', status_note: '', assigned_to: null })}
+              onDelete={taskId => onDeleteTask(projectId, taskId)}
               isDragging={dragIdx === idx}
               isDragTarget={dragOverIdx === idx && dragIdx !== null && dragIdx !== idx}
               onDragStart={e => handleDragStart(e, idx)}
@@ -522,7 +545,7 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onReord
 
           {/* add task button */}
           <tr>
-            <td colSpan={7} style={{ padding: '8px 12px', borderTop: '1px solid var(--border)' }}>
+            <td colSpan={8} style={{ padding: '8px 12px', borderTop: '1px solid var(--border)' }}>
               <button
                 className="btn btn-ghost btn-sm"
                 onClick={startAdd}
@@ -654,6 +677,14 @@ export default function ProjectsPage() {
     if (data) setProjectTasks(prev => ({
       ...prev,
       [projectId]: [...(prev[projectId] || []), data],
+    }))
+  }
+
+  async function deleteProjectTask(projectId, taskId) {
+    await supabase.from('tasks').delete().eq('id', taskId)
+    setProjectTasks(prev => ({
+      ...prev,
+      [projectId]: (prev[projectId] || []).filter(t => t.id !== taskId),
     }))
   }
 
@@ -808,6 +839,7 @@ export default function ProjectsPage() {
             onReorderItems={reorderProjectItems}
             onSaveTask={saveProjectTask}
             onAddTask={addProjectTask}
+            onDeleteTask={deleteProjectTask}
             onReorderTasks={reorderProjectTasks}
             onEdit={p => setEditProject(p)}
             onArchive={handleArchive}
@@ -862,7 +894,7 @@ function groupByClient(projects) {
 function WorkView({
   projects, clients, productMap, profiles, loading, showArchived, confirmDelete,
   addingRow, setAddingRow, addInputRef, clientFilter,
-  expandedRows, expandedItemRows, projectTasks, projectItems, onToggleExpand, onToggleItemExpand, onSaveTask, onAddTask, onReorderTasks, onAddItem, onReorderItems,
+  expandedRows, expandedItemRows, projectTasks, projectItems, onToggleExpand, onToggleItemExpand, onSaveTask, onAddTask, onDeleteTask, onReorderTasks, onAddItem, onReorderItems,
   onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm,
   onView, onReorder, onStartAdd, onAddSave, onAddKeyDown,
 }) {
@@ -1076,6 +1108,7 @@ function WorkView({
                               profiles={profiles}
                               onSaveTask={onSaveTask}
                               onAddTask={onAddTask}
+                              onDeleteTask={onDeleteTask}
                               onReorder={onReorderTasks}
                             />
                           </td>
