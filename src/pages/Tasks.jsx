@@ -396,6 +396,8 @@ export default function TasksPage() {
   const [profiles,     setProfiles]     = useState([])
   const [loading,      setLoading]      = useState(true)
   const [statusFilter, setStatusFilter] = useState('Open')
+  const [clientFilter, setClientFilter] = useState('')
+  const [searchQuery,  setSearchQuery]  = useState('')
   const [newRows,      setNewRows]      = useState([])
   const [dragIdx,      setDragIdx]      = useState(null)
   const [productMap,   setProductMap]   = useState({})
@@ -441,9 +443,33 @@ export default function TasksPage() {
   }
 
   // ── FILTER ─────────────────────────────────────────────────────────────────
-  const filtered = tasks.filter(t =>
-    statusFilter === 'All' ? true : t.status === statusFilter
-  )
+  const clients = [...new Map(
+    tasks
+      .map(t => t.project?.client)
+      .filter(Boolean)
+      .map(c => [c.company || c.alias, c])
+  ).values()].sort((a, b) => (a.company || a.alias || '').localeCompare(b.company || b.alias || ''))
+
+  const filtered = tasks.filter(t => {
+    if (statusFilter !== 'All' && t.status !== statusFilter) return false
+    if (clientFilter) {
+      const label = t.project?.client?.company || t.project?.client?.alias || ''
+      if (label !== clientFilter) return false
+    }
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      const haystack = [
+        t.note,
+        t.status_note,
+        t.project?.name,
+        t.project?.client?.company,
+        t.project?.client?.alias,
+        productLabel(t.project, productMap),
+      ].join(' ').toLowerCase()
+      if (!haystack.includes(q)) return false
+    }
+    return true
+  })
 
   // ── SAVE EXISTING ──────────────────────────────────────────────────────────
   async function saveTask(taskId, updates) {
@@ -556,6 +582,32 @@ export default function TasksPage() {
           { label: 'Tasks' },
         ]} />
         <PillNav tabs={STATUS_TABS} active={statusFilter} onChange={setStatusFilter} />
+        <select
+          value={clientFilter}
+          onChange={e => setClientFilter(e.target.value)}
+          style={{
+            background: 'var(--bg2)', border: '1px solid var(--border)',
+            borderRadius: 8, padding: '5px 10px', color: clientFilter ? 'var(--text)' : 'var(--text3)',
+            fontSize: 13, cursor: 'pointer',
+          }}
+        >
+          <option value="">All clients</option>
+          {clients.map(c => {
+            const label = c.company || c.alias
+            return <option key={label} value={label}>{label}</option>
+          })}
+        </select>
+        <input
+          type="search"
+          placeholder="Search…"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          style={{
+            background: 'var(--bg2)', border: '1px solid var(--border)',
+            borderRadius: 8, padding: '5px 10px', color: 'var(--text)',
+            fontSize: 13, width: 180, outline: 'none',
+          }}
+        />
         <button
           className="btn btn-primary"
           onClick={() => addRowAfter(filtered[filtered.length - 1])}
