@@ -121,11 +121,6 @@ function TaskRow({ task, idx, profiles, projects, productMap, onSave, onAddBelow
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
-      {/* drag handle */}
-      <td style={{ padding: '8px 6px 8px 16px', width: 28, cursor: 'grab' }}>
-        <DragHandle />
-      </td>
-
       {/* client */}
       <td>{clientLabel(task.project)}</td>
 
@@ -136,6 +131,11 @@ function TaskRow({ task, idx, profiles, projects, productMap, onSave, onAddBelow
 
       {/* project */}
       <td>{task.project?.name || '—'}</td>
+
+      {/* drag handle */}
+      <td style={{ padding: '8px 4px', width: 28, cursor: 'grab' }}>
+        <DragHandle />
+      </td>
 
       {/* task (note) */}
       <td className="td-main" style={{ minWidth: 160 }}>
@@ -271,8 +271,6 @@ function NewTaskRow({ row, projects, profiles, onChange, onCommit, onDiscard }) 
 
   return (
     <tr style={{ background: 'var(--accent-glow)' }}>
-      <td style={{ padding: '8px 6px 8px 16px', width: 28 }} />
-
       {/* project selector (drives client + product display) */}
       <td colSpan={3}>
         <select
@@ -292,6 +290,9 @@ function NewTaskRow({ row, projects, profiles, onChange, onCommit, onDiscard }) 
           ))}
         </select>
       </td>
+
+      {/* drag handle placeholder */}
+      <td style={{ width: 28 }} />
 
       {/* task text */}
       <td className="td-main">
@@ -622,10 +623,10 @@ export default function TasksPage() {
             <table>
               <thead>
                 <tr>
-                  <th style={{ width: 28, padding: '10px 6px 10px 16px' }} />
                   <th>Client</th>
                   <th>Product</th>
                   <th>Project</th>
+                  <th style={{ width: 28, padding: '10px 6px 10px 4px' }} />
                   <th>Task</th>
                   <th>Assigned</th>
                   <th>Note</th>
