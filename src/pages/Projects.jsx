@@ -958,8 +958,8 @@ function WorkView({
         <table>
           <thead>
             <tr>
-              <th style={{ width: 80 }}></th>{/* toggle */}
               <th style={{ width: 24 }}></th>{/* drag */}
+              <th style={{ width: 80 }}></th>{/* toggle */}
               <th>#</th><th>Client</th><th>Product</th><th>Project</th><th></th>
             </tr>
           </thead>
@@ -1021,6 +1021,14 @@ function WorkView({
                           cursor: 'pointer',
                         }}
                       >
+                        {/* drag handle */}
+                        <td style={{
+                          cursor: 'grab', color: 'var(--text3)',
+                          fontSize: 15, userSelect: 'none', paddingRight: 0,
+                        }}>
+                          ⠿
+                        </td>
+
                         {/* expand toggles */}
                         <td
                           onClick={e => e.stopPropagation()}
@@ -1060,14 +1068,6 @@ function WorkView({
                             </svg>
                             Items
                           </button>
-                        </td>
-
-                        {/* drag handle */}
-                        <td style={{
-                          cursor: 'grab', color: 'var(--text3)',
-                          fontSize: 15, userSelect: 'none', paddingRight: 0,
-                        }}>
-                          ⠿
                         </td>
                         <td className="text-mono text-dim">{p.project_number}</td>
                         <td style={{ color: 'var(--text2)', fontSize: 13 }}>{p.client?.company || '—'}</td>
