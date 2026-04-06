@@ -116,18 +116,19 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
       {/* task text */}
       <td className="td-main" style={{ minWidth: 140 }}>
         {editField === 'note' ? (
-          <input
+          <textarea
             autoFocus
             value={noteVal}
             onChange={e => setNoteVal(e.target.value)}
             onBlur={commitNote}
-            onKeyDown={e => { if (e.key === 'Enter') commitNote(); if (e.key === 'Escape') { setNoteVal(task.note || ''); setEditField(null) } }}
-            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
+            onKeyDown={e => { if (e.key === 'Escape') { setNoteVal(task.note || ''); setEditField(null) } }}
+            rows={3}
+            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13, resize: 'vertical' }}
           />
         ) : (
           <span
             onClick={() => { setNoteVal(task.note || ''); setEditField('note') }}
-            style={{ cursor: 'text', display: 'block', minHeight: 20 }}
+            style={{ cursor: 'text', display: 'block', minHeight: 20, whiteSpace: 'pre-wrap' }}
           >
             {task.note || <span style={{ color: 'var(--text3)' }}>Click to add…</span>}
           </span>
