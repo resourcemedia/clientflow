@@ -35,7 +35,22 @@ function DragDots() {
 function CheckIcon({ done }) {
   return done
     ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
-    : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/></svg>
+    : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+}
+
+function ArchiveIcon() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="21 8 21 21 3 21 3 8"/>
+    <rect x="1" y="3" width="22" height="5"/>
+    <line x1="10" y1="12" x2="14" y2="12"/>
+  </svg>
+}
+
+function RestoreIcon() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="1 4 1 10 7 10"/>
+    <path d="M3.51 15a9 9 0 1 0 .49-3.3"/>
+  </svg>
 }
 
 function TrashIcon() {
@@ -94,7 +109,7 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
       onDrop={onDrop}
       style={{
         opacity: isDragging ? 0.4 : 1,
-        background: isDragTarget ? 'var(--accent-glow)' : undefined,
+        background: isDragTarget ? 'var(--accent-glow)' : '#f7fff5',
         transition: 'background 0.1s',
       }}
     >
@@ -443,13 +458,13 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
     <div style={{ background: 'var(--bg3)', borderTop: '2px solid var(--border2)' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
-          <tr style={{ background: 'var(--bg3)' }}>
+          <tr style={{ background: '#9dc691' }}>
             <th style={{ width: 24, padding: '6px 4px 6px 12px' }} />
             <th style={{ width: 22, padding: '6px 0' }} />
-            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)' }}>Task</th>
-            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)' }}>Note</th>
-            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)' }}>Assigned</th>
-            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)' }}>Updated</th>
+            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff' }}>Task</th>
+            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff' }}>Note</th>
+            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff' }}>Assigned</th>
+            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff' }}>Updated</th>
             <th style={{ width: 40 }} />
             <th style={{ width: 32 }} />
           </tr>
@@ -545,13 +560,13 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
           )}
 
           {/* add task button */}
-          <tr>
+          <tr style={{ background: '#9dc691' }}>
             <td colSpan={8} style={{ padding: '8px 12px', borderTop: '1px solid var(--border)' }}>
               <button
                 className="btn btn-ghost btn-sm"
                 onClick={startAdd}
-                style={{ color: 'var(--text3)', fontSize: 12 }}
-              >+ Add task</button>
+                style={{ color: '#fff', fontSize: 12, fontWeight: 600 }}
+              >+ Add Task</button>
             </td>
           </tr>
         </tbody>
@@ -786,9 +801,7 @@ export default function ProjectsPage() {
     <div className="fade-in">
       <div className="topbar">
         <div className="breadcrumb">
-          <button className="breadcrumb-link" onClick={() => navigate('/clients')}>← Clients</button>
-          <span className="breadcrumb-sep">|</span>
-          <span className="breadcrumb-current">Projects</span>
+          <span className="breadcrumb-current" style={{ fontSize: 20, fontWeight: 700 }}>Projects</span>
         </div>
         <PillNav tabs={TABS} active={tab} onChange={setTab} />
         <select
@@ -967,14 +980,14 @@ function WorkView({
           {groups.map(group => (
               <tbody key={`group-${group.name}`}>
                 {/* Client group header */}
-                <tr style={{ background: 'var(--bg3)', pointerEvents: 'none' }}>
+                <tr style={{ background: '#595958', pointerEvents: 'none' }}>
                   <td colSpan={7} style={{
                     padding: '7px 16px',
                     fontSize: 11,
                     fontWeight: 600,
                     letterSpacing: '0.07em',
                     textTransform: 'uppercase',
-                    color: 'var(--text2)',
+                    color: '#fff',
                   }}>
                     {group.name}
                   </td>
@@ -1036,9 +1049,9 @@ function WorkView({
                           style={{ padding: '8px 4px 8px 10px', whiteSpace: 'nowrap' }}
                         >
                           <button
-                            className="btn btn-ghost btn-sm"
+                            className="btn btn-sm"
                             onClick={() => onToggleExpand(p.id)}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginRight: 4 }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginRight: 4, background: '#9dc691', color: '#fff', border: 'none' }}
                           >
                             <svg
                               width="9" height="9" viewBox="0 0 10 10" fill="currentColor"
@@ -1053,9 +1066,9 @@ function WorkView({
                             Tasks
                           </button>
                           <button
-                            className="btn btn-ghost btn-sm"
+                            className="btn btn-sm"
                             onClick={() => onToggleItemExpand(p.id)}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#89bac9', color: '#fff', border: 'none' }}
                           >
                             <svg
                               width="9" height="9" viewBox="0 0 10 10" fill="currentColor"
@@ -1087,8 +1100,8 @@ function WorkView({
                               ✏️
                             </button>
                           )}
-                          <button className="btn btn-ghost btn-sm" style={{ marginRight: 4 }} onClick={() => onArchive(p)}>
-                            {p.archived ? 'Restore' : 'Archive'}
+                          <button className="btn btn-ghost btn-sm btn-icon" style={{ marginRight: 4 }} title={p.archived ? 'Restore' : 'Archive'} onClick={() => onArchive(p)}>
+                            {p.archived ? <RestoreIcon /> : <ArchiveIcon />}
                           </button>
                           <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)', marginRight: 4 }} title="Delete project" onClick={() => onDeleteRequest(p.id)}>
                             🗑️
