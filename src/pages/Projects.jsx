@@ -565,7 +565,7 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
 
           {/* add task button */}
           <tr style={{ background: '#f7fff5' }}>
-            <td colSpan={8} style={{ padding: '8px 12px', borderTop: '1px solid var(--border)' }}>
+            <td colSpan={8} style={{ padding: '8px 12px 8px 40px', borderTop: '1px solid var(--border)' }}>
               <button
                 className="btn btn-sm"
                 onClick={startAdd}
