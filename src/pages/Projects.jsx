@@ -825,12 +825,6 @@ export default function ProjectsPage() {
           onChange={e => setSearch(e.target.value)}
           style={{ width: 200 }}
         />
-        <button
-          className={`btn ${showArchived ? 'btn-primary' : 'btn-ghost'}`}
-          onClick={() => setShowArchived(v => !v)}
-        >
-          {showArchived ? 'Archived' : 'Active'}
-        </button>
       </div>
 
       <div className="page-content">
