@@ -24,7 +24,7 @@ function Avatar({ name, size = 26 }) {
 
 function DragDots() {
   return (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" style={{ color: 'var(--text3)', cursor: 'grab' }}>
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" style={{ color: '#333', cursor: 'grab' }}>
       <circle cx="3.5" cy="2.5" r="1.1"/><circle cx="8.5" cy="2.5" r="1.1"/>
       <circle cx="3.5" cy="6"   r="1.1"/><circle cx="8.5" cy="6"   r="1.1"/>
       <circle cx="3.5" cy="9.5" r="1.1"/><circle cx="8.5" cy="9.5" r="1.1"/>
@@ -455,7 +455,15 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
   }, [assignOpen])
 
   return (
-    <div style={{ background: 'var(--bg3)', borderTop: '2px solid var(--border2)' }}>
+    <div style={{
+      background: 'var(--bg3)',
+      borderTop: '2px solid #333',
+      '--text': '#333',
+      '--text2': '#333',
+      '--text3': '#333',
+      '--border': '#333',
+      '--border2': '#333',
+    }}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
