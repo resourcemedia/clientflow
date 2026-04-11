@@ -458,7 +458,7 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
 
   return (
     <div style={{
-      background: 'var(--bg3)',
+      background: '#f7fff5',
       '--text': '#333',
       '--text2': '#333',
       '--text3': '#333',
