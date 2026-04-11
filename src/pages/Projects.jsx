@@ -1083,7 +1083,7 @@ function WorkView({
                               ✏️
                             </button>
                           )}
-                          <button className="btn btn-ghost btn-sm btn-icon" style={{ marginRight: 4, border: '1px solid #333' }} title={p.archived ? 'Restore' : 'Archive'} onClick={() => onArchive(p)}>
+                          <button className="btn btn-ghost btn-sm" style={{ marginRight: 4, border: '1px solid #333' }} title={p.archived ? 'Restore' : 'Archive'} onClick={() => onArchive(p)}>
                             {p.archived ? <RestoreIcon /> : <ArchiveIcon />}
                           </button>
                           <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)', marginRight: 4, border: '1px solid #333' }} title="Delete project" onClick={() => onDeleteRequest(p.id)}>
