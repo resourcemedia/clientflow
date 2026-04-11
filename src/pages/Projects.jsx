@@ -801,10 +801,6 @@ export default function ProjectsPage() {
   const totalOwed = filtered.reduce((s, p) => s + (p.client_owed || 0), 0)
   const totalPaid = filtered.reduce((s, p) => s + (p.client_paid || 0), 0)
 
-  const TABS = [
-    { id: 'work',      label: 'Work view' },
-    { id: 'financial', label: 'Financial view' },
-  ]
 
   return (
     <div className="fade-in">
@@ -812,7 +808,6 @@ export default function ProjectsPage() {
         <div className="breadcrumb">
           <span className="breadcrumb-current" style={{ fontSize: 20, fontWeight: 700 }}>Projects</span>
         </div>
-        <PillNav tabs={TABS} active={tab} onChange={setTab} />
         <select
           value={clientFilter}
           onChange={e => setClientFilter(e.target.value)}
