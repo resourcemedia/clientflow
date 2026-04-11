@@ -934,9 +934,6 @@ function WorkView({
 
   function reset() { setDragIdx(null); setDragOverIdx(null) }
 
-  const clientName = clientFilter
-    ? clients.find(c => c.id === clientFilter)?.company || ''
-    : ''
 
   if (loading) return <div className="card"><div className="empty-state text-dim">Loading…</div></div>
 
@@ -961,11 +958,6 @@ function WorkView({
 
   return (
     <div className="card">
-      {clientName && (
-        <div className="card-header">
-          <span className="breadcrumb-current">{clientName}</span>
-        </div>
-      )}
       <div className="table-wrap">
         <table>
           <thead>
