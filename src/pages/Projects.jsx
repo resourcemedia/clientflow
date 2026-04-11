@@ -1075,23 +1075,25 @@ function WorkView({
                         </td>
                         <td className="td-main">{p.name}</td>
                         <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
-                          <button className="btn btn-ghost btn-sm" style={{ marginRight: 4, border: '1px solid #333' }} onClick={() => onView(p.id)}>
-                            Items
-                          </button>
-                          {!showArchived && (
-                            <button className="btn btn-ghost btn-sm" style={{ marginRight: 4, border: '1px solid #333' }} title="Edit project" onClick={() => onEdit(p)}>
-                              ✏️
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }} onClick={() => onView(p.id)}>
+                              Items
                             </button>
-                          )}
-                          <button className="btn btn-ghost btn-sm" style={{ marginRight: 4, border: '1px solid #333' }} title={p.archived ? 'Restore' : 'Archive'} onClick={() => onArchive(p)}>
-                            {p.archived ? <RestoreIcon /> : <ArchiveIcon />}
-                          </button>
-                          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)', marginRight: 4, border: '1px solid #333' }} title="Delete project" onClick={() => onDeleteRequest(p.id)}>
-                            🗑️
-                          </button>
-                          <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }} title="Add new project" onClick={onStartAdd}>
-                            +
-                          </button>
+                            {!showArchived && (
+                              <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }} title="Edit project" onClick={() => onEdit(p)}>
+                                ✏️
+                              </button>
+                            )}
+                            <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }} title={p.archived ? 'Restore' : 'Archive'} onClick={() => onArchive(p)}>
+                              {p.archived ? <RestoreIcon /> : <ArchiveIcon />}
+                            </button>
+                            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)', border: '1px solid #333' }} title="Delete project" onClick={() => onDeleteRequest(p.id)}>
+                              🗑️
+                            </button>
+                            <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }} title="Add new project" onClick={onStartAdd}>
+                              +
+                            </button>
+                          </div>
                         </td>
                       </tr>
 
