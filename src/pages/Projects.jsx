@@ -117,6 +117,7 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
         opacity: isDragging ? 0.4 : 1,
         background: isDragTarget ? 'var(--accent-glow)' : '#f7fff5',
         transition: 'background 0.1s',
+        '--border': '#9dc691',
       }}
     >
       {/* drag handle */}
@@ -222,13 +223,13 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
             className="btn btn-ghost btn-icon btn-sm"
             title="Add task below"
             onClick={e => { e.stopPropagation(); onAdd() }}
-            style={{ color: 'var(--text3)' }}
+            style={{ color: 'var(--text3)', border: '1px solid #333' }}
           ><PlusIcon /></button>
           <button
             className="btn btn-ghost btn-icon btn-sm"
             onClick={e => { e.stopPropagation(); onSave(task.id, { status: task.status === 'Done' ? 'Open' : 'Done' }) }}
             title={task.status === 'Done' ? 'Mark Open' : 'Mark Done'}
-            style={{ color: task.status === 'Done' ? 'var(--green)' : 'var(--text3)' }}
+            style={{ color: task.status === 'Done' ? 'var(--green)' : 'var(--text3)', border: '1px solid #333' }}
           >
             <CheckIcon done={task.status === 'Done'} />
           </button>
@@ -236,7 +237,7 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
             className="btn btn-ghost btn-icon btn-sm"
             onClick={e => { e.stopPropagation(); onDelete(task.id) }}
             title="Delete task"
-            style={{ color: 'var(--text3)' }}
+            style={{ color: 'var(--text3)', border: '1px solid #333' }}
           >
             <TrashIcon />
           </button>
