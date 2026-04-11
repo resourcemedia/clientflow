@@ -109,6 +109,7 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
 
   return (
     <tr
+      className="task-row"
       draggable
       onDragStart={onDragStart}
       onDragOver={onDragOver}
