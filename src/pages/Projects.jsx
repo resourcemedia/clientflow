@@ -960,13 +960,6 @@ function WorkView({
     <div className="card">
       <div className="table-wrap">
         <table>
-          <thead>
-            <tr style={{ '--text3': '#333' }}>
-              <th style={{ width: 24 }}></th>{/* drag */}
-              <th style={{ width: 80 }}></th>{/* toggle */}
-              <th>#</th><th>Client</th><th>Product</th><th>Project</th><th></th>
-            </tr>
-          </thead>
           {groups.map(group => (
               <tbody key={`group-${group.name}`}>
                 {/* Client group header */}
