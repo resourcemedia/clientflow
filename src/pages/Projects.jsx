@@ -118,16 +118,6 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
         <DragDots />
       </td>
 
-      {/* add below */}
-      <td style={{ width: 22, padding: '7px 0' }}>
-        <button
-          className="btn btn-ghost btn-icon btn-sm"
-          title="Add task below"
-          onClick={e => { e.stopPropagation(); onAdd() }}
-          style={{ color: 'var(--text3)', padding: '1px 4px', fontSize: 14 }}
-        >+</button>
-      </td>
-
       {/* task text */}
       <td className="td-main" style={{ minWidth: 140 }}>
         {editField === 'note' ? (
@@ -217,6 +207,16 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
       {/* updated */}
       <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--text3)', whiteSpace: 'nowrap' }}>
         {fmtUpdated(task.updated_at, task.updater?.name)}
+      </td>
+
+      {/* add below */}
+      <td style={{ width: 22, padding: '7px 0' }}>
+        <button
+          className="btn btn-ghost btn-icon btn-sm"
+          title="Add task below"
+          onClick={e => { e.stopPropagation(); onAdd() }}
+          style={{ color: 'var(--text3)', padding: '1px 4px', fontSize: 14 }}
+        >+</button>
       </td>
 
       {/* done toggle */}
@@ -468,11 +468,11 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
         <thead>
           <tr>
             <th style={{ width: 24, padding: '6px 4px 6px 12px', background: '#9dc691' }} />
-            <th style={{ width: 22, padding: '6px 0', background: '#9dc691' }} />
             <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691' }}>Task</th>
             <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691' }}>Note</th>
             <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691' }}>Assigned</th>
             <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691' }}>Updated</th>
+            <th style={{ width: 22, background: '#9dc691' }} />
             <th style={{ width: 40, background: '#9dc691' }} />
             <th style={{ width: 32, background: '#9dc691' }} />
           </tr>
@@ -505,7 +505,6 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
           {addingRow !== null && (
             <tr style={{ background: 'var(--accent-glow)' }}>
               <td style={{ padding: '7px 4px 7px 12px', width: 24 }} />
-              <td style={{ width: 22 }} />
               <td className="td-main">
                 <input
                   ref={addInputRef}
@@ -557,6 +556,7 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
                   </div>
                 )}
               </td>
+              <td />
               <td />
               <td style={{ padding: '7px 10px 7px 4px', whiteSpace: 'nowrap' }}>
                 <div style={{ display: 'flex', gap: 4 }}>
