@@ -209,38 +209,32 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
         {fmtUpdated(task.updated_at, task.updater?.name)}
       </td>
 
-      {/* add below */}
-      <td style={{ width: 22, padding: '7px 0' }}>
-        <button
-          className="btn btn-ghost btn-icon btn-sm"
-          title="Add task below"
-          onClick={e => { e.stopPropagation(); onAdd() }}
-          style={{ color: 'var(--text3)', padding: '1px 4px', fontSize: 14 }}
-        >+</button>
-      </td>
-
-      {/* done toggle */}
-      <td style={{ padding: '7px 4px 7px 4px' }}>
-        <button
-          className="btn btn-ghost btn-icon btn-sm"
-          onClick={e => { e.stopPropagation(); onSave(task.id, { status: task.status === 'Done' ? 'Open' : 'Done' }) }}
-          title={task.status === 'Done' ? 'Mark Open' : 'Mark Done'}
-          style={{ color: task.status === 'Done' ? 'var(--green)' : 'var(--text3)' }}
-        >
-          <CheckIcon done={task.status === 'Done'} />
-        </button>
-      </td>
-
-      {/* delete */}
-      <td style={{ padding: '7px 10px 7px 4px' }}>
-        <button
-          className="btn btn-ghost btn-icon btn-sm"
-          onClick={e => { e.stopPropagation(); onDelete(task.id) }}
-          title="Delete task"
-          style={{ color: 'var(--text3)' }}
-        >
-          <TrashIcon />
-        </button>
+      {/* actions: add / done / delete */}
+      <td style={{ padding: '7px 10px 7px 4px', whiteSpace: 'nowrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button
+            className="btn btn-ghost btn-icon btn-sm"
+            title="Add task below"
+            onClick={e => { e.stopPropagation(); onAdd() }}
+            style={{ color: 'var(--text3)' }}
+          >+</button>
+          <button
+            className="btn btn-ghost btn-icon btn-sm"
+            onClick={e => { e.stopPropagation(); onSave(task.id, { status: task.status === 'Done' ? 'Open' : 'Done' }) }}
+            title={task.status === 'Done' ? 'Mark Open' : 'Mark Done'}
+            style={{ color: task.status === 'Done' ? 'var(--green)' : 'var(--text3)' }}
+          >
+            <CheckIcon done={task.status === 'Done'} />
+          </button>
+          <button
+            className="btn btn-ghost btn-icon btn-sm"
+            onClick={e => { e.stopPropagation(); onDelete(task.id) }}
+            title="Delete task"
+            style={{ color: 'var(--text3)' }}
+          >
+            <TrashIcon />
+          </button>
+        </div>
       </td>
     </tr>
   )
@@ -472,9 +466,7 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
             <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691' }}>Note</th>
             <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691' }}>Assigned</th>
             <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691' }}>Updated</th>
-            <th style={{ width: 22, background: '#9dc691' }} />
-            <th style={{ width: 40, background: '#9dc691' }} />
-            <th style={{ width: 32, background: '#9dc691' }} />
+            <th style={{ width: 100, background: '#9dc691' }} />
           </tr>
         </thead>
         <tbody>
@@ -556,8 +548,6 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
                   </div>
                 )}
               </td>
-              <td />
-              <td />
               <td style={{ padding: '7px 10px 7px 4px', whiteSpace: 'nowrap' }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                   <button className="btn btn-primary btn-sm" onClick={commitAdd}>Save</button>
