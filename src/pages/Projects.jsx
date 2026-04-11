@@ -457,7 +457,6 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
   return (
     <div style={{
       background: 'var(--bg3)',
-      borderTop: '2px solid #333',
       '--text': '#333',
       '--text2': '#333',
       '--text3': '#333',
@@ -467,12 +466,12 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
-            <th style={{ width: 24, padding: '6px 4px 6px 12px', background: '#9dc691' }} />
-            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691' }}>Task</th>
-            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691' }}>Note</th>
-            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691' }}>Assigned</th>
-            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691' }}>Updated</th>
-            <th style={{ width: 100, background: '#9dc691' }} />
+            <th style={{ width: 24, padding: '6px 4px 6px 12px', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }} />
+            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Task</th>
+            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Note</th>
+            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Assigned</th>
+            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Updated</th>
+            <th style={{ width: 100, background: '#9dc691', borderTop: 'none', borderBottom: 'none' }} />
           </tr>
         </thead>
         <tbody>
