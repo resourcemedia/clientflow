@@ -129,14 +129,13 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
       {/* task text */}
       <td className="td-main" style={{ minWidth: 140 }}>
         {editField === 'note' ? (
-          <textarea
+          <input
             autoFocus
             value={noteVal}
             onChange={e => setNoteVal(e.target.value)}
             onBlur={commitNote}
-            onKeyDown={e => { if (e.key === 'Escape') { setNoteVal(task.note || ''); setEditField(null) } }}
-            rows={1}
-            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13, resize: 'vertical' }}
+            onKeyDown={e => { if (e.key === 'Enter') commitNote(); if (e.key === 'Escape') { setNoteVal(task.note || ''); setEditField(null) } }}
+            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
           />
         ) : (
           <span
