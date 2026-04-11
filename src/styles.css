@@ -388,7 +388,7 @@ td {
 
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: var(--bg3); cursor: pointer; }
-tr.task-row:hover td { background: var(--bg3); cursor: default; }
+tr.task-row:hover td { background: #f7fff5; cursor: default; }
 
 .td-main { color: var(--text); font-weight: 500; }
 
