@@ -975,7 +975,7 @@ function WorkView({
       <div className="table-wrap">
         <table>
           <thead>
-            <tr>
+            <tr style={{ color: '#333' }}>
               <th style={{ width: 24 }}></th>{/* drag */}
               <th style={{ width: 80 }}></th>{/* toggle */}
               <th>#</th><th>Client</th><th>Product</th><th>Project</th><th></th>
