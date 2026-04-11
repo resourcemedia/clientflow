@@ -1119,7 +1119,7 @@ function WorkView({
 
                       {/* task drawer row */}
                       {isExpanded && (
-                        <tr key={`drawer-${p.id}`}>
+                        <tr key={`drawer-${p.id}`} className="drawer-row">
                           <td colSpan={7} style={{ padding: 0 }}>
                             <TaskDrawer
                               projectId={p.id}
