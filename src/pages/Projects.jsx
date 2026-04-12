@@ -2,9 +2,10 @@ import { useState, useEffect, useRef, Fragment } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { DEMO_PROJECTS, DEMO_CLIENTS, PRIORITIES, PROOF_STATUSES, INV_STATUSES, COLLECT_STATUSES } from '../lib/demo-data'
-import { StatusBadge, Modal, EmptyState, FormGroup, fmt$, initials } from '../components/ui'
+import { StatusBadge, Modal, EmptyState, PillNav, FormGroup, fmt$, initials } from '../components/ui'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
+const PRODUCT_TYPES = ['ST', 'CO', 'DS', 'OH']
 
 // ── SHARED HELPERS ───────────────────────────────────────────────────────
 function Avatar({ name, size = 26 }) {
@@ -586,12 +587,14 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
 export default function ProjectsPage() {
   const [projects, setProjects]           = useState([])
   const [clients, setClients]             = useState([])
+  const [productMap, setProductMap]       = useState({}) // { type: name }
   const [products, setProducts]           = useState([]) // [{ type, name }]
   const [profiles, setProfiles]           = useState([])
   const [loading, setLoading]             = useState(true)
+  const [tab, setTab]                     = useState('work')
   const [editProject, setEditProject]     = useState(null)
   const [search, setSearch]               = useState('')
-  const [showArchived]                    = useState(false)
+  const [showArchived, setShowArchived]   = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [searchParams]                    = useSearchParams()
   const [clientFilter, setClientFilter]   = useState(searchParams.get('client') || '')
@@ -626,6 +629,9 @@ export default function ProjectsPage() {
       setProjects(p || [])
       setClients(c || [])
       setProfiles(profs || [])
+      const map = {}
+      ;(prods || []).forEach(prod => { if (prod.type) map[prod.type] = prod.name })
+      setProductMap(map)
       setProducts(prods || [])
     }
     setLoading(false)
@@ -662,13 +668,9 @@ export default function ProjectsPage() {
   }
 
   async function addProjectItem(projectId, payload) {
-    const existing = projectItems[projectId] || []
-    const nums = existing.map(i => parseInt(i.item_number, 10)).filter(n => !isNaN(n))
-    const item_number = String(nums.length ? Math.max(...nums) + 1 : 1).padStart(2, '0')
-
     const { data } = await supabase
       .from('project_items')
-      .insert({ ...payload, project_id: projectId, item_number })
+      .insert({ ...payload, project_id: projectId })
       .select('id, item_number, name, scheduled_date, status, sort_order')
       .single()
     if (data) setProjectItems(prev => ({ ...prev, [projectId]: [...(prev[projectId] || []), data] }))
@@ -830,7 +832,7 @@ export default function ProjectsPage() {
           <WorkView
             projects={filtered}
             clients={clients}
-
+            productMap={productMap}
             profiles={profiles}
             loading={loading}
             showArchived={showArchived}
@@ -902,7 +904,7 @@ function groupByClient(projects) {
 
 // ── WORK VIEW ───────────────────────────────────────────────────────────
 function WorkView({
-  projects, clients, profiles, loading, showArchived, confirmDelete,
+  projects, clients, productMap, profiles, loading, showArchived, confirmDelete,
   addingRow, setAddingRow, addInputRef, clientFilter,
   expandedRows, expandedItemRows, projectTasks, projectItems, onToggleExpand, onToggleItemExpand, onSaveTask, onAddTask, onDeleteTask, onReorderTasks, onAddItem, onReorderItems,
   onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm,
