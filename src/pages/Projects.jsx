@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, Fragment } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { DEMO_PROJECTS, DEMO_CLIENTS, PRIORITIES, PROOF_STATUSES, INV_STATUSES, COLLECT_STATUSES } from '../lib/demo-data'
-import { StatusBadge, Modal, EmptyState, FormGroup, fmt$, initials } from '../components/ui'
+import { Modal, EmptyState, FormGroup, initials } from '../components/ui'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 
@@ -795,11 +795,6 @@ export default function ProjectsPage() {
       || (p.client?.company || '').toLowerCase().includes(q)
   })
 
-  const totalEst  = filtered.reduce((s, p) => s + (p.est_amount  || 0), 0)
-  const totalOwed = filtered.reduce((s, p) => s + (p.client_owed || 0), 0)
-  const totalPaid = filtered.reduce((s, p) => s + (p.client_paid || 0), 0)
-
-
   return (
     <div className="fade-in">
       <div className="topbar">
@@ -826,52 +821,40 @@ export default function ProjectsPage() {
       </div>
 
       <div className="page-content">
-{tab === 'work' ? (
-          <WorkView
-            projects={filtered}
-            clients={clients}
-
-            profiles={profiles}
-            loading={loading}
-            showArchived={showArchived}
-            confirmDelete={confirmDelete}
-            addingRow={addingRow}
-            setAddingRow={setAddingRow}
-            addInputRef={addInputRef}
-            clientFilter={clientFilter}
-            expandedRows={expandedRows}
-            expandedItemRows={expandedItemRows}
-            projectTasks={projectTasks}
-            projectItems={projectItems}
-            onToggleExpand={toggleExpand}
-            onToggleItemExpand={toggleItemExpand}
-            onAddItem={addProjectItem}
-            onReorderItems={reorderProjectItems}
-            onSaveTask={saveProjectTask}
-            onAddTask={addProjectTask}
-            onDeleteTask={deleteProjectTask}
-            onReorderTasks={reorderProjectTasks}
-            onEdit={p => setEditProject(p)}
-            onArchive={handleArchive}
-            onDeleteRequest={id => setConfirmDelete(id)}
-            onDeleteCancel={() => setConfirmDelete(null)}
-            onDeleteConfirm={handleDelete}
-            onView={id => navigate(`/projects/${id}`)}
-            onReorder={handleReorder}
-            onStartAdd={startAdd}
-            onAddSave={handleAddSave}
-            onAddKeyDown={handleAddKeyDown}
-          />
-        ) : (
-          <FinancialView
-            projects={filtered}
-            loading={loading}
-            totalEst={totalEst}
-            totalOwed={totalOwed}
-            totalPaid={totalPaid}
-            onView={id => navigate(`/projects/${id}`)}
-          />
-        )}
+        <WorkView
+          projects={filtered}
+          clients={clients}
+          profiles={profiles}
+          loading={loading}
+          showArchived={showArchived}
+          confirmDelete={confirmDelete}
+          addingRow={addingRow}
+          setAddingRow={setAddingRow}
+          addInputRef={addInputRef}
+          clientFilter={clientFilter}
+          expandedRows={expandedRows}
+          expandedItemRows={expandedItemRows}
+          projectTasks={projectTasks}
+          projectItems={projectItems}
+          onToggleExpand={toggleExpand}
+          onToggleItemExpand={toggleItemExpand}
+          onAddItem={addProjectItem}
+          onReorderItems={reorderProjectItems}
+          onSaveTask={saveProjectTask}
+          onAddTask={addProjectTask}
+          onDeleteTask={deleteProjectTask}
+          onReorderTasks={reorderProjectTasks}
+          onEdit={p => setEditProject(p)}
+          onArchive={handleArchive}
+          onDeleteRequest={id => setConfirmDelete(id)}
+          onDeleteCancel={() => setConfirmDelete(null)}
+          onDeleteConfirm={handleDelete}
+          onView={id => navigate(`/projects/${id}`)}
+          onReorder={handleReorder}
+          onStartAdd={startAdd}
+          onAddSave={handleAddSave}
+          onAddKeyDown={handleAddKeyDown}
+        />
       </div>
 
       {editProject && (
@@ -1197,60 +1180,6 @@ function WorkView({
 }
 
 // ── FINANCIAL VIEW ──────────────────────────────────────────────────────
-function FinancialView({ projects, loading, totalEst, totalOwed, totalPaid, onView }) {
-  if (loading) return <div className="card"><div className="empty-state text-dim">Loading…</div></div>
-  return (
-    <div className="card">
-      <div className="card-header"><span className="card-title">Financial overview</span></div>
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th><th>Project</th><th>Client</th><th>Est amount</th>
-              <th>C owed</th><th>C paid</th><th>Balance</th>
-              <th>Team owed</th><th>Team paid</th><th>Invoice</th><th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {projects.map(p => {
-              const balance = (p.client_owed || 0) - (p.client_paid || 0)
-              return (
-                <tr key={p.id}>
-                  <td className="text-mono text-dim">{p.project_number}</td>
-                  <td className="td-main">{p.name}</td>
-                  <td>{p.client?.company || '—'}</td>
-                  <td className="text-mono">{fmt$(p.est_amount)}</td>
-                  <td className="text-mono text-amber">{fmt$(p.client_owed)}</td>
-                  <td className="text-mono text-green">{fmt$(p.client_paid)}</td>
-                  <td className="text-mono" style={{ color: balance > 0 ? 'var(--red)' : 'var(--green)' }}>
-                    {fmt$(balance)}
-                  </td>
-                  <td className="text-mono text-dim">{fmt$(p.team_owed)}</td>
-                  <td className="text-mono text-dim">{fmt$(p.team_paid)}</td>
-                  <td><StatusBadge status={p.inv_status} /></td>
-                  <td>
-                    <button className="btn btn-ghost btn-sm" onClick={() => onView(p.id)}>View</button>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-        <div style={{
-          padding: '14px 20px',
-          borderTop: '2px solid var(--border2)',
-          display: 'flex', justifyContent: 'flex-end', gap: 40,
-          fontFamily: 'DM Mono, monospace', fontSize: 13,
-        }}>
-          <span className="text-dim">Total est: <span style={{ color: 'var(--text)', fontWeight: 600 }}>{fmt$(totalEst)}</span></span>
-          <span className="text-dim">Total owed: <span style={{ color: 'var(--amber)', fontWeight: 600 }}>{fmt$(totalOwed)}</span></span>
-          <span className="text-dim">Total paid: <span style={{ color: 'var(--green)', fontWeight: 600 }}>{fmt$(totalPaid)}</span></span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── PROJECT MODAL (edit only) ────────────────────────────────────────────
 function ProjectModal({ project, clients, projects, products, onClose, onSaved }) {
   const [form, setForm] = useState({
