@@ -668,9 +668,11 @@ export default function ProjectsPage() {
   }
 
   async function addProjectItem(projectId, payload) {
+    const existing = projectItems[projectId] || []
+    const nextNumber = String(existing.length + 1).padStart(2, '0')
     const { data } = await supabase
       .from('project_items')
-      .insert({ ...payload, project_id: projectId })
+      .insert({ ...payload, project_id: projectId, item_number: nextNumber })
       .select('id, item_number, name, scheduled_date, status, sort_order')
       .single()
     if (data) setProjectItems(prev => ({ ...prev, [projectId]: [...(prev[projectId] || []), data] }))
