@@ -326,7 +326,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onReorder }) {
     <div style={{ background: 'var(--bg3)', borderTop: '2px solid var(--border2)' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
-          <tr style={{ background: 'var(--bg3)' }}>
+          <tr style={{ background: '#89bac9' }}>
             <th style={{ width: 24, padding: '6px 4px 6px 12px' }} />
             <th style={{ ...thStyle, width: 180 }}>Item</th>
             <th style={{ ...thStyle, width: 80 }}>Order</th>
@@ -353,6 +353,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onReorder }) {
                 onDrop={() => handleDrop(idx)}
                 onDragEnd={() => { setDragIdx(null); setDragOverIdx(null) }}
                 style={{
+                  background: '#e6f8fc',
                   borderTop: '1px solid var(--border)',
                   opacity: dragIdx === idx ? 0.4 : 1,
                   outline: dragOverIdx === idx && dragIdx !== idx ? '2px solid var(--accent)' : undefined,
@@ -433,7 +434,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onReorder }) {
           )}
 
           {/* add item button */}
-          <tr>
+          <tr style={{ background: '#e6f8fc' }}>
             <td colSpan={5} style={{ padding: '8px 12px', borderTop: '1px solid var(--border)' }}>
               <button className="btn btn-ghost btn-sm" onClick={startAdd} style={{ color: 'var(--text3)', fontSize: 12 }}>
                 + Add item
