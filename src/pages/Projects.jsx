@@ -254,11 +254,28 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
 
 // ── TASK DRAWER ──────────────────────────────────────────────────────────
 // ── ITEM DRAWER ──────────────────────────────────────────────────────────────
-function ItemDrawer({ projectId, items, onAddItem, onReorder }) {
+function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onReorder }) {
   const [addingRow,   setAddingRow]   = useState(null) // null | { name, scheduled_date }
   const [dragIdx,     setDragIdx]     = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
+  const [editField,   setEditField]   = useState(null) // null | { itemId, field }
+  const [editVal,     setEditVal]     = useState('')
   const addInputRef = useRef(null)
+
+  function startEdit(item, field) {
+    setEditField({ itemId: item.id, field })
+    setEditVal(field === 'scheduled_date' ? (item.scheduled_date || '') : item.name)
+  }
+
+  async function commitEdit(item) {
+    if (!editField) return
+    const { field } = editField
+    const original = field === 'scheduled_date' ? (item.scheduled_date || '') : item.name
+    setEditField(null)
+    if (editVal === original) return
+    const updates = { [field]: field === 'scheduled_date' ? (editVal || null) : editVal }
+    await onUpdateItem(projectId, item.id, updates)
+  }
 
   useEffect(() => {
     if (addingRow !== null) addInputRef.current?.focus()
@@ -343,12 +360,39 @@ function ItemDrawer({ projectId, items, onAddItem, onReorder }) {
                 }}
               >
                 <td style={{ padding: '7px 4px 7px 12px', width: 24, cursor: 'grab', color: 'var(--text3)', fontSize: 14, userSelect: 'none' }}>⠿</td>
-                <td style={{ padding: '7px 12px', fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{item.name}</td>
+                <td style={{ padding: '4px 12px', fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                  {editField?.itemId === item.id && editField.field === 'name' ? (
+                    <input
+                      autoFocus
+                      value={editVal}
+                      onChange={e => setEditVal(e.target.value)}
+                      onBlur={() => commitEdit(item)}
+                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') { setEditField(null) } }}
+                      style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13, fontWeight: 600 }}
+                    />
+                  ) : (
+                    <span style={{ cursor: 'text', display: 'block' }} onClick={() => startEdit(item, 'name')}>{item.name}</span>
+                  )}
+                </td>
                 <td style={{ padding: '7px 12px', fontSize: 12, color: 'var(--text3)', fontFamily: 'DM Mono, monospace' }}>{item.item_number || '—'}</td>
-                <td style={{ padding: '7px 12px', fontSize: 12, fontFamily: 'DM Mono, monospace', color: isOverdue ? 'var(--red)' : 'var(--text3)', fontWeight: isOverdue ? 600 : 400 }}>
-                  {item.scheduled_date
-                    ? (() => { const [y,m,d] = item.scheduled_date.split('-'); return `${m}/${d}/${y.slice(2)}` })()
-                    : '—'}
+                <td style={{ padding: '4px 12px', fontSize: 12, fontFamily: 'DM Mono, monospace', color: isOverdue ? 'var(--red)' : 'var(--text3)', fontWeight: isOverdue ? 600 : 400 }}>
+                  {editField?.itemId === item.id && editField.field === 'scheduled_date' ? (
+                    <input
+                      autoFocus
+                      type="date"
+                      value={editVal}
+                      onChange={e => setEditVal(e.target.value)}
+                      onBlur={() => commitEdit(item)}
+                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') { setEditField(null) } }}
+                      style={{ background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 12 }}
+                    />
+                  ) : (
+                    <span style={{ cursor: 'text', display: 'block' }} onClick={() => startEdit(item, 'scheduled_date')}>
+                      {item.scheduled_date
+                        ? (() => { const [y,m,d] = item.scheduled_date.split('-'); return `${m}/${d}/${y.slice(2)}` })()
+                        : '—'}
+                    </span>
+                  )}
                 </td>
                 <td />
               </tr>
@@ -678,6 +722,19 @@ export default function ProjectsPage() {
     if (data) setProjectItems(prev => ({ ...prev, [projectId]: [...(prev[projectId] || []), data] }))
   }
 
+  async function updateProjectItem(projectId, itemId, updates) {
+    const { data } = await supabase
+      .from('project_items')
+      .update(updates)
+      .eq('id', itemId)
+      .select('id, item_number, name, scheduled_date, status, sort_order')
+      .single()
+    if (data) setProjectItems(prev => ({
+      ...prev,
+      [projectId]: (prev[projectId] || []).map(i => i.id === itemId ? data : i),
+    }))
+  }
+
   async function saveProjectTask(projectId, taskId, updates) {
     if (isDemo) return
     const { data } = await supabase
@@ -850,6 +907,7 @@ export default function ProjectsPage() {
             onToggleExpand={toggleExpand}
             onToggleItemExpand={toggleItemExpand}
             onAddItem={addProjectItem}
+            onUpdateItem={updateProjectItem}
             onReorderItems={reorderProjectItems}
             onSaveTask={saveProjectTask}
             onAddTask={addProjectTask}
@@ -908,7 +966,7 @@ function groupByClient(projects) {
 function WorkView({
   projects, clients, productMap, profiles, loading, showArchived, confirmDelete,
   addingRow, setAddingRow, addInputRef, clientFilter,
-  expandedRows, expandedItemRows, projectTasks, projectItems, onToggleExpand, onToggleItemExpand, onSaveTask, onAddTask, onDeleteTask, onReorderTasks, onAddItem, onReorderItems,
+  expandedRows, expandedItemRows, projectTasks, projectItems, onToggleExpand, onToggleItemExpand, onSaveTask, onAddTask, onDeleteTask, onReorderTasks, onAddItem, onUpdateItem, onReorderItems,
   onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm,
   onView, onReorder, onStartAdd, onAddSave, onAddKeyDown,
 }) {
@@ -1124,6 +1182,7 @@ function WorkView({
                               projectId={p.id}
                               items={projectItems[p.id] || []}
                               onAddItem={onAddItem}
+                              onUpdateItem={onUpdateItem}
                               onReorder={onReorderItems}
                             />
                           </td>
