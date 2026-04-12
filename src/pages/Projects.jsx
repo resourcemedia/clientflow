@@ -326,12 +326,12 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onReorder }) {
     <div style={{ background: 'var(--bg3)', borderTop: '2px solid var(--border2)' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
-          <tr style={{ background: '#89bac9' }}>
-            <th style={{ width: 24, padding: '6px 4px 6px 12px' }} />
-            <th style={{ ...thStyle, width: 180 }}>Item</th>
-            <th style={{ ...thStyle, width: 80 }}>Order</th>
-            <th style={{ ...thStyle, width: 120 }}>Scheduled</th>
-            <th style={{ width: 40 }} />
+          <tr>
+            <th style={{ width: 24, padding: '6px 4px 6px 12px', background: '#89bac9' }} />
+            <th style={{ ...thStyle, width: 180, background: '#89bac9' }}>Item</th>
+            <th style={{ ...thStyle, width: 80, background: '#89bac9' }}>Order</th>
+            <th style={{ ...thStyle, width: 120, background: '#89bac9' }}>Scheduled</th>
+            <th style={{ width: 40, background: '#89bac9' }} />
           </tr>
         </thead>
         <tbody>
