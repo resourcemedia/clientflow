@@ -328,9 +328,9 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onReorder }) {
         <thead>
           <tr>
             <th style={{ width: 24, padding: '6px 4px 6px 12px', background: '#89bac9' }} />
-            <th style={{ ...thStyle, width: 180, background: '#89bac9' }}>Item</th>
-            <th style={{ ...thStyle, width: 80, background: '#89bac9' }}>Order</th>
-            <th style={{ ...thStyle, width: 120, background: '#89bac9' }}>Scheduled</th>
+            <th style={{ ...thStyle, width: 180, background: '#89bac9', color: '#fff' }}>Item</th>
+            <th style={{ ...thStyle, width: 80, background: '#89bac9', color: '#fff' }}>Order</th>
+            <th style={{ ...thStyle, width: 120, background: '#89bac9', color: '#fff' }}>Scheduled</th>
             <th style={{ width: 40, background: '#89bac9' }} />
           </tr>
         </thead>
