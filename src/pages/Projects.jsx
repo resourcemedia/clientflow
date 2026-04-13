@@ -354,14 +354,13 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onReorder }) {
                 onDragEnd={() => { setDragIdx(null); setDragOverIdx(null) }}
                 style={{
                   background: '#e6f8fc',
-                  borderBottom: '1px solid #89bac9',
                   opacity: dragIdx === idx ? 0.4 : 1,
                   outline: dragOverIdx === idx && dragIdx !== idx ? '2px solid var(--accent)' : undefined,
                   cursor: 'default',
                 }}
               >
-                <td style={{ padding: '7px 4px 7px 12px', width: 24, cursor: 'grab', color: 'var(--text3)', fontSize: 14, userSelect: 'none' }}>⠿</td>
-                <td style={{ padding: '4px 12px', fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                <td style={{ padding: '7px 4px 7px 12px', width: 24, cursor: 'grab', color: 'var(--text3)', fontSize: 14, userSelect: 'none', borderBottom: '1px solid #89bac9' }}>⠿</td>
+                <td style={{ padding: '4px 12px', fontSize: 13, fontWeight: 600, color: 'var(--text)', borderBottom: '1px solid #89bac9' }}>
                   {editField?.itemId === item.id && editField.field === 'name' ? (
                     <input
                       autoFocus
@@ -375,8 +374,8 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onReorder }) {
                     <span style={{ cursor: 'text', display: 'block' }} onClick={() => startEdit(item, 'name')}>{item.name}</span>
                   )}
                 </td>
-                <td style={{ padding: '7px 12px', fontSize: 12, color: 'var(--text3)', fontFamily: 'DM Mono, monospace' }}>{item.item_number || '—'}</td>
-                <td style={{ padding: '4px 12px', fontSize: 12, fontFamily: 'DM Mono, monospace', color: isOverdue ? 'var(--red)' : 'var(--text3)', fontWeight: isOverdue ? 600 : 400 }}>
+                <td style={{ padding: '7px 12px', fontSize: 12, color: 'var(--text3)', fontFamily: 'DM Mono, monospace', borderBottom: '1px solid #89bac9' }}>{item.item_number || '—'}</td>
+                <td style={{ padding: '4px 12px', fontSize: 12, fontFamily: 'DM Mono, monospace', color: isOverdue ? 'var(--red)' : 'var(--text3)', fontWeight: isOverdue ? 600 : 400, borderBottom: '1px solid #89bac9' }}>
                   {editField?.itemId === item.id && editField.field === 'scheduled_date' ? (
                     <input
                       autoFocus
@@ -395,7 +394,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onReorder }) {
                     </span>
                   )}
                 </td>
-                <td />
+                <td style={{ borderBottom: '1px solid #89bac9' }} />
               </tr>
             )
           })}
