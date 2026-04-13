@@ -327,11 +327,11 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onReorder }) {
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
-            <th style={{ width: 24, padding: '6px 4px 6px 12px', background: '#89bac9' }} />
-            <th style={{ ...thStyle, width: 180, background: '#89bac9', color: '#fff' }}>Item</th>
-            <th style={{ ...thStyle, width: 80, background: '#89bac9', color: '#fff' }}>Order</th>
-            <th style={{ ...thStyle, width: 120, background: '#89bac9', color: '#fff' }}>Scheduled</th>
-            <th style={{ width: 40, background: '#89bac9' }} />
+            <th style={{ width: 24, padding: '6px 4px 6px 12px', background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
+            <th style={{ ...thStyle, width: 180, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Item</th>
+            <th style={{ ...thStyle, width: 80, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Order</th>
+            <th style={{ ...thStyle, width: 120, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Scheduled</th>
+            <th style={{ width: 40, background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
           </tr>
         </thead>
         <tbody>
@@ -354,7 +354,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onReorder }) {
                 onDragEnd={() => { setDragIdx(null); setDragOverIdx(null) }}
                 style={{
                   background: '#e6f8fc',
-                  borderTop: '1px solid var(--border)',
+                  borderTop: '1px solid #89bac9',
                   opacity: dragIdx === idx ? 0.4 : 1,
                   outline: dragOverIdx === idx && dragIdx !== idx ? '2px solid var(--accent)' : undefined,
                   cursor: 'default',
