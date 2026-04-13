@@ -254,7 +254,7 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
 
 // ── TASK DRAWER ──────────────────────────────────────────────────────────
 // ── ITEM DRAWER ──────────────────────────────────────────────────────────────
-function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onReorder }) {
+function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, onReorder }) {
   const [addingRow,   setAddingRow]   = useState(null) // null | { name, scheduled_date }
   const [dragIdx,     setDragIdx]     = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
@@ -394,7 +394,16 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onReorder }) {
                     </span>
                   )}
                 </td>
-                <td style={{ borderBottom: '1px solid #89bac9' }} />
+                <td style={{ borderBottom: '1px solid #89bac9', padding: '7px 10px 7px 4px', whiteSpace: 'nowrap' }}>
+                  <button
+                    className="btn btn-ghost btn-icon btn-sm"
+                    onClick={e => { e.stopPropagation(); onDeleteItem(projectId, item.id) }}
+                    title="Delete item"
+                    style={{ color: 'var(--text3)', border: '1px solid #333' }}
+                  >
+                    <TrashIcon />
+                  </button>
+                </td>
               </tr>
             )
           })}
@@ -735,6 +744,14 @@ export default function ProjectsPage() {
     }))
   }
 
+  async function deleteProjectItem(projectId, itemId) {
+    await supabase.from('project_items').delete().eq('id', itemId)
+    setProjectItems(prev => ({
+      ...prev,
+      [projectId]: (prev[projectId] || []).filter(i => i.id !== itemId),
+    }))
+  }
+
   async function saveProjectTask(projectId, taskId, updates) {
     if (isDemo) return
     const { data } = await supabase
@@ -908,6 +925,7 @@ export default function ProjectsPage() {
             onToggleItemExpand={toggleItemExpand}
             onAddItem={addProjectItem}
             onUpdateItem={updateProjectItem}
+            onDeleteItem={deleteProjectItem}
             onReorderItems={reorderProjectItems}
             onSaveTask={saveProjectTask}
             onAddTask={addProjectTask}
@@ -966,7 +984,7 @@ function groupByClient(projects) {
 function WorkView({
   projects, clients, productMap, profiles, loading, showArchived, confirmDelete,
   addingRow, setAddingRow, addInputRef, clientFilter,
-  expandedRows, expandedItemRows, projectTasks, projectItems, onToggleExpand, onToggleItemExpand, onSaveTask, onAddTask, onDeleteTask, onReorderTasks, onAddItem, onUpdateItem, onReorderItems,
+  expandedRows, expandedItemRows, projectTasks, projectItems, onToggleExpand, onToggleItemExpand, onSaveTask, onAddTask, onDeleteTask, onReorderTasks, onAddItem, onUpdateItem, onDeleteItem, onReorderItems,
   onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm,
   onView, onReorder, onStartAdd, onAddSave, onAddKeyDown,
 }) {
@@ -1183,6 +1201,7 @@ function WorkView({
                               items={projectItems[p.id] || []}
                               onAddItem={onAddItem}
                               onUpdateItem={onUpdateItem}
+                              onDeleteItem={onDeleteItem}
                               onReorder={onReorderItems}
                             />
                           </td>
