@@ -354,7 +354,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onReorder }) {
                 onDragEnd={() => { setDragIdx(null); setDragOverIdx(null) }}
                 style={{
                   background: '#e6f8fc',
-                  borderTop: '1px solid #89bac9',
+                  borderBottom: '1px solid #89bac9',
                   opacity: dragIdx === idx ? 0.4 : 1,
                   outline: dragOverIdx === idx && dragIdx !== idx ? '2px solid var(--accent)' : undefined,
                   cursor: 'default',
