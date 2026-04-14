@@ -118,16 +118,15 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
         opacity: isDragging ? 0.4 : 1,
         background: isDragTarget ? 'var(--accent-glow)' : '#f7fff5',
         transition: 'background 0.1s',
-        '--border': '#9dc691',
       }}
     >
       {/* drag handle */}
-      <td style={{ padding: '7px 4px 7px 12px', width: 24, cursor: 'grab' }}>
+      <td style={{ padding: '7px 4px 7px 12px', width: 24, cursor: 'grab', borderBottom: '1px solid #9dc691' }}>
         <DragDots />
       </td>
 
       {/* task text */}
-      <td className="td-main" style={{ minWidth: 140 }}>
+      <td className="td-main" style={{ minWidth: 140, borderBottom: '1px solid #9dc691' }}>
         {editField === 'note' ? (
           <textarea
             autoFocus
@@ -153,7 +152,7 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
       </td>
 
       {/* status note */}
-      <td style={{ minWidth: 120 }}>
+      <td style={{ minWidth: 120, borderBottom: '1px solid #9dc691' }}>
         {editField === 'status_note' ? (
           <input
             autoFocus
@@ -174,7 +173,7 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
       </td>
 
       {/* assigned */}
-      <td style={{ position: 'relative' }} ref={assignRef}>
+      <td style={{ position: 'relative', borderBottom: '1px solid #9dc691' }} ref={assignRef}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           {assignee
             ? <Avatar name={assignee.name} size={24} />
@@ -217,12 +216,12 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
       </td>
 
       {/* updated */}
-      <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--text3)', whiteSpace: 'nowrap' }}>
+      <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--text3)', whiteSpace: 'nowrap', borderBottom: '1px solid #9dc691' }}>
         {fmtUpdated(task.updated_at, task.updater?.name)}
       </td>
 
       {/* actions: add / done / delete */}
-      <td style={{ padding: '7px 10px 7px 4px', whiteSpace: 'nowrap' }}>
+      <td style={{ padding: '7px 10px 7px 4px', whiteSpace: 'nowrap', borderBottom: '1px solid #9dc691' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <button
             className="btn btn-ghost btn-icon btn-sm"
