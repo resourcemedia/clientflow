@@ -442,8 +442,8 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
 
           {/* add item button */}
           <tr style={{ background: '#e6f8fc' }}>
-            <td colSpan={5} style={{ padding: '8px 12px', borderTop: '1px solid var(--border)' }}>
-              <button className="btn btn-ghost btn-sm" onClick={startAdd} style={{ color: 'var(--text3)', fontSize: 12 }}>
+            <td colSpan={5} style={{ padding: '8px 12px 8px 40px', borderTop: '1px solid var(--border)' }}>
+              <button className="btn btn-sm" onClick={startAdd} style={{ background: '#89bac9', color: '#fff', fontSize: 12, fontWeight: 600, border: 'none' }}>
                 + Add item
               </button>
             </td>
