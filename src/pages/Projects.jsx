@@ -447,7 +447,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                                 </button>
                               </td>
                               <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd' }}>{item.name}</td>
-                              <td style={{ padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: 12, borderBottom: '1px solid #d5b6dd' }}>{proof.version}</td>
+                              <td style={{ padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: 12, borderBottom: '1px solid #d5b6dd' }}>{item.item_number}{String.fromCharCode(64 + proof.version)}</td>
                               <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd' }}>{proof.status || '—'}</td>
                               <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd' }}>{proof.comments || '—'}</td>
                               <td style={{ padding: '5px 8px', whiteSpace: 'nowrap', borderBottom: '1px solid #d5b6dd' }}>
@@ -901,9 +901,7 @@ export default function ProjectsPage() {
 
   async function addProof(itemId, itemNumber) {
     const proofs = itemProofs[itemId] || []
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    const nextLetter = letters[proofs.length] || 'A'
-    const version = `${itemNumber || '01'}${nextLetter}`
+    const version = proofs.length + 1
     const { data } = await supabase
       .from('proofs')
       .insert({ item_id: itemId, version })
