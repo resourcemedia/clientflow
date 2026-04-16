@@ -253,7 +253,7 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
 
 // ── TASK DRAWER ──────────────────────────────────────────────────────────
 // ── ITEM DRAWER ──────────────────────────────────────────────────────────────
-function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, onReorder }) {
+function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, onReorder, expandedProofRows, itemProofs, onToggleProofExpand, onAddProof, onDeleteProof }) {
   const [addingRow,   setAddingRow]   = useState(null) // null | { name, scheduled_date }
   const [dragIdx,     setDragIdx]     = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
@@ -320,6 +320,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
   }
 
   const thStyle = { padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)' }
+  const proofThStyle = { padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#d5b6dd', borderTop: 'none', borderBottom: 'none' }
 
   return (
     <div style={{ background: 'var(--bg3)', borderTop: '2px solid var(--border2)' }}>
@@ -327,6 +328,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
         <thead>
           <tr>
             <th style={{ width: 24, padding: '6px 4px 6px 12px', background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
+            <th style={{ width: 110, background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
             <th style={{ ...thStyle, width: 180, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Item</th>
             <th style={{ ...thStyle, width: 80, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Order</th>
             <th style={{ ...thStyle, width: 120, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Scheduled</th>
@@ -336,74 +338,151 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
         <tbody>
           {items.length === 0 && addingRow === null && (
             <tr>
-              <td colSpan={5} style={{ padding: '12px 16px', color: 'var(--text3)', fontSize: 13 }}>
+              <td colSpan={6} style={{ padding: '12px 16px', color: 'var(--text3)', fontSize: 13 }}>
                 No items yet.
               </td>
             </tr>
           )}
           {items.map((item, idx) => {
             const isOverdue = item.scheduled_date && item.scheduled_date < new Date().toISOString().slice(0, 10)
+            const proofOpen = expandedProofRows?.[item.id]
             return (
-              <tr
-                key={item.id}
-                draggable
-                onDragStart={e => handleDragStart(e, idx)}
-                onDragOver={e => handleDragOver(e, idx)}
-                onDrop={() => handleDrop(idx)}
-                onDragEnd={() => { setDragIdx(null); setDragOverIdx(null) }}
-                style={{
-                  background: '#e6f8fc',
-                  opacity: dragIdx === idx ? 0.4 : 1,
-                  outline: dragOverIdx === idx && dragIdx !== idx ? '2px solid var(--accent)' : undefined,
-                  cursor: 'default',
-                }}
-              >
-                <td style={{ padding: '7px 4px 7px 12px', width: 24, cursor: 'grab', color: 'var(--text3)', fontSize: 14, userSelect: 'none', borderBottom: '1px solid #89bac9' }}>⠿</td>
-                <td style={{ padding: '4px 12px', fontSize: 13, fontWeight: 600, color: 'var(--text)', borderBottom: '1px solid #89bac9' }}>
-                  {editField?.itemId === item.id && editField.field === 'name' ? (
-                    <input
-                      autoFocus
-                      value={editVal}
-                      onChange={e => setEditVal(e.target.value)}
-                      onBlur={() => commitEdit(item)}
-                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') { setEditField(null) } }}
-                      style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13, fontWeight: 600 }}
-                    />
-                  ) : (
-                    <span style={{ cursor: 'text', display: 'block' }} onClick={() => startEdit(item, 'name')}>{item.name}</span>
-                  )}
-                </td>
-                <td style={{ padding: '7px 12px', fontSize: 12, color: 'var(--text3)', fontFamily: 'DM Mono, monospace', borderBottom: '1px solid #89bac9' }}>{item.item_number || '—'}</td>
-                <td style={{ padding: '4px 12px', fontSize: 12, fontFamily: 'DM Mono, monospace', color: isOverdue ? 'var(--red)' : 'var(--text3)', fontWeight: isOverdue ? 600 : 400, borderBottom: '1px solid #89bac9' }}>
-                  {editField?.itemId === item.id && editField.field === 'scheduled_date' ? (
-                    <input
-                      autoFocus
-                      type="date"
-                      value={editVal}
-                      onChange={e => setEditVal(e.target.value)}
-                      onBlur={() => commitEdit(item)}
-                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') { setEditField(null) } }}
-                      style={{ background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 12 }}
-                    />
-                  ) : (
-                    <span style={{ cursor: 'text', display: 'block' }} onClick={() => startEdit(item, 'scheduled_date')}>
-                      {item.scheduled_date
-                        ? (() => { const [y,m,d] = item.scheduled_date.split('-'); return `${m}/${d}/${y.slice(2)}` })()
-                        : '—'}
-                    </span>
-                  )}
-                </td>
-                <td style={{ borderBottom: '1px solid #89bac9', padding: '7px 10px 7px 4px', whiteSpace: 'nowrap' }}>
-                  <button
-                    className="btn btn-ghost btn-icon btn-sm"
-                    onClick={e => { e.stopPropagation(); onDeleteItem(projectId, item.id) }}
-                    title="Delete item"
-                    style={{ color: 'var(--text3)', border: '1px solid #333' }}
-                  >
-                    <TrashIcon />
-                  </button>
-                </td>
-              </tr>
+              <Fragment key={item.id}>
+                <tr
+                  draggable
+                  onDragStart={e => handleDragStart(e, idx)}
+                  onDragOver={e => handleDragOver(e, idx)}
+                  onDrop={() => handleDrop(idx)}
+                  onDragEnd={() => { setDragIdx(null); setDragOverIdx(null) }}
+                  style={{
+                    background: '#e6f8fc',
+                    opacity: dragIdx === idx ? 0.4 : 1,
+                    outline: dragOverIdx === idx && dragIdx !== idx ? '2px solid var(--accent)' : undefined,
+                    cursor: 'default',
+                  }}
+                >
+                  <td style={{ padding: '7px 4px 7px 12px', width: 24, cursor: 'grab', color: 'var(--text3)', fontSize: 14, userSelect: 'none', borderBottom: '1px solid #89bac9' }}>⠿</td>
+                  <td style={{ padding: '4px 8px', borderBottom: '1px solid #89bac9' }}>
+                    <button
+                      className="btn btn-sm"
+                      onClick={e => { e.stopPropagation(); onToggleProofExpand(item.id) }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#d5b6dd', color: '#fff', border: 'none', fontSize: 12, fontWeight: 600 }}
+                    >
+                      <svg
+                        width="9" height="9" viewBox="0 0 10 10" fill="currentColor"
+                        style={{ transition: 'transform 0.15s', transform: proofOpen ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }}
+                      >
+                        <path d="M3 1.5l4 3.5-4 3.5V1.5z"/>
+                      </svg>
+                      Proofs
+                    </button>
+                  </td>
+                  <td style={{ padding: '4px 12px', fontSize: 13, fontWeight: 600, color: 'var(--text)', borderBottom: '1px solid #89bac9' }}>
+                    {editField?.itemId === item.id && editField.field === 'name' ? (
+                      <input
+                        autoFocus
+                        value={editVal}
+                        onChange={e => setEditVal(e.target.value)}
+                        onBlur={() => commitEdit(item)}
+                        onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') { setEditField(null) } }}
+                        style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13, fontWeight: 600 }}
+                      />
+                    ) : (
+                      <span style={{ cursor: 'text', display: 'block' }} onClick={() => startEdit(item, 'name')}>{item.name}</span>
+                    )}
+                  </td>
+                  <td style={{ padding: '7px 12px', fontSize: 12, color: 'var(--text3)', fontFamily: 'DM Mono, monospace', borderBottom: '1px solid #89bac9' }}>{item.item_number || '—'}</td>
+                  <td style={{ padding: '4px 12px', fontSize: 12, fontFamily: 'DM Mono, monospace', color: isOverdue ? 'var(--red)' : 'var(--text3)', fontWeight: isOverdue ? 600 : 400, borderBottom: '1px solid #89bac9' }}>
+                    {editField?.itemId === item.id && editField.field === 'scheduled_date' ? (
+                      <input
+                        autoFocus
+                        type="date"
+                        value={editVal}
+                        onChange={e => setEditVal(e.target.value)}
+                        onBlur={() => commitEdit(item)}
+                        onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') { setEditField(null) } }}
+                        style={{ background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 12 }}
+                      />
+                    ) : (
+                      <span style={{ cursor: 'text', display: 'block' }} onClick={() => startEdit(item, 'scheduled_date')}>
+                        {item.scheduled_date
+                          ? (() => { const [y,m,d] = item.scheduled_date.split('-'); return `${m}/${d}/${y.slice(2)}` })()
+                          : '—'}
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ borderBottom: '1px solid #89bac9', padding: '7px 10px 7px 4px', whiteSpace: 'nowrap' }}>
+                    <button
+                      className="btn btn-ghost btn-icon btn-sm"
+                      onClick={e => { e.stopPropagation(); onDeleteItem(projectId, item.id) }}
+                      title="Delete item"
+                      style={{ color: 'var(--text3)', border: '1px solid #333' }}
+                    >
+                      <TrashIcon />
+                    </button>
+                  </td>
+                </tr>
+
+                {/* Proof drawer — inline below this item row */}
+                {proofOpen && (
+                  <tr>
+                    <td colSpan={6} style={{ padding: 0 }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr>
+                            <th style={{ width: 90, padding: '6px 12px', background: '#d5b6dd', borderTop: 'none', borderBottom: 'none' }} />
+                            <th style={{ ...proofThStyle }}>Item</th>
+                            <th style={{ ...proofThStyle }}>Proof</th>
+                            <th style={{ ...proofThStyle }}>Status</th>
+                            <th style={{ ...proofThStyle }}>Comments / Changes</th>
+                            <th style={{ width: 70, background: '#d5b6dd', borderTop: 'none', borderBottom: 'none' }} />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(itemProofs?.[item.id] || []).map(proof => (
+                            <tr key={proof.id} style={{ background: '#f2eaf4' }}>
+                              <td style={{ padding: '5px 12px', borderBottom: '1px solid #d5b6dd' }}>
+                                <button style={{ background: '#fff', border: '1px solid #999', borderRadius: 4, padding: '2px 8px', fontSize: 12, cursor: 'default', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                  👁 View
+                                </button>
+                              </td>
+                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd' }}>{item.name}</td>
+                              <td style={{ padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: 12, borderBottom: '1px solid #d5b6dd' }}>{proof.version}</td>
+                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd' }}>{proof.status || '—'}</td>
+                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd' }}>{proof.comments || '—'}</td>
+                              <td style={{ padding: '5px 8px', whiteSpace: 'nowrap', borderBottom: '1px solid #d5b6dd' }}>
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                  <button
+                                    className="btn btn-ghost btn-icon btn-sm"
+                                    onClick={e => { e.stopPropagation(); onDeleteProof(item.id, proof.id) }}
+                                    title="Delete proof"
+                                    style={{ border: '1px solid #333' }}
+                                  ><TrashIcon /></button>
+                                  <button
+                                    className="btn btn-ghost btn-icon btn-sm"
+                                    onClick={e => { e.stopPropagation(); onAddProof(item.id, item.item_number) }}
+                                    title="Add proof version"
+                                    style={{ border: '1px solid #333' }}
+                                  ><PlusIcon /></button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                          <tr style={{ background: '#f2eaf4' }}>
+                            <td colSpan={6} style={{ padding: '8px 12px 8px 40px', borderTop: '1px solid #d5b6dd' }}>
+                              <button
+                                className="btn btn-sm"
+                                onClick={e => { e.stopPropagation(); onAddProof(item.id, item.item_number) }}
+                                style={{ background: '#d5b6dd', color: '#fff', fontSize: 12, fontWeight: 600, border: 'none' }}
+                              >+ Add Proof</button>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             )
           })}
 
@@ -411,6 +490,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
           {addingRow !== null && (
             <tr style={{ background: 'var(--accent-glow)', borderTop: '1px solid var(--border)' }}>
               <td style={{ padding: '7px 4px 7px 12px', width: 24 }} />
+              <td />
               <td style={{ padding: '7px 12px' }}>
                 <input
                   ref={addInputRef}
@@ -442,7 +522,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
 
           {/* add item button */}
           <tr style={{ background: '#e6f8fc' }}>
-            <td colSpan={5} style={{ padding: '8px 12px 8px 40px', borderTop: '1px solid var(--border)' }}>
+            <td colSpan={6} style={{ padding: '8px 12px 8px 40px', borderTop: '1px solid var(--border)' }}>
               <button className="btn btn-sm" onClick={startAdd} style={{ background: '#89bac9', color: '#fff', fontSize: 12, fontWeight: 600, border: 'none' }}>
                 + Add item
               </button>
@@ -657,6 +737,9 @@ export default function ProjectsPage() {
   const [projectItems, setProjectItems]         = useState({}) // { [projectId]: Item[] }
   const [loadedProjects, setLoadedProjects]     = useState(new Set())
   const [loadedItemProjects, setLoadedItemProjects] = useState(new Set())
+  const [expandedProofRows, setExpandedProofRows]   = useState({}) // { [itemId]: true }
+  const [itemProofs, setItemProofs]                 = useState({}) // { [itemId]: Proof[] }
+  const [loadedProofItems, setLoadedProofItems]     = useState(new Set())
   const addInputRef = useRef(null)
   const navigate = useNavigate()
 
@@ -802,6 +885,41 @@ export default function ProjectsPage() {
     })
   }
 
+  async function toggleProofExpand(itemId) {
+    const isOpen = expandedProofRows[itemId]
+    setExpandedProofRows(prev => ({ ...prev, [itemId]: !isOpen }))
+    if (!isOpen && !loadedProofItems.has(itemId) && !isDemo) {
+      const { data } = await supabase
+        .from('proofs')
+        .select('*')
+        .eq('item_id', itemId)
+        .order('version', { ascending: true })
+      setItemProofs(prev => ({ ...prev, [itemId]: data || [] }))
+      setLoadedProofItems(prev => new Set([...prev, itemId]))
+    }
+  }
+
+  async function addProof(itemId, itemNumber) {
+    const proofs = itemProofs[itemId] || []
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    const nextLetter = letters[proofs.length] || 'A'
+    const version = `${itemNumber || '01'}${nextLetter}`
+    const { data } = await supabase
+      .from('proofs')
+      .insert({ item_id: itemId, version })
+      .select('*')
+      .single()
+    if (data) setItemProofs(prev => ({ ...prev, [itemId]: [...(prev[itemId] || []), data] }))
+  }
+
+  async function deleteProof(itemId, proofId) {
+    await supabase.from('proofs').delete().eq('id', proofId)
+    setItemProofs(prev => ({
+      ...prev,
+      [itemId]: (prev[itemId] || []).filter(p => p.id !== proofId),
+    }))
+  }
+
   async function handleArchive(project) {
     const newVal = !project.archived
     await supabase.from('projects').update({ archived: newVal }).eq('id', project.id)
@@ -926,6 +1044,11 @@ export default function ProjectsPage() {
             onUpdateItem={updateProjectItem}
             onDeleteItem={deleteProjectItem}
             onReorderItems={reorderProjectItems}
+            expandedProofRows={expandedProofRows}
+            itemProofs={itemProofs}
+            onToggleProofExpand={toggleProofExpand}
+            onAddProof={addProof}
+            onDeleteProof={deleteProof}
             onSaveTask={saveProjectTask}
             onAddTask={addProjectTask}
             onDeleteTask={deleteProjectTask}
@@ -984,6 +1107,7 @@ function WorkView({
   projects, clients, productMap, profiles, loading, showArchived, confirmDelete,
   addingRow, setAddingRow, addInputRef, clientFilter,
   expandedRows, expandedItemRows, projectTasks, projectItems, onToggleExpand, onToggleItemExpand, onSaveTask, onAddTask, onDeleteTask, onReorderTasks, onAddItem, onUpdateItem, onDeleteItem, onReorderItems,
+  expandedProofRows, itemProofs, onToggleProofExpand, onAddProof, onDeleteProof,
   onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm,
   onView, onReorder, onStartAdd, onAddSave, onAddKeyDown,
 }) {
@@ -1202,6 +1326,11 @@ function WorkView({
                               onUpdateItem={onUpdateItem}
                               onDeleteItem={onDeleteItem}
                               onReorder={onReorderItems}
+                              expandedProofRows={expandedProofRows}
+                              itemProofs={itemProofs}
+                              onToggleProofExpand={onToggleProofExpand}
+                              onAddProof={onAddProof}
+                              onDeleteProof={onDeleteProof}
                             />
                           </td>
                         </tr>
