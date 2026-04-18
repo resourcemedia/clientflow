@@ -421,11 +421,11 @@ function TasksDrawer() {
               <button
                 className="btn btn-sm"
                 style={{
-                  background:  'none',
-                  color:       '#9dc691',
+                  background:  '#9dc691',
+                  color:       '#fff',
                   fontSize:    12,
                   fontWeight:  600,
-                  border:      '1px solid #9dc691',
+                  border:      'none',
                 }}
               >
                 + Add Task
