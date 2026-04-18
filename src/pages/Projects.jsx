@@ -366,7 +366,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                     <button
                       className="btn btn-sm"
                       onClick={e => { e.stopPropagation(); onToggleProofExpand(item.id) }}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#d5b6dd', color: '#fff', border: 'none', fontSize: 12, fontWeight: 600 }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#d5b6dd', color: '#fff', border: 'none', fontSize: 12, fontWeight: 600, width: 70 }}
                     >
                       <svg
                         width="9" height="9" viewBox="0 0 10 10" fill="currentColor"
@@ -442,7 +442,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                           {(itemProofs?.[item.id] || []).map(proof => (
                             <tr key={proof.id} style={{ background: '#f2eaf4' }}>
                               <td style={{ padding: '5px 12px 5px 40px', borderBottom: '1px solid #d5b6dd' }}>
-                                <button style={{ background: '#fff', border: '1px solid #ffffff', borderRadius: 6, padding: '5px 8px 2px 10px', fontSize: 12, cursor: 'default', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <button style={{ background: '#fff', border: '1px solid #ffffff', borderRadius: 6, padding: '5px 8px 2px 10px', fontSize: 12, cursor: 'default', display: 'inline-flex', alignItems: 'center', gap: 4, width: 70 }}>
                                   👁 View
                                 </button>
                               </td>
@@ -1233,7 +1233,7 @@ function WorkView({
                           <button
                             className="btn btn-sm"
                             onClick={() => onToggleExpand(p.id)}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginRight: 4, background: '#9dc691', color: '#fff', border: 'none' }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginRight: 4, background: '#9dc691', color: '#fff', border: 'none', width: 70 }}
                           >
                             <svg
                               width="9" height="9" viewBox="0 0 10 10" fill="currentColor"
@@ -1250,7 +1250,7 @@ function WorkView({
                           <button
                             className="btn btn-sm"
                             onClick={() => onToggleItemExpand(p.id)}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#89bac9', color: '#fff', border: 'none' }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#89bac9', color: '#fff', border: 'none', width: 70 }}
                           >
                             <svg
                               width="9" height="9" viewBox="0 0 10 10" fill="currentColor"
