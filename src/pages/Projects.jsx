@@ -430,7 +430,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                           <tr>
-                            <th style={{ width: 100, padding: '6px 12px', background: '#d5b6dd', borderTop: 'none', borderBottom: 'none' }} />
+                            <th style={{ width: 125, padding: '6px 12px', background: '#d5b6dd', borderTop: 'none', borderBottom: 'none' }} />
                             <th style={{ ...proofThStyle }}>Item</th>
                             <th style={{ ...proofThStyle }}>Proof</th>
                             <th style={{ ...proofThStyle }}>Status</th>
