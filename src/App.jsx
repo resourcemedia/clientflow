@@ -14,6 +14,7 @@ import ProofsPage from './pages/Proofs'
 import Items from './pages/Items'
 import ProductsPage from './pages/Products'
 import { CampaignsPage, TimeboardPage, BillingPage } from './pages/Placeholders'
+import ProjectsSandbox from './sandbox/ProjectsSandbox'
 import './styles.css'
 
 function AppShell() {
@@ -49,6 +50,7 @@ function AppShell() {
           <Route path="/timeboard"  element={<TimeboardPage />} />
           <Route path="/billing"    element={<BillingPage />} />
           <Route path="/products"   element={<ProductsPage />} />
+          <Route path="/sandbox"    element={<ProjectsSandbox />} />
           <Route path="/login"      element={<Navigate to="/" replace />} />
         </Routes>
       </main>

@@ -1,466 +1,1105 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Projects — Sandbox</title>
-  <link rel="stylesheet" href="./projects.css" />
-</head>
-<body>
-
-<div class="app-layout">
-
-  <!-- ── SIDEBAR ─────────────────────────────────────────────────── -->
-  <aside class="sidebar">
-
-    <div class="sidebar-logo">
-      <div class="logo-mark">C</div>
-      <div>
-        <div class="logo-text">ClientFlow</div>
-        <div class="logo-sub">Marketing OS</div>
-      </div>
-    </div>
-
-    <div class="nav-items">
-      <a class="nav-item" href="#">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-        </svg>
-        Dashboard
-      </a>
-      <a class="nav-item" href="#">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-        </svg>
-        Clients
-      </a>
-      <a class="nav-item active" href="#">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-        </svg>
-        Projects
-        <span class="nav-badge warn">5</span>
-      </a>
-      <a class="nav-item" href="#">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
-          <line x1="8" y1="18" x2="21" y2="18"/>
-          <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/>
-          <line x1="3" y1="18" x2="3.01" y2="18"/>
-        </svg>
-        Items
-      </a>
-      <a class="nav-item" href="#">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
-        </svg>
-        Proofs
-        <span class="nav-badge">3</span>
-      </a>
-      <a class="nav-item" href="#">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/>
-          <line x1="9" y1="18" x2="20" y2="18"/>
-          <polyline points="4 6 5 7 7 5"/><polyline points="4 12 5 13 7 11"/>
-          <polyline points="4 18 5 19 7 17"/>
-        </svg>
-        Tasks
-        <span class="nav-badge warn">12</span>
-      </a>
-      <a class="nav-item" href="#">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="4" width="18" height="18" rx="2"/>
-          <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
-          <line x1="3" y1="10" x2="21" y2="10"/>
-        </svg>
-        Calendar
-      </a>
-      <a class="nav-item" href="#">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-        </svg>
-        Time board
-      </a>
-      <a class="nav-item" href="#">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="12" y1="1" x2="12" y2="23"/>
-          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-        </svg>
-        Billing
-      </a>
-      <a class="nav-item" href="#">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-          <line x1="7" y1="7" x2="7.01" y2="7"/>
-        </svg>
-        Products
-      </a>
-    </div>
-
-    <div class="sidebar-footer">
-      <div class="user-avatar">JO</div>
-      <div style="flex:1; min-width:0">
-        <div class="user-name">Jim OConnell</div>
-        <div class="user-role">Manager</div>
-      </div>
-      <button class="theme-btn" title="Toggle theme">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="5"/>
-          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-        </svg>
-      </button>
-      <button class="theme-btn" title="Sign out">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-          <polyline points="16 17 21 12 16 7"/>
-          <line x1="21" y1="12" x2="9" y2="12"/>
-        </svg>
-      </button>
-    </div>
-
-  </aside>
-
-  <!-- ── MAIN CONTENT ──────────────────────────────────────────────── -->
-  <div class="main-content">
-
-    <!-- Topbar -->
-    <div class="topbar">
-      <span class="page-title">Projects</span>
-      <select>
-        <option>All clients</option>
-        <option selected>Adams Orthodontics</option>
-        <option>Kindlewood Counseling</option>
-      </select>
-      <input type="text" placeholder="Search projects…" />
-    </div>
-
-    <!-- Page content -->
-    <div class="page-content">
-      <div class="card">
-        <div class="table-wrap">
-          <table>
-
-            <!-- ── CLIENT GROUP: Adams Orthodontics ── -->
-            <tbody>
-              <tr class="client-group-header">
-                <td colspan="7">Adams Orthodontics</td>
-              </tr>
-
-              <!-- Project Row 1 — items drawer expanded -->
-              <tr class="project-row">
-                <td style="padding:8px 4px 8px 12px; width:20px; color:#9898aa; font-size:14px; cursor:grab">⠿</td>
-                <td style="padding:8px 4px; white-space:nowrap">
-                  <button class="btn btn-sm btn-tasks" style="display:inline-flex;align-items:center;gap:4px;margin-right:4px">
-                    <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1.5l4 3.5-4 3.5V1.5z"/></svg>
-                    Tasks
-                  </button>
-                  <button class="btn btn-sm btn-items" style="display:inline-flex;align-items:center;gap:4px">
-                    <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1.5l4 3.5-4 3.5V1.5z" style="transform:rotate(90deg);transform-origin:center"/></svg>
-                    Items
-                  </button>
-                </td>
-                <td class="text-mono text-dim">8083</td>
-                <td style="color:#555566;font-size:13px">Adams Orthodontics</td>
-                <td style="color:#555566;font-size:13px;white-space:nowrap">CO</td>
-                <td class="td-main">Test Project</td>
-                <td style="white-space:nowrap" onclick="event.stopPropagation()">
-                  <div style="display:flex;align-items:center;gap:4px">
-                    <button class="btn btn-ghost btn-sm" style="border:1px solid #333">Items</button>
-                    <button class="icon-btn" title="Edit">✏️</button>
-                    <button class="icon-btn" title="Archive">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/>
-                        <line x1="10" y1="12" x2="14" y2="12"/>
-                      </svg>
-                    </button>
-                    <button class="icon-btn" title="Delete" style="color:#dc2626">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="3 6 5 6 21 6"/>
-                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                        <path d="M10 11v6"/><path d="M14 11v6"/>
-                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                      </svg>
-                    </button>
-                    <button class="icon-btn" title="Add task">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                      </svg>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-
-              <!-- Items Drawer (expanded under Project Row 1) -->
-              <tr class="drawer-row">
-                <td colspan="7">
-                  <div class="items-drawer">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th></th>
-                          <th>Item</th>
-                          <th>Order</th>
-                          <th>Scheduled</th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr class="item-row">
-                          <td>⠿</td>
-                          <td class="item-name">Initial Interface Design</td>
-                          <td class="item-order">01</td>
-                          <td class="item-date">—</td>
-                          <td class="item-action">
-                            <button class="icon-btn" title="Delete item">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="3 6 5 6 21 6"/>
-                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                                <path d="M10 11v6"/><path d="M14 11v6"/>
-                                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                              </svg>
-                            </button>
-                          </td>
-                        </tr>
-                        <tr class="item-row">
-                          <td>⠿</td>
-                          <td class="item-name">Logo Refinements</td>
-                          <td class="item-order">02</td>
-                          <td class="item-date overdue">04/12/26</td>
-                          <td class="item-action">
-                            <button class="icon-btn" title="Delete item">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="3 6 5 6 21 6"/>
-                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                                <path d="M10 11v6"/><path d="M14 11v6"/>
-                                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                              </svg>
-                            </button>
-                          </td>
-                        </tr>
-                        <tr class="item-row">
-                          <td>⠿</td>
-                          <td class="item-name">Brand Guidelines</td>
-                          <td class="item-order">03</td>
-                          <td class="item-date">05/01/26</td>
-                          <td class="item-action">
-                            <button class="icon-btn" title="Delete item">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="3 6 5 6 21 6"/>
-                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                                <path d="M10 11v6"/><path d="M14 11v6"/>
-                                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                              </svg>
-                            </button>
-                          </td>
-                        </tr>
-                        <tr class="item-footer">
-                          <td colspan="5">
-                            <button class="btn btn-ghost btn-sm" style="color:#9898aa;font-size:12px">+ Add item</button>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </td>
-              </tr>
-
-              <!-- Project Row 2 — tasks drawer expanded -->
-              <tr class="project-row">
-                <td style="padding:8px 4px 8px 12px; width:20px; color:#9898aa; font-size:14px; cursor:grab">⠿</td>
-                <td style="padding:8px 4px; white-space:nowrap">
-                  <button class="btn btn-sm btn-tasks" style="display:inline-flex;align-items:center;gap:4px;margin-right:4px">
-                    <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1.5l4 3.5-4 3.5V1.5z" style="transform:rotate(90deg);transform-origin:center"/></svg>
-                    Tasks
-                  </button>
-                  <button class="btn btn-sm btn-items" style="display:inline-flex;align-items:center;gap:4px">
-                    <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1.5l4 3.5-4 3.5V1.5z"/></svg>
-                    Items
-                  </button>
-                </td>
-                <td class="text-mono text-dim">8062</td>
-                <td style="color:#555566;font-size:13px">Adams Orthodontics</td>
-                <td style="color:#555566;font-size:13px;white-space:nowrap">ST | Website</td>
-                <td class="td-main">Website Redesign</td>
-                <td style="white-space:nowrap" onclick="event.stopPropagation()">
-                  <div style="display:flex;align-items:center;gap:4px">
-                    <button class="btn btn-ghost btn-sm" style="border:1px solid #333">Items</button>
-                    <button class="icon-btn" title="Edit">✏️</button>
-                    <button class="icon-btn" title="Archive">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/>
-                        <line x1="10" y1="12" x2="14" y2="12"/>
-                      </svg>
-                    </button>
-                    <button class="icon-btn" title="Delete" style="color:#dc2626">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="3 6 5 6 21 6"/>
-                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                        <path d="M10 11v6"/><path d="M14 11v6"/>
-                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                      </svg>
-                    </button>
-                    <button class="icon-btn" title="Add task">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                      </svg>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-
-              <!-- Tasks Drawer (expanded under Project Row 2) -->
-              <tr class="drawer-row">
-                <td colspan="7">
-                  <div class="tasks-drawer">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th></th>
-                          <th>Task</th>
-                          <th>Note</th>
-                          <th>Assigned</th>
-                          <th>Updated</th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr class="task-row">
-                          <td>⠿</td>
-                          <td class="task-name">Write homepage copy</td>
-                          <td class="task-note">Draft due by end of week</td>
-                          <td class="task-assign">JO</td>
-                          <td class="task-assign">4/10/26</td>
-                          <td class="task-action">
-                            <div style="display:flex;align-items:center;gap:6px">
-                              <button class="icon-btn" title="Add subtask">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                                </svg>
-                              </button>
-                              <button class="icon-btn" title="Mark done">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                  <rect x="3" y="3" width="18" height="18" rx="2"/>
-                                </svg>
-                              </button>
-                              <button class="icon-btn" title="Delete task">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                  <polyline points="3 6 5 6 21 6"/>
-                                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                                  <path d="M10 11v6"/><path d="M14 11v6"/>
-                                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                                </svg>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                        <tr class="task-row">
-                          <td>⠿</td>
-                          <td class="task-name">Review design mockups</td>
-                          <td class="task-note">—</td>
-                          <td class="task-assign">JO</td>
-                          <td class="task-assign">4/11/26</td>
-                          <td class="task-action">
-                            <div style="display:flex;align-items:center;gap:6px">
-                              <button class="icon-btn" title="Add subtask">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                                </svg>
-                              </button>
-                              <button class="icon-btn" title="Mark done" style="color:#16a34a">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                  <path d="M20 6L9 17l-5-5"/>
-                                </svg>
-                              </button>
-                              <button class="icon-btn" title="Delete task">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                  <polyline points="3 6 5 6 21 6"/>
-                                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                                  <path d="M10 11v6"/><path d="M14 11v6"/>
-                                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                                </svg>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                        <tr class="task-footer">
-                          <td colspan="6">
-                            <button class="btn btn-sm" style="background:#9dc691;color:#fff;font-size:12px;font-weight:600;border:none">+ Add Task</button>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </td>
-              </tr>
-
-              <!-- Project Row 3 — collapsed -->
-              <tr class="project-row">
-                <td style="padding:8px 4px 8px 12px; width:20px; color:#9898aa; font-size:14px; cursor:grab">⠿</td>
-                <td style="padding:8px 4px; white-space:nowrap">
-                  <button class="btn btn-sm btn-tasks" style="display:inline-flex;align-items:center;gap:4px;margin-right:4px">
-                    <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1.5l4 3.5-4 3.5V1.5z"/></svg>
-                    Tasks
-                  </button>
-                  <button class="btn btn-sm btn-items" style="display:inline-flex;align-items:center;gap:4px">
-                    <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1.5l4 3.5-4 3.5V1.5z"/></svg>
-                    Items
-                  </button>
-                </td>
-                <td class="text-mono text-dim">8041</td>
-                <td style="color:#555566;font-size:13px">Adams Orthodontics</td>
-                <td style="color:#555566;font-size:13px;white-space:nowrap">DS | Logo</td>
-                <td class="td-main">Brand Identity</td>
-                <td style="white-space:nowrap" onclick="event.stopPropagation()">
-                  <div style="display:flex;align-items:center;gap:4px">
-                    <button class="btn btn-ghost btn-sm" style="border:1px solid #333">Items</button>
-                    <button class="icon-btn" title="Edit">✏️</button>
-                    <button class="icon-btn" title="Archive">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/>
-                        <line x1="10" y1="12" x2="14" y2="12"/>
-                      </svg>
-                    </button>
-                    <button class="icon-btn" title="Delete" style="color:#dc2626">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="3 6 5 6 21 6"/>
-                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                        <path d="M10 11v6"/><path d="M14 11v6"/>
-                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                      </svg>
-                    </button>
-                    <button class="icon-btn" title="Add task">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                      </svg>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-
-            </tbody>
-
-            <!-- ── ADD PROJECT ROW ── -->
-            <tbody>
-              <tr class="add-project-row">
-                <td colspan="7">
-                  <button class="btn btn-ghost btn-sm">+ Add project</button>
-                </td>
-              </tr>
-            </tbody>
-
-          </table>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Projects — Sandbox</title>
+    <link rel="stylesheet" href="./projects.css" />
+  </head>
+  <body>
+    <div class="app-layout">
+      <!-- ── SIDEBAR ─────────────────────────────────────────────────── -->
+      <aside class="sidebar">
+        <div class="sidebar-logo">
+          <div class="logo-mark">C</div>
+          <div>
+            <div class="logo-text">ClientFlow</div>
+            <div class="logo-sub">Marketing OS</div>
+          </div>
         </div>
+
+        <div class="nav-items">
+          <a class="nav-item" href="#">
+            <svg
+              class="nav-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
+            Dashboard
+          </a>
+          <a class="nav-item" href="#">
+            <svg
+              class="nav-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              K
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            Clients
+          </a>
+          <a class="nav-item active" href="#">
+            <svg
+              class="nav-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+              />
+            </svg>
+            Projects
+            <span class="nav-badge warn">5</span>
+          </a>
+          <a class="nav-item" href="#">
+            <svg
+              class="nav-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="8" y1="6" x2="21" y2="6" />
+              <line x1="8" y1="12" x2="21" y2="12" />
+              <line x1="8" y1="18" x2="21" y2="18" />
+              <line x1="3" y1="6" x2="3.01" y2="6" />
+              <line x1="3" y1="12" x2="3.01" y2="12" />
+              <line x1="3" y1="18" x2="3.01" y2="18" />
+            </svg>
+            Items
+          </a>
+          <a class="nav-item" href="#">
+            <svg
+              class="nav-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+              />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+            </svg>
+            Proofs
+            <span class="nav-badge">3</span>
+          </a>
+          <a class="nav-item" href="#">
+            <svg
+              class="nav-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="9" y1="6" x2="20" y2="6" />
+              <line x1="9" y1="12" x2="20" y2="12" />
+              <line x1="9" y1="18" x2="20" y2="18" />
+              <polyline points="4 6 5 7 7 5" />
+              <polyline points="4 12 5 13 7 11" />
+              <polyline points="4 18 5 19 7 17" />
+            </svg>
+            Tasks
+            <span class="nav-badge warn">12</span>
+          </a>
+          <a class="nav-item" href="#">
+            <svg
+              class="nav-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            Calendar
+          </a>
+          <a class="nav-item" href="#">
+            <svg
+              class="nav-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            Time board
+          </a>
+          <a class="nav-item" href="#">
+            <svg
+              class="nav-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="12" y1="1" x2="12" y2="23" />
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+            Billing
+          </a>
+          <a class="nav-item" href="#">
+            <svg
+              class="nav-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"
+              />
+              <line x1="7" y1="7" x2="7.01" y2="7" />
+            </svg>
+            Products
+          </a>
+        </div>
+
+        <div class="sidebar-footer">
+          <div class="user-avatar">JO</div>
+          <div style="flex: 1; min-width: 0">
+            <div class="user-name">Jim OConnell</div>
+            <div class="user-role">Manager</div>
+          </div>
+          <button class="theme-btn" title="Toggle theme">
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="5" />
+              <line x1="12" y1="1" x2="12" y2="3" />
+              <line x1="12" y1="21" x2="12" y2="23" />
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            </svg>
+          </button>
+          <button class="theme-btn" title="Sign out">
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
+        </div>
+      </aside>
+
+      <!-- ── MAIN CONTENT ──────────────────────────────────────────────── -->
+      <div class="main-content">
+        <!-- Topbar -->
+        <div class="topbar">
+          <span class="page-title">Projects</span>
+          <select>
+            <option>All clients</option>
+            <option selected>Adams Orthodontics</option>
+            <option>Kindlewood Counseling</option>
+          </select>
+          <input type="text" placeholder="Search projects…" />
+        </div>
+
+        <!-- Page content -->
+        <div class="page-content">
+          <div class="card">
+            <div class="table-wrap">
+              <table>
+                <!-- ── CLIENT GROUP: Adams Orthodontics ── -->
+                <tbody>
+                  <tr class="client-group-header">
+                    <td colspan="7">Adams Orthodontics</td>
+                  </tr>
+
+                  <!-- Project Row 1 — items drawer expanded -->
+                  <tr class="project-row">
+                    <td
+                      style="
+                        padding: 8px 4px 8px 12px;
+                        width: 20px;
+                        color: #9898aa;
+                        font-size: 14px;
+                        cursor: grab;
+                      "
+                    >
+                      ⠿
+                    </td>
+                    <td style="padding: 8px 4px; white-space: nowrap">
+                      <button
+                        class="btn btn-sm btn-tasks"
+                        style="
+                          display: inline-flex;
+                          align-items: center;
+                          gap: 4px;
+                          margin-right: 4px;
+                        "
+                      >
+                        <svg
+                          width="9"
+                          height="9"
+                          viewBox="0 0 10 10"
+                          fill="currentColor"
+                        >
+                          <path d="M3 1.5l4 3.5-4 3.5V1.5z" />
+                        </svg>
+                        Tasks
+                      </button>
+                      <button
+                        class="btn btn-sm btn-items"
+                        style="
+                          display: inline-flex;
+                          align-items: center;
+                          gap: 4px;
+                        "
+                      >
+                        <svg
+                          width="9"
+                          height="9"
+                          viewBox="0 0 10 10"
+                          fill="currentColor"
+                        >
+                          <path
+                            d="M3 1.5l4 3.5-4 3.5V1.5z"
+                            style="
+                              transform: rotate(90deg);
+                              transform-origin: center;
+                            "
+                          />
+                        </svg>
+                        Items
+                      </button>
+                    </td>
+                    <td class="text-mono text-dim">8083</td>
+                    <td style="color: #555566; font-size: 13px">
+                      Adams Orthodontics
+                    </td>
+                    <td
+                      style="
+                        color: #555566;
+                        font-size: 13px;
+                        white-space: nowrap;
+                      "
+                    >
+                      CO
+                    </td>
+                    <td class="td-main">Test Project</td>
+                    <td
+                      style="white-space: nowrap"
+                      onclick="event.stopPropagation()"
+                    >
+                      <div style="display: flex; align-items: center; gap: 4px">
+                        <button
+                          class="btn btn-ghost btn-sm"
+                          style="border: 1px solid #333"
+                        >
+                          Items
+                        </button>
+                        <button class="icon-btn" title="Edit">✏️</button>
+                        <button class="icon-btn" title="Archive">
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                          >
+                            <polyline points="21 8 21 21 3 21 3 8" />
+                            <rect x="1" y="3" width="22" height="5" />
+                            <line x1="10" y1="12" x2="14" y2="12" />
+                          </svg>
+                        </button>
+                        <button
+                          class="icon-btn"
+                          title="Delete"
+                          style="color: #dc2626"
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                          >
+                            <polyline points="3 6 5 6 21 6" />
+                            <path
+                              d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"
+                            />
+                            <path d="M10 11v6" />
+                            <path d="M14 11v6" />
+                            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                          </svg>
+                        </button>
+                        <button class="icon-btn" title="Add task">
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                          >
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- Items Drawer (expanded under Project Row 1) -->
+                  <tr class="drawer-row">
+                    <td colspan="7">
+                      <div class="items-drawer">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th
+                                style="
+                                  width: 24px;
+                                  background: #89bac9;
+                                  border-top: none;
+                                  border-bottom: none;
+                                "
+                              ></th>
+                              <th
+                                style="
+                                  width: 110px;
+                                  background: #89bac9;
+                                  border-top: none;
+                                  border-bottom: none;
+                                "
+                              ></th>
+                              <th
+                                style="
+                                  background: #89bac9;
+                                  color: #fff;
+                                  border-top: none;
+                                  border-bottom: none;
+                                  padding: 6px 12px;
+                                  text-align: left;
+                                  font-size: 11px;
+                                  font-weight: 600;
+                                  letter-spacing: 0.07em;
+                                  text-transform: uppercase;
+                                "
+                              >
+                                Item
+                              </th>
+                              <th
+                                style="
+                                  background: #89bac9;
+                                  color: #fff;
+                                  border-top: none;
+                                  border-bottom: none;
+                                  padding: 6px 12px;
+                                  text-align: left;
+                                  font-size: 11px;
+                                  font-weight: 600;
+                                  letter-spacing: 0.07em;
+                                  text-transform: uppercase;
+                                  width: 80px;
+                                "
+                              >
+                                Order
+                              </th>
+                              <th
+                                style="
+                                  background: #89bac9;
+                                  color: #fff;
+                                  border-top: none;
+                                  border-bottom: none;
+                                  padding: 6px 12px;
+                                  text-align: left;
+                                  font-size: 11px;
+                                  font-weight: 600;
+                                  letter-spacing: 0.07em;
+                                  text-transform: uppercase;
+                                  width: 120px;
+                                "
+                              >
+                                Scheduled
+                              </th>
+                              <th
+                                style="
+                                  width: 50px;
+                                  background: #89bac9;
+                                  border-top: none;
+                                  border-bottom: none;
+                                "
+                              ></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr class="item-row">
+                              <td>⠿</td>
+                              <td style="padding: 4px 8px; border-bottom: 1px solid #89bac9">
+                                <button class="btn btn-sm btn-proofs">
+                                  <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1.5l4 3.5-4 3.5V1.5z"/></svg>
+                                  Proofs
+                                </button>
+                              </td>
+                              <td class="item-name">Initial Interface Design</td>
+                              <td class="item-order">01</td>
+                              <td class="item-date">—</td>
+                              <td class="item-action">
+                                <button class="icon-btn" title="Delete item">
+                                  <svg
+                                    width="14"
+                                    height="14"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                  >
+                                    <polyline points="3 6 5 6 21 6" />
+                                    <path
+                                      d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"
+                                    />
+                                    <path d="M10 11v6" />
+                                    <path d="M14 11v6" />
+                                    <path
+                                      d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
+                                    />
+                                  </svg>
+                                </button>
+                              </td>
+                            </tr>
+
+                            <!-- Logo Refinements — Proofs drawer open -->
+                            <tr class="item-row">
+                              <td>⠿</td>
+                              <td style="padding: 4px 8px; border-bottom: 1px solid #89bac9">
+                                <button class="btn btn-sm btn-proofs">
+                                  <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor" style="transform:rotate(90deg);transform-origin:center"><path d="M3 1.5l4 3.5-4 3.5V1.5z"/></svg>
+                                  Proofs
+                                </button>
+                              </td>
+                              <td class="item-name">Logo Refinements</td>
+                              <td class="item-order">02</td>
+                              <td class="item-date overdue">04/12/26</td>
+                              <td class="item-action">
+                                <button class="icon-btn" title="Delete item">
+                                  <svg
+                                    width="14"
+                                    height="14"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                  >
+                                    <polyline points="3 6 5 6 21 6" />
+                                    <path
+                                      d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"
+                                    />
+                                    <path d="M10 11v6" />
+                                    <path d="M14 11v6" />
+                                    <path
+                                      d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
+                                    />
+                                  </svg>
+                                </button>
+                              </td>
+                            </tr>
+                            <!-- Proof sub-drawer (inline, open for Logo Refinements) -->
+                            <tr>
+                              <td colspan="6" style="padding: 0">
+                                <table class="proof-drawer">
+                                  <thead>
+                                    <tr>
+                                      <th></th>
+                                      <th>Item</th>
+                                      <th>Proof</th>
+                                      <th>Status</th>
+                                      <th>Comments / Changes</th>
+                                      <th></th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    <tr class="proof-row">
+                                      <td class="proof-view">
+                                        <button style="background:#fff;border:1px solid #999;border-radius:4px;padding:2px 8px;font-size:12px;cursor:default;display:inline-flex;align-items:center;gap:4px">👁 View</button>
+                                      </td>
+                                      <td class="proof-item">Logo Refinements</td>
+                                      <td class="proof-version">02A</td>
+                                      <td class="proof-status">In Review</td>
+                                      <td class="proof-comments">Lighten the tagline color</td>
+                                      <td class="proof-action">
+                                        <div style="display:flex;gap:4px">
+                                          <button class="icon-btn" title="Delete proof">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                              <polyline points="3 6 5 6 21 6"/>
+                                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                                              <path d="M10 11v6"/><path d="M14 11v6"/>
+                                              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                                            </svg>
+                                          </button>
+                                          <button class="icon-btn" title="Add proof version">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                                            </svg>
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                    <tr class="proof-footer">
+                                      <td colspan="6">
+                                        <button class="btn btn-sm btn-proofs">+ Add Proof</button>
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </td>
+                            </tr>
+
+                            <tr class="item-row">
+                              <td>⠿</td>
+                              <td style="padding: 4px 8px; border-bottom: 1px solid #89bac9">
+                                <button class="btn btn-sm btn-proofs">
+                                  <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1.5l4 3.5-4 3.5V1.5z"/></svg>
+                                  Proofs
+                                </button>
+                              </td>
+                              <td class="item-name">Brand Guidelines</td>
+                              <td class="item-order">03</td>
+                              <td class="item-date">05/01/26</td>
+                              <td class="item-action">
+                                <button class="icon-btn" title="Delete item">
+                                  <svg
+                                    width="14"
+                                    height="14"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                  >
+                                    <polyline points="3 6 5 6 21 6" />
+                                    <path
+                                      d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"
+                                    />
+                                    <path d="M10 11v6" />
+                                    <path d="M14 11v6" />
+                                    <path
+                                      d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
+                                    />
+                                  </svg>
+                                </button>
+                              </td>
+                            </tr>
+                            <tr class="item-footer">
+                              <td
+                                colspan="6"
+                                style="padding: 8px 12px 8px 40px"
+                              >
+                                <button
+                                  class="btn btn-sm"
+                                  style="
+                                    background: #89bac9;
+                                    color: #fff;
+                                    font-size: 12px;
+                                    font-weight: 600;
+                                    border: none;
+                                  "
+                                >
+                                  + Add item
+                                </button>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- Project Row 2 — tasks drawer expanded -->
+                  <tr class="project-row">
+                    <td
+                      style="
+                        padding: 8px 4px 8px 12px;
+                        width: 20px;
+                        color: #9898aa;
+                        font-size: 14px;
+                        cursor: grab;
+                      "
+                    >
+                      ⠿
+                    </td>
+                    <td style="padding: 8px 4px; white-space: nowrap">
+                      <button
+                        class="btn btn-sm btn-tasks"
+                        style="
+                          display: inline-flex;
+                          align-items: center;
+                          gap: 4px;
+                          margin-right: 4px;
+                        "
+                      >
+                        <svg
+                          width="9"
+                          height="9"
+                          viewBox="0 0 10 10"
+                          fill="currentColor"
+                        >
+                          <path
+                            d="M3 1.5l4 3.5-4 3.5V1.5z"
+                            style="
+                              transform: rotate(90deg);
+                              transform-origin: center;
+                            "
+                          />
+                        </svg>
+                        Tasks
+                      </button>
+                      <button
+                        class="btn btn-sm btn-items"
+                        style="
+                          display: inline-flex;
+                          align-items: center;
+                          gap: 4px;
+                        "
+                      >
+                        <svg
+                          width="9"
+                          height="9"
+                          viewBox="0 0 10 10"
+                          fill="currentColor"
+                        >
+                          <path d="M3 1.5l4 3.5-4 3.5V1.5z" />
+                        </svg>
+                        Items
+                      </button>
+                    </td>
+                    <td class="text-mono text-dim">8062</td>
+                    <td style="color: #555566; font-size: 13px">
+                      Adams Orthodontics
+                    </td>
+                    <td
+                      style="
+                        color: #555566;
+                        font-size: 13px;
+                        white-space: nowrap;
+                      "
+                    >
+                      ST | Website
+                    </td>
+                    <td class="td-main">Website Redesign</td>
+                    <td
+                      style="white-space: nowrap"
+                      onclick="event.stopPropagation()"
+                    >
+                      <div style="display: flex; align-items: center; gap: 4px">
+                        <button
+                          class="btn btn-ghost btn-sm"
+                          style="border: 1px solid #333"
+                        >
+                          Items
+                        </button>
+                        <button class="icon-btn" title="Edit">✏️</button>
+                        <button class="icon-btn" title="Archive">
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                          >
+                            <polyline points="21 8 21 21 3 21 3 8" />
+                            <rect x="1" y="3" width="22" height="5" />
+                            <line x1="10" y1="12" x2="14" y2="12" />
+                          </svg>
+                        </button>
+                        <button
+                          class="icon-btn"
+                          title="Delete"
+                          style="color: #dc2626"
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                          >
+                            <polyline points="3 6 5 6 21 6" />
+                            <path
+                              d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"
+                            />
+                            <path d="M10 11v6" />
+                            <path d="M14 11v6" />
+                            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                          </svg>
+                        </button>
+                        <button class="icon-btn" title="Add task">
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                          >
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- Tasks Drawer (expanded under Project Row 2) -->
+                  <tr class="drawer-row">
+                    <td colspan="7">
+                      <div class="tasks-drawer">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th></th>
+                              <th>Task</th>
+                              <th>Note</th>
+                              <th>Assigned</th>
+                              <th>Updated</th>
+                              <th></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr class="task-row">
+                              <td>⠿</td>
+                              <td class="task-name">Write homepage copy</td>
+                              <td class="task-note">
+                                Draft due by end of week
+                              </td>
+                              <td class="task-assign">JO</td>
+                              <td class="task-assign">4/10/26</td>
+                              <td class="task-action">
+                                <div
+                                  style="
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 6px;
+                                  "
+                                >
+                                  <button class="icon-btn" title="Add subtask">
+                                    <svg
+                                      width="14"
+                                      height="14"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      stroke-width="2.5"
+                                    >
+                                      <line x1="12" y1="5" x2="12" y2="19" />
+                                      <line x1="5" y1="12" x2="19" y2="12" />
+                                    </svg>
+                                  </button>
+                                  <button class="icon-btn" title="Mark done">
+                                    <svg
+                                      width="14"
+                                      height="14"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      stroke-width="2"
+                                    >
+                                      <rect
+                                        x="3"
+                                        y="3"
+                                        width="18"
+                                        height="18"
+                                        rx="2"
+                                      />
+                                    </svg>
+                                  </button>
+                                  <button class="icon-btn" title="Delete task">
+                                    <svg
+                                      width="14"
+                                      height="14"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      stroke-width="2"
+                                    >
+                                      <polyline points="3 6 5 6 21 6" />
+                                      <path
+                                        d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"
+                                      />
+                                      <path d="M10 11v6" />
+                                      <path d="M14 11v6" />
+                                      <path
+                                        d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
+                                      />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr class="task-row">
+                              <td>⠿</td>
+                              <td class="task-name">Review design mockups</td>
+                              <td class="task-note">—</td>
+                              <td class="task-assign">JO</td>
+                              <td class="task-assign">4/11/26</td>
+                              <td class="task-action">
+                                <div
+                                  style="
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 6px;
+                                  "
+                                >
+                                  <button class="icon-btn" title="Add subtask">
+                                    <svg
+                                      width="14"
+                                      height="14"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      stroke-width="2.5"
+                                    >
+                                      <line x1="12" y1="5" x2="12" y2="19" />
+                                      <line x1="5" y1="12" x2="19" y2="12" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    class="icon-btn"
+                                    title="Mark done"
+                                    style="color: #16a34a"
+                                  >
+                                    <svg
+                                      width="14"
+                                      height="14"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      stroke-width="2.5"
+                                    >
+                                      <path d="M20 6L9 17l-5-5" />
+                                    </svg>
+                                  </button>
+                                  <button class="icon-btn" title="Delete task">
+                                    <svg
+                                      width="14"
+                                      height="14"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      stroke-width="2"
+                                    >
+                                      <polyline points="3 6 5 6 21 6" />
+                                      <path
+                                        d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"
+                                      />
+                                      <path d="M10 11v6" />
+                                      <path d="M14 11v6" />
+                                      <path
+                                        d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
+                                      />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr class="task-footer">
+                              <td colspan="6">
+                                <button
+                                  class="btn btn-sm"
+                                  style="
+                                    background: #9dc691;
+                                    color: #fff;
+                                    font-size: 12px;
+                                    font-weight: 600;
+                                    border: none;
+                                  "
+                                >
+                                  + Add Task
+                                </button>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- Project Row 3 — collapsed -->
+                  <tr class="project-row">
+                    <td
+                      style="
+                        padding: 8px 4px 8px 12px;
+                        width: 20px;
+                        color: #9898aa;
+                        font-size: 14px;
+                        cursor: grab;
+                      "
+                    >
+                      ⠿
+                    </td>
+                    <td style="padding: 8px 4px; white-space: nowrap">
+                      <button
+                        class="btn btn-sm btn-tasks"
+                        style="
+                          display: inline-flex;
+                          align-items: center;
+                          gap: 4px;
+                          margin-right: 4px;
+                        "
+                      >
+                        <svg
+                          width="9"
+                          height="9"
+                          viewBox="0 0 10 10"
+                          fill="currentColor"
+                        >
+                          <path d="M3 1.5l4 3.5-4 3.5V1.5z" />
+                        </svg>
+                        Tasks
+                      </button>
+                      <button
+                        class="btn btn-sm btn-items"
+                        style="
+                          display: inline-flex;
+                          align-items: center;
+                          gap: 4px;
+                        "
+                      >
+                        <svg
+                          width="9"
+                          height="9"
+                          viewBox="0 0 10 10"
+                          fill="currentColor"
+                        >
+                          <path d="M3 1.5l4 3.5-4 3.5V1.5z" />
+                        </svg>
+                        Items
+                      </button>
+                    </td>
+                    <td class="text-mono text-dim">8041</td>
+                    <td style="color: #555566; font-size: 13px">
+                      Adams Orthodontics
+                    </td>
+                    <td
+                      style="
+                        color: #555566;
+                        font-size: 13px;
+                        white-space: nowrap;
+                      "
+                    >
+                      DS | Logo
+                    </td>
+                    <td class="td-main">Brand Identity</td>
+                    <td
+                      style="white-space: nowrap"
+                      onclick="event.stopPropagation()"
+                    >
+                      <div style="display: flex; align-items: center; gap: 4px">
+                        <button
+                          class="btn btn-ghost btn-sm"
+                          style="border: 1px solid #333"
+                        >
+                          Items
+                        </button>
+                        <button class="icon-btn" title="Edit">✏️</button>
+                        <button class="icon-btn" title="Archive">
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                          >
+                            <polyline points="21 8 21 21 3 21 3 8" />
+                            <rect x="1" y="3" width="22" height="5" />
+                            <line x1="10" y1="12" x2="14" y2="12" />
+                          </svg>
+                        </button>
+                        <button
+                          class="icon-btn"
+                          title="Delete"
+                          style="color: #dc2626"
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                          >
+                            <polyline points="3 6 5 6 21 6" />
+                            <path
+                              d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"
+                            />
+                            <path d="M10 11v6" />
+                            <path d="M14 11v6" />
+                            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                          </svg>
+                        </button>
+                        <button class="icon-btn" title="Add task">
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                          >
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+
+                <!-- ── PROJECT FOOTER ── -->
+                <tbody>
+                  <tr class="project-footer">
+                    <td colspan="7">
+                      <button class="btn btn-ghost btn-sm">
+                        + Add project
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <!-- /page-content -->
       </div>
-    </div><!-- /page-content -->
-
-  </div><!-- /main-content -->
-</div><!-- /app-layout -->
-
-</body>
+      <!-- /main-content -->
+    </div>
+    <!-- /app-layout -->
+  </body>
 </html>

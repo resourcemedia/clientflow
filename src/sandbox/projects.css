@@ -220,8 +220,9 @@ tr:hover td { background: #f0f0f4; cursor: pointer; }
 .project-row { cursor: pointer; }
 .project-row:hover td { background: #f0f0f4; }
 
-.btn-tasks { background: #9dc691; color: #fff; border: none; }
-.btn-items { background: #89bac9; color: #fff; border: none; }
+.btn-tasks  { background: #9dc691; color: #fff; border: none; }
+.btn-items  { background: #89bac9; color: #fff; border: none; }
+.btn-proofs { background: #d5b6dd; color: #fff; border: none; display: inline-flex; align-items: center; gap: 4px; }
 
 /* ── DRAWER ROWS (no hover highlight) ── */
 .drawer-row:hover td { background: transparent !important; cursor: default; }
@@ -287,9 +288,41 @@ tr:hover td { background: #f0f0f4; cursor: pointer; }
 .task-footer td { border-top: 1px solid #e0e0e8; padding: 8px 12px 8px 40px; }
 .task-footer:hover td { background: #f7fff5; cursor: default; }
 
-/* ── ADD PROJECT ROW ── */
-.add-project-row td { padding: 12px 20px; }
-.add-project-row:hover td { background: transparent; cursor: default; }
+/* ── PROJECT FOOTER ── */
+.project-footer td { padding: 12px 20px; }
+.project-footer:hover td { background: transparent; cursor: default; }
+
+/* ── PROOFS DRAWER ── */
+.proof-drawer { width: 100%; border-collapse: collapse; }
+.proof-drawer th {
+  background: #d5b6dd;
+  color: #fff;
+  border-top: none;
+  border-bottom: none;
+  padding: 6px 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.proof-drawer th:first-child { width: 90px; }
+.proof-drawer th:last-child  { width: 70px; }
+
+.proof-row { background: #f2eaf4; }
+.proof-row:hover td { background: #f2eaf4; cursor: default; }
+.proof-row td { border-bottom: 1px solid #d5b6dd; }
+
+.proof-view   { padding: 5px 12px; }
+.proof-item   { padding: 5px 12px; font-size: 13px; }
+.proof-version { padding: 5px 12px; font-family: 'DM Mono', monospace; font-size: 12px; }
+.proof-status  { padding: 5px 12px; font-size: 13px; }
+.proof-comments { padding: 5px 12px; font-size: 13px; }
+.proof-action  { padding: 5px 8px; white-space: nowrap; }
+
+.proof-footer { background: #f2eaf4; }
+.proof-footer td { border-top: 1px solid #d5b6dd; padding: 8px 12px 8px 40px; }
+.proof-footer:hover td { background: #f2eaf4; cursor: default; }
 
 /* ── TRASH / ACTION ICON BUTTONS ── */
 .icon-btn {

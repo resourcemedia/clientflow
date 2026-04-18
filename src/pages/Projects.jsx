@@ -362,7 +362,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                   }}
                 >
                   <td style={{ padding: '7px 4px 7px 12px', width: 24, cursor: 'grab', color: 'var(--text3)', fontSize: 14, userSelect: 'none', borderBottom: '1px solid #89bac9' }}>⠿</td>
-                  <td style={{ padding: '4px 8px', borderBottom: '1px solid #89bac9' }}>
+                  <td style={{ padding: '4px 0', borderBottom: '1px solid #89bac9' }}>
                     <button
                       className="btn btn-sm"
                       onClick={e => { e.stopPropagation(); onToggleProofExpand(item.id) }}
@@ -430,7 +430,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                           <tr>
-                            <th style={{ width: 90, padding: '6px 12px', background: '#d5b6dd', borderTop: 'none', borderBottom: 'none' }} />
+                            <th style={{ width: 100, padding: '6px 12px', background: '#d5b6dd', borderTop: 'none', borderBottom: 'none' }} />
                             <th style={{ ...proofThStyle }}>Item</th>
                             <th style={{ ...proofThStyle }}>Proof</th>
                             <th style={{ ...proofThStyle }}>Status</th>
@@ -441,7 +441,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                         <tbody>
                           {(itemProofs?.[item.id] || []).map(proof => (
                             <tr key={proof.id} style={{ background: '#f2eaf4' }}>
-                              <td style={{ padding: '5px 12px', borderBottom: '1px solid #d5b6dd' }}>
+                              <td style={{ padding: '5px 12px 5px 40px', borderBottom: '1px solid #d5b6dd' }}>
                                 <button style={{ background: '#fff', border: '1px solid #999', borderRadius: 4, padding: '2px 8px', fontSize: 12, cursor: 'default', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                                   👁 View
                                 </button>
@@ -1220,7 +1220,7 @@ function WorkView({
                         {/* drag handle */}
                         <td style={{
                           cursor: 'grab', color: 'var(--text3)',
-                          fontSize: 15, userSelect: 'none', paddingRight: 0,
+                          fontSize: 15, userSelect: 'none', padding: '12px 4px 12px 4px', width: 20,
                         }}>
                           ⠿
                         </td>
@@ -1228,7 +1228,7 @@ function WorkView({
                         {/* expand toggles */}
                         <td
                           onClick={e => e.stopPropagation()}
-                          style={{ padding: '8px 4px 8px 10px', whiteSpace: 'nowrap' }}
+                          style={{ padding: '8px 4px 8px 12px', whiteSpace: 'nowrap' }}
                         >
                           <button
                             className="btn btn-sm"
