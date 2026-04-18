@@ -442,7 +442,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                           {(itemProofs?.[item.id] || []).map(proof => (
                             <tr key={proof.id} style={{ background: '#f2eaf4' }}>
                               <td style={{ padding: '5px 12px 5px 40px', borderBottom: '1px solid #d5b6dd' }}>
-                                <button style={{ background: '#fff', border: '1px solid #999', borderRadius: 4, padding: '2px 8px', fontSize: 12, cursor: 'default', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <button style={{ background: '#fff', border: '1px solid #ffffff', borderRadius: 6, padding: '5px 8px 2px 10px', fontSize: 12, cursor: 'default', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                                   👁 View
                                 </button>
                               </td>
