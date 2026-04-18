@@ -473,8 +473,8 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                               <button
                                 className="btn btn-sm"
                                 onClick={e => { e.stopPropagation(); onAddProof(item.id, item.item_number) }}
-                                style={{ background: '#d5b6dd', color: '#fff', fontSize: 12, fontWeight: 600, border: 'none' }}
-                              >+ Add Proof</button>
+                                style={{ background: 'none', color: '#d5b6dd', fontSize: 12, fontWeight: 600, border: '1px solid #d5b6dd' }}
+                              >+</button>
                             </td>
                           </tr>
                         </tbody>
@@ -524,7 +524,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
           <tr style={{ background: '#e6f8fc' }}>
             <td colSpan={6} style={{ padding: '8px 12px 8px 40px', borderTop: '1px solid var(--border)' }}>
               <button className="btn btn-sm" onClick={startAdd} style={{ background: 'none', color: '#89bac9', fontSize: 12, fontWeight: 600, border: '1px solid #89bac9' }}>
-                + Add item
+                +
               </button>
             </td>
           </tr>
@@ -707,7 +707,7 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
                 className="btn btn-sm"
                 onClick={startAdd}
                 style={{ background: 'none', color: '#9dc691', fontSize: 12, fontWeight: 600, border: '1px solid #9dc691' }}
-              >+ Add Task</button>
+              >+</button>
             </td>
           </tr>
         </tbody>
