@@ -607,9 +607,9 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
             <th style={{ width: 24, padding: '6px 4px 6px 12px', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }} />
             <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Task</th>
             <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Note</th>
-            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Assigned</th>
-            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Updated</th>
-            <th style={{ width: 100, background: '#9dc691', borderTop: 'none', borderBottom: 'none' }} />
+            <th style={{ width: 80, padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Assigned</th>
+            <th style={{ width: 100, padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Updated</th>
+            <th style={{ width: 40, background: '#9dc691', borderTop: 'none', borderBottom: 'none' }} />
           </tr>
         </thead>
         <tbody>
