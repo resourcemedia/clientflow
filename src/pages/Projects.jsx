@@ -126,7 +126,7 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
       </td>
 
       {/* task text */}
-      <td className="td-main" style={{ minWidth: 140, borderBottom: '1px solid #9dc691' }}>
+      <td className="td-main" style={{ minWidth: 140, borderBottom: '1px solid #9dc691', borderRight: '1px solid var(--border)' }}>
         {editField === 'note' ? (
           <textarea
             autoFocus
@@ -152,7 +152,7 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
       </td>
 
       {/* status note */}
-      <td style={{ minWidth: 120, borderBottom: '1px solid #9dc691' }}>
+      <td style={{ minWidth: 120, padding: '7px 12px', fontSize: 13, color: 'var(--text3)', borderBottom: '1px solid #9dc691', borderRight: '1px solid var(--border)' }}>
         {editField === 'status_note' ? (
           <input
             autoFocus
@@ -173,7 +173,7 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
       </td>
 
       {/* assigned */}
-      <td style={{ position: 'relative', borderBottom: '1px solid #9dc691' }} ref={assignRef}>
+      <td style={{ position: 'relative', padding: '7px 12px', fontSize: 12, color: 'var(--text3)', borderBottom: '1px solid #9dc691', borderRight: '1px solid var(--border)' }} ref={assignRef}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           {assignee
             ? <Avatar name={assignee.name} size={24} />
@@ -216,7 +216,7 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
       </td>
 
       {/* updated */}
-      <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--text3)', whiteSpace: 'nowrap', borderBottom: '1px solid #9dc691' }}>
+      <td style={{ padding: '7px 12px', fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--text3)', whiteSpace: 'nowrap', borderBottom: '1px solid #9dc691', borderRight: '1px solid var(--border)' }}>
         {fmtUpdated(task.updated_at, task.updater?.name)}
       </td>
 

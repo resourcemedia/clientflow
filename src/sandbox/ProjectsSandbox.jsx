@@ -2,6 +2,8 @@
 // No state, no data fetching. Style objects match Projects.jsx exactly.
 // To update the live app: copy the style={{ }} object to the matching element.
 
+import { MoveRight } from "lucide-react"
+
 // ── icons ─────────────────────────────────────────────────────────────────────
 const TrashIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -40,6 +42,7 @@ const ITEMS = [
   { id: 3, name: 'Brand Guidelines',         item_number: '03', scheduled_date: '2026-05-01' },
 ]
 const PROOFS = [
+  { id: 1, version: 1, status: 'In Review', comments: 'Lighten the tagline color' },
   { id: 1, version: 1, status: 'In Review', comments: 'Lighten the tagline color' },
 ]
 const TASKS = [
@@ -92,12 +95,41 @@ function ItemsDrawer() {
 
         <thead>
           <tr>
-            <th style={{ width: 24, padding: '6px 4px 6px 12px', background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
-            <th style={{ width: 110,                              background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
-            <th style={{ ...itemTh, width: 180 }}>Item</th>
-            <th style={{ ...itemTh, width: 80  }}>Order</th>
-            <th style={{ ...itemTh, width: 120 }}>Scheduled</th>
-            <th style={{ width: 40,                              background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
+            {/* ── item drag ── */}
+            <th style={{ 
+              width: 24, 
+              padding: '6px 4px 6px 12px', 
+              background: '#89bac9', 
+              borderTop: 'none', 
+              borderBottom: 'none' }} />
+
+            {/* ── item proofs button ── */}
+            <th style={{ 
+              width: 215,                              
+              background: '#89bac9', 
+              borderTop: 'none', borderBottom: 'none'}} />
+
+            {/* ── item item ── */}
+            <th style={{ ...itemTh, 
+              width: 250 }}>
+              Item</th>
+
+            {/* ── item order ── */}
+            <th style={{ 
+              ...itemTh, 
+              width: 80  }}>
+                Order</th>
+
+            {/* ── item schedule─ */}
+            <th style={{ ...itemTh, 
+            }}>Scheduled</th>
+
+            {/* ── item schedule─ */}
+            <th style={{ 
+              width:40,                              
+              background: '#89bac9', 
+              borderTop: 'none', 
+              borderBottom: 'none', }} />
           </tr>
         </thead>
 
@@ -122,13 +154,17 @@ function ItemsDrawer() {
                     <DragDots />
                   </td>
 
+                  {/* ── item proof button ── */}
+
                   <td style={{
                     padding:      '4px 0',
                     borderBottom: '1px solid #89bac9',
+                    borderRight: '1px solid var(--border)',
                   }}>
                     <button
                       className="btn btn-sm"
                       style={{
+                        width:       70,
                         display:     'inline-flex',
                         alignItems:  'center',
                         gap:         4,
@@ -144,15 +180,20 @@ function ItemsDrawer() {
                     </button>
                   </td>
 
+                  {/* ── item items ── */}
+
                   <td style={{
                     padding:      '4px 12px',
                     fontSize:     13,
                     fontWeight:   600,
                     color:        'var(--text)',
                     borderBottom: '1px solid #89bac9',
+                    borderRight: '1px solid var(--border)',
                   }}>
                     {item.name}
                   </td>
+
+                  {/* ── item order ── */}
 
                   <td style={{
                     padding:      '7px 12px',
@@ -160,9 +201,12 @@ function ItemsDrawer() {
                     color:        'var(--text3)',
                     fontFamily:   'DM Mono, monospace',
                     borderBottom: '1px solid #89bac9',
+                    borderRight: '1px solid var(--border)',
                   }}>
                     {item.item_number}
                   </td>
+
+                   {/* ── item scheduled date ── */}
 
                   <td style={{
                     padding:      '4px 12px',
@@ -171,13 +215,17 @@ function ItemsDrawer() {
                     color:        isOverdue ? 'var(--red)' : 'var(--text3)',
                     fontWeight:   isOverdue ? 600 : 400,
                     borderBottom: '1px solid #89bac9',
+                    borderRight: '1px solid var(--border)',
                   }}>
                     {item.scheduled_date
                       ? (() => { const [y,m,d] = item.scheduled_date.split('-'); return `${m}/${d}/${y.slice(2)}` })()
                       : '—'}
                   </td>
 
+                   {/* ── item trash button ── */}
+
                   <td style={{
+                    width:       40,
                     padding:      '7px 10px 7px 4px',
                     whiteSpace:   'nowrap',
                     borderBottom: '1px solid #89bac9',
@@ -270,14 +318,14 @@ function ItemsDrawer() {
                               <button
                                 className="btn btn-sm"
                                 style={{
-                                  background:  '#d5b6dd',
-                                  color:       '#fff',
+                                  background:  'none',
+                                  color:       '#d5b6dd',
                                   fontSize:    12,
                                   fontWeight:  600,
-                                  border:      'none',
+                                  border:      '1px solid #d5b6dd',
                                 }}
                               >
-                                + Add Proof
+                                +
                               </button>
                             </td>
                           </tr>
@@ -304,7 +352,7 @@ function ItemsDrawer() {
                   border:      '1px solid #89bac9',
                 }}
               >
-                + Add item
+                +
               </button>
             </td>
           </tr>
@@ -326,7 +374,11 @@ function TasksDrawer() {
 
         <thead>
           <tr>
-            <th style={{ width: 24, padding: '6px 4px 6px 12px', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }} />
+            <th style={{ 
+              width: 24, 
+              padding: '6px 4px 6px 12px', 
+              background: '#9dc691', 
+              borderTop: 'none', borderBottom: 'none' }} />
             <th style={{ ...taskTh              }}>Task</th>
             <th style={{ ...taskTh              }}>Note</th>
             <th style={{ ...taskTh, width: 80   }}>Assigned</th>
@@ -353,6 +405,7 @@ function TasksDrawer() {
                 style={{
                   minWidth:     140,
                   borderBottom: '1px solid #9dc691',
+                  borderRight:  '1px solid var(--border)',
                 }}
               >
                 {task.note}
@@ -364,6 +417,7 @@ function TasksDrawer() {
                 fontSize:     13,
                 color:        'var(--text3)',
                 borderBottom: '1px solid #9dc691',
+                borderRight:  '1px solid var(--border)',
               }}>
                 {task.status_note}
               </td>
@@ -373,6 +427,7 @@ function TasksDrawer() {
                 fontSize:     12,
                 color:        'var(--text3)',
                 borderBottom: '1px solid #9dc691',
+                borderRight:  '1px solid var(--border)',
               }}>
                 {task.assignee}
               </td>
@@ -384,6 +439,7 @@ function TasksDrawer() {
                 color:        'var(--text3)',
                 whiteSpace:   'nowrap',
                 borderBottom: '1px solid #9dc691',
+                borderRight:  '1px solid var(--border)',
               }}>
                 {task.updated}
               </td>
@@ -428,7 +484,7 @@ function TasksDrawer() {
                   border:      '1px solid #9dc691',
                 }}
               >
-                + Add Task
+                + 
               </button>
             </td>
           </tr>
@@ -445,6 +501,7 @@ function ProjectRow({ number, client, tags, name, itemsOpen, tasksOpen }) {
     <>
       <tr style={{ cursor: 'pointer' }}>
 
+        {/* drag handle */}
         <td style={{
           padding:    '12px 4px 12px 4px',
           width:      20,
@@ -456,10 +513,16 @@ function ProjectRow({ number, client, tags, name, itemsOpen, tasksOpen }) {
           ⠿
         </td>
 
-        <td style={{ padding: '8px 4px 8px 12px', whiteSpace: 'nowrap' }}>
+        {/* expand toggles */}
+        <td style={{ 
+          borderRight: '1px solid var(--border)',
+          width: 150,
+          padding: '8px 8px 8px 12px', 
+          whiteSpace: 'nowrap' }}>
           <button
             className="btn btn-sm"
             style={{
+              width:       70,
               display:     'inline-flex',
               alignItems:  'center',
               gap:         4,
@@ -486,29 +549,54 @@ function ProjectRow({ number, client, tags, name, itemsOpen, tasksOpen }) {
           </button>
         </td>
 
+        {/* project number */}
         <td style={{
-          fontFamily: 'DM Mono, monospace',
-          color:      'var(--text3)',
+          borderRight: '1px solid var(--border)',
+          width:      60,
+          color:      'var(--text2)',
           fontSize:   12,
           padding:    '8px 12px',
         }}>
           {number}
         </td>
 
-        <td style={{ color: 'var(--text2)', fontSize: 13, padding: '8px 12px' }}>
+        {/* client */}
+        <td style={{ 
+          borderRight: '1px solid var(--border)',
+          width: 150,
+          color: 'var(--text2)', 
+          fontSize: 13, 
+          padding: '8px 12px' }}>
           {client}
         </td>
 
-        <td style={{ color: 'var(--text2)', fontSize: 13, whiteSpace: 'nowrap', padding: '8px 12px' }}>
+        {/* tags */}
+        <td style={{ 
+          borderRight: '1px solid var(--border)',
+          width: 75 ,
+          color: 'var(--text2)', 
+          fontSize: 13, 
+          whiteSpace: 'nowrap', 
+          padding: '8px 12px' }}>
           {tags}
         </td>
 
-        <td className="td-main" style={{ padding: '8px 12px' }}>
+        {/* project name */}
+        <td className="td-main" style={{ 
+          borderRight: '1px solid var(--border)',
+          padding: '8px 12px' }}>
           {name}
         </td>
 
-        <td style={{ whiteSpace: 'nowrap', padding: '8px 10px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        {/* actions */}
+        <td style={{ 
+          whiteSpace: 'nowrap', 
+          padding: '8px 10px' }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'flex-end',
+            gap: 4 }}>
             <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }}>Items</button>
             <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }}>✏️</button>
             <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333', color: 'var(--red)' }}><TrashIcon /></button>
