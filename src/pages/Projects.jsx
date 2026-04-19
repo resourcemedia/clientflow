@@ -377,7 +377,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                       Proofs
                     </button>
                   </td>
-                  <td style={{ padding: '4px 12px', fontSize: 13, fontWeight: 600, color: 'var(--text)', borderBottom: '1px solid #89bac9' }}>
+                  <td style={{ padding: '4px 12px', fontSize: 13, fontWeight: 600, color: 'var(--text)', borderBottom: '1px solid #89bac9', borderRight: '1px solid var(--border)' }}>
                     {editField?.itemId === item.id && editField.field === 'name' ? (
                       <input
                         autoFocus
@@ -391,8 +391,8 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                       <span style={{ cursor: 'text', display: 'block' }} onClick={() => startEdit(item, 'name')}>{item.name}</span>
                     )}
                   </td>
-                  <td style={{ padding: '7px 12px', fontSize: 12, color: 'var(--text3)', fontFamily: 'DM Mono, monospace', borderBottom: '1px solid #89bac9' }}>{item.item_number || '—'}</td>
-                  <td style={{ padding: '4px 12px', fontSize: 12, fontFamily: 'DM Mono, monospace', color: isOverdue ? 'var(--red)' : 'var(--text3)', fontWeight: isOverdue ? 600 : 400, borderBottom: '1px solid #89bac9' }}>
+                  <td style={{ padding: '7px 12px', fontSize: 12, color: 'var(--text3)', fontFamily: 'DM Mono, monospace', borderBottom: '1px solid #89bac9', borderRight: '1px solid var(--border)' }}>{item.item_number || '—'}</td>
+                  <td style={{ padding: '4px 12px', fontSize: 12, fontFamily: 'DM Mono, monospace', color: isOverdue ? 'var(--red)' : 'var(--text3)', fontWeight: isOverdue ? 600 : 400, borderBottom: '1px solid #89bac9', borderRight: '1px solid var(--border)' }}>
                     {editField?.itemId === item.id && editField.field === 'scheduled_date' ? (
                       <input
                         autoFocus
