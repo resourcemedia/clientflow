@@ -362,7 +362,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                   }}
                 >
                   <td style={{ padding: '7px 4px 7px 12px', width: 24, cursor: 'grab', color: 'var(--text3)', fontSize: 14, userSelect: 'none', borderBottom: '1px solid #89bac9' }}>⠿</td>
-                  <td style={{ padding: '4px 0', borderBottom: '1px solid #89bac9' }}>
+                  <td style={{ padding: '4px 0', borderBottom: '1px solid #89bac9', borderRight: '1px solid var(--border)' }}>
                     <button
                       className="btn btn-sm"
                       onClick={e => { e.stopPropagation(); onToggleProofExpand(item.id) }}
