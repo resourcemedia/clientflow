@@ -1228,7 +1228,7 @@ function WorkView({
                         {/* expand toggles */}
                         <td
                           onClick={e => e.stopPropagation()}
-                          style={{ padding: '8px 4px 8px 12px', whiteSpace: 'nowrap' }}
+                          style={{ borderRight: '1px solid var(--border)', width: 150, padding: '8px 8px 8px 12px', whiteSpace: 'nowrap' }}
                         >
                           <button
                             className="btn btn-sm"
@@ -1265,16 +1265,21 @@ function WorkView({
                             Items
                           </button>
                         </td>
-                        <td className="text-mono text-dim">{p.project_number}</td>
-                        <td style={{ color: 'var(--text2)', fontSize: 13 }}>{p.client?.company || '—'}</td>
-                        <td style={{ color: 'var(--text2)', fontSize: 13, whiteSpace: 'nowrap' }}>
+                        {/* project number */}
+                        <td style={{ borderRight: '1px solid var(--border)', width: 60, color: 'var(--text2)', fontSize: 12, padding: '8px 12px' }}>{p.project_number}</td>
+                        {/* client */}
+                        <td style={{ borderRight: '1px solid var(--border)', width: 150, color: 'var(--text2)', fontSize: 13, padding: '8px 12px' }}>{p.client?.company || '—'}</td>
+                        {/* tags */}
+                        <td style={{ borderRight: '1px solid var(--border)', width: 75, color: 'var(--text2)', fontSize: 13, whiteSpace: 'nowrap', padding: '8px 12px' }}>
                           {p.product
                             ? `${p.product.type}${p.product.name ? ` | ${p.product.name}` : ''}`
                             : p.product_type || '—'}
                         </td>
-                        <td className="td-main">{p.name}</td>
-                        <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        {/* project name */}
+                        <td className="td-main" style={{ borderRight: '1px solid var(--border)', padding: '8px 12px' }}>{p.name}</td>
+                        {/* actions */}
+                        <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap', padding: '8px 10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
                             <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }} onClick={() => onView(p.id)}>
                               Items
                             </button>
