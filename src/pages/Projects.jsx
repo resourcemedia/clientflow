@@ -3,6 +3,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { DEMO_PROJECTS, DEMO_CLIENTS, PRIORITIES, PROOF_STATUSES, INV_STATUSES, COLLECT_STATUSES } from '../lib/demo-data'
 import { StatusBadge, Modal, EmptyState, PillNav, FormGroup, fmt$, initials } from '../components/ui'
+import iconTodo   from '../assets/icon_todo.svg'
+import iconItem   from '../assets/icon_item.svg'
+import iconProofs from '../assets/icon_proofs.svg'
+import iconView   from '../assets/icon_view.svg'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 const PRODUCT_TYPES = ['ST', 'CO', 'DS', 'OH']
@@ -364,17 +368,12 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                   <td style={{ padding: '7px 4px 7px 12px', width: 24, cursor: 'grab', color: 'var(--text3)', fontSize: 14, userSelect: 'none', borderBottom: '1px solid #89bac9' }}>⠿</td>
                   <td style={{ padding: '4px 0', borderBottom: '1px solid #89bac9', borderRight: '1px solid var(--border)' }}>
                     <button
-                      className="btn btn-sm"
+                      className="btn btn-ghost btn-icon"
                       onClick={e => { e.stopPropagation(); onToggleProofExpand(item.id) }}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#d5b6dd', color: '#fff', border: 'none', fontSize: 12, fontWeight: 600, width: 70 }}
+                      title="Toggle Proofs"
+                      style={{ padding: 0, border: 'none', background: 'none', opacity: proofOpen ? 1 : 0.45, transition: 'opacity 0.15s' }}
                     >
-                      <svg
-                        width="9" height="9" viewBox="0 0 10 10" fill="currentColor"
-                        style={{ transition: 'transform 0.15s', transform: proofOpen ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }}
-                      >
-                        <path d="M3 1.5l4 3.5-4 3.5V1.5z"/>
-                      </svg>
-                      Proofs
+                      <img src={iconProofs} width={25} height={25} alt="Proofs" style={{ display: 'block' }} />
                     </button>
                   </td>
                   <td style={{ padding: '4px 12px', fontSize: 13, fontWeight: 600, color: 'var(--text)', borderBottom: '1px solid #89bac9', borderRight: '1px solid var(--border)' }}>
@@ -442,9 +441,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                           {(itemProofs?.[item.id] || []).map(proof => (
                             <tr key={proof.id} style={{ background: '#f2eaf4' }}>
                               <td style={{ padding: '5px 12px 5px 40px', borderBottom: '1px solid #d5b6dd' }}>
-                                <button style={{ background: '#fff', border: '1px solid #ffffff', borderRadius: 6, padding: '5px 8px 2px 10px', fontSize: 12, cursor: 'default', display: 'inline-flex', alignItems: 'center', gap: 4, width: 70 }}>
-                                  👁 View
-                                </button>
+                                <img src={iconView} width={25} height={25} alt="View" style={{ display: 'block', cursor: 'pointer' }} />
                               </td>
                               <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd' }}>{item.name}</td>
                               <td style={{ padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: 12, borderBottom: '1px solid #d5b6dd' }}>{item.item_number}{String.fromCharCode(64 + proof.version)}</td>
@@ -1231,38 +1228,20 @@ function WorkView({
                           style={{ borderRight: '1px solid var(--border)', width: 150, padding: '8px 8px 8px 12px', whiteSpace: 'nowrap' }}
                         >
                           <button
-                            className="btn btn-sm"
+                            className="btn btn-ghost btn-icon"
                             onClick={() => onToggleExpand(p.id)}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginRight: 4, background: '#9dc691', color: '#fff', border: 'none', width: 70 }}
+                            title="Toggle Tasks"
+                            style={{ padding: 0, border: 'none', background: 'none', marginRight: 4, opacity: isExpanded ? 1 : 0.45, transition: 'opacity 0.15s' }}
                           >
-                            <svg
-                              width="9" height="9" viewBox="0 0 10 10" fill="currentColor"
-                              style={{
-                                transition: 'transform 0.15s',
-                                transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                                flexShrink: 0,
-                              }}
-                            >
-                              <path d="M3 1.5l4 3.5-4 3.5V1.5z"/>
-                            </svg>
-                            Tasks
+                            <img src={iconTodo} width={25} height={25} alt="Tasks" style={{ display: 'block' }} />
                           </button>
                           <button
-                            className="btn btn-sm"
+                            className="btn btn-ghost btn-icon"
                             onClick={() => onToggleItemExpand(p.id)}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#89bac9', color: '#fff', border: 'none', width: 70 }}
+                            title="Toggle Items"
+                            style={{ padding: 0, border: 'none', background: 'none', opacity: expandedItemRows[p.id] ? 1 : 0.45, transition: 'opacity 0.15s' }}
                           >
-                            <svg
-                              width="9" height="9" viewBox="0 0 10 10" fill="currentColor"
-                              style={{
-                                transition: 'transform 0.15s',
-                                transform: expandedItemRows[p.id] ? 'rotate(90deg)' : 'rotate(0deg)',
-                                flexShrink: 0,
-                              }}
-                            >
-                              <path d="M3 1.5l4 3.5-4 3.5V1.5z"/>
-                            </svg>
-                            Items
+                            <img src={iconItem} width={25} height={25} alt="Items" style={{ display: 'block' }} />
                           </button>
                         </td>
                         {/* project number */}

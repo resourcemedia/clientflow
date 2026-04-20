@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 25 25">
+  <defs>
+    <style>.st0{fill:#fff}.st1{fill:#d5b6dd}</style>
+  </defs>
+  <circle class="st1" cx="12.5" cy="12.5" r="12.5"/>
+  <rect class="st0" x="10.83" y="5.68" width="7.41" height="9.77"/>
+  <path class="st0" d="M15.13,17.73h-5.95c-.33,0-.59-.27-.59-.59V7.14c0-.33.27-.59.59-.59s.59.27.59.59v9.4h5.36c.33,0,.59.27.59.59s-.27.59-.59.59Z"/>
+  <path class="st0" d="M12.91,19.95h-5.95c-.33,0-.59-.27-.59-.59v-9.99c0-.33.27-.59.59-.59s.59.27.59.59v9.4h5.36c.33,0,.59.27.59.59s-.27.59-.59.59Z"/>
+</svg>
