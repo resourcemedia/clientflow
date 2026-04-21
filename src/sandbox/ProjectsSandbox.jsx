@@ -2,7 +2,10 @@
 // No state, no data fetching. Style objects match Projects.jsx exactly.
 // To update the live app: copy the style={{ }} object to the matching element.
 
-import { MoveRight } from "lucide-react"
+import iconTodo   from '../assets/icon_todo.svg'
+import iconItem   from '../assets/icon_item.svg'
+import iconProofs from '../assets/icon_proofs.svg'
+import iconView   from '../assets/icon_view.svg'
 
 // ── icons ─────────────────────────────────────────────────────────────────────
 const TrashIcon = () => (
@@ -21,18 +24,6 @@ const PlusIcon = () => (
 )
 const DragDots = () => (
   <span style={{ fontSize: 14, color: 'var(--text3)', userSelect: 'none' }}>⠿</span>
-)
-const TriArrow = ({ open }) => (
-  <svg
-    width="9" height="9" viewBox="0 0 10 10" fill="currentColor"
-    style={{
-      transition:      'transform 0.15s',
-      transform:       open ? 'rotate(90deg)' : 'rotate(0deg)',
-      flexShrink:      0,
-    }}
-  >
-    <path d="M3 1.5l4 3.5-4 3.5V1.5z"/>
-  </svg>
 )
 
 // ── sample data ───────────────────────────────────────────────────────────────
@@ -96,40 +87,17 @@ function ItemsDrawer() {
         <thead>
           <tr>
             {/* ── item drag ── */}
-            <th style={{ 
-              width: 24, 
-              padding: '6px 4px 6px 12px', 
-              background: '#89bac9', 
-              borderTop: 'none', 
-              borderBottom: 'none' }} />
-
+            <th style={{ width: 25, padding: '6px 4px 6px 12px', background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
             {/* ── item proofs button ── */}
-            <th style={{ 
-              width: 215,                              
-              background: '#89bac9', 
-              borderTop: 'none', borderBottom: 'none'}} />
-
-            {/* ── item item ── */}
-            <th style={{ ...itemTh, 
-              width: 250 }}>
-              Item</th>
-
+            <th style={{ width: 75, background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
+            {/* ── item name ── */}
+            <th style={{ ...itemTh, width: 200 }}>Item</th>
             {/* ── item order ── */}
-            <th style={{ 
-              ...itemTh, 
-              width: 80  }}>
-                Order</th>
-
-            {/* ── item schedule─ */}
-            <th style={{ ...itemTh, 
-            }}>Scheduled</th>
-
-            {/* ── item schedule─ */}
-            <th style={{ 
-              width:40,                              
-              background: '#89bac9', 
-              borderTop: 'none', 
-              borderBottom: 'none', }} />
+            <th style={{ ...itemTh, width: 75 }}>Order</th>
+            {/* ── item scheduled ── */}
+            <th style={{ ...itemTh }}>Scheduled</th>
+            {/* ── item actions ── */}
+            <th style={{ width: 225, background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
           </tr>
         </thead>
 
@@ -144,12 +112,13 @@ function ItemsDrawer() {
 
                   <td style={{
                     padding:      '7px 4px 7px 12px',
-                    width:        24,
+                    width:        25,
                     cursor:       'grab',
                     color:        'var(--text3)',
                     fontSize:     14,
                     userSelect:   'none',
                     borderBottom: '1px solid #89bac9',
+                    borderRight:  '1px solid var(--border)',
                   }}>
                     <DragDots />
                   </td>
@@ -159,24 +128,14 @@ function ItemsDrawer() {
                   <td style={{
                     padding:      '4px 0',
                     borderBottom: '1px solid #89bac9',
-                    borderRight: '1px solid var(--border)',
+                    borderRight: '1px solid var(--border)', 
                   }}>
                     <button
-                      className="btn btn-sm"
-                      style={{
-                        width:       70,
-                        display:     'inline-flex',
-                        alignItems:  'center',
-                        gap:         4,
-                        background:  '#d5b6dd',
-                        color:       '#fff',
-                        border:      'none',
-                        fontSize:    12,
-                        fontWeight:  600,
-                      }}
+                      className="btn btn-ghost btn-icon"
+                      title="Toggle Proofs"
+                      style={{ padding: 0, border: 'none', background: 'none', opacity: proofOpen ? 1 : 0.45, transition: 'opacity 0.15s' }}
                     >
-                      <TriArrow open={proofOpen} />
-                      Proofs
+                      <img src={iconProofs} width={25} height={25} alt="Proofs" style={{ display: 'block' }} />
                     </button>
                   </td>
 
@@ -225,7 +184,6 @@ function ItemsDrawer() {
                    {/* ── item trash button ── */}
 
                   <td style={{
-                    width:       40,
                     padding:      '7px 10px 7px 4px',
                     whiteSpace:   'nowrap',
                     borderBottom: '1px solid #89bac9',
@@ -248,12 +206,13 @@ function ItemsDrawer() {
 
                         <thead>
                           <tr>
-                            <th style={{ width: 125, padding: '6px 12px', background: '#d5b6dd', borderTop: 'none', borderBottom: 'none' }} />
-                            <th style={{ ...proofTh }}>Item</th>
-                            <th style={{ ...proofTh }}>Proof</th>
+                            <th style={{ width: 25, background: '#d5b6dd', borderTop: 'none', borderBottom: 'none' }} />
+                            <th style={{ width: 65, background: '#d5b6dd', borderTop: 'none', borderBottom: 'none' }} />
+                            <th style={{ ...proofTh, width: 200 }}>Item</th>
+                            <th style={{ ...proofTh, width: 75 }}>Proof</th>
                             <th style={{ ...proofTh }}>Status</th>
                             <th style={{ ...proofTh }}>Comments / Changes</th>
-                            <th style={{ width: 70,                           background: '#d5b6dd', borderTop: 'none', borderBottom: 'none' }} />
+                            <th style={{ width: 225, background: '#d5b6dd', borderTop: 'none', borderBottom: 'none' }} />
                           </tr>
                         </thead>
 
@@ -261,40 +220,24 @@ function ItemsDrawer() {
                           {PROOFS.map(proof => (
                             <tr key={proof.id} style={{ background: '#f2eaf4' }}>
 
-                              <td style={{
-                                padding:      '5px 12px 5px 40px',
-                                borderBottom: '1px solid #d5b6dd',
-                              }}>
-                                <button style={{
-                                  color:       '#333',
-                                  width:       70,
-                                  background:   '#fff',
-                                  border:       '1px solid #ffffff',
-                                  borderRadius: 6,
-                                  padding:      '5px 8px 2px 10px',
-                                  fontSize:     12,
-                                  cursor:       'default',
-                                  display:      'inline-flex',
-                                  alignItems:   'center',
-                                  gap:          4,
-                                }}>
-                                  👁 View
-                                </button>
+                              <td style={{ width: 25, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }} />
+                              <td style={{ padding: '5px 8px', borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>
+                                <img src={iconView} width={25} height={25} alt="View" style={{ display: 'block', cursor: 'pointer' }} />
                               </td>
 
-                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd' }}>
+                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>
                                 {item.name}
                               </td>
 
-                              <td style={{ padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: 12, borderBottom: '1px solid #d5b6dd' }}>
+                              <td style={{ padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: 12, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>
                                 {item.item_number}{String.fromCharCode(64 + proof.version)}
                               </td>
 
-                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd' }}>
+                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>
                                 {proof.status}
                               </td>
 
-                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd' }}>
+                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>
                                 {proof.comments}
                               </td>
 
@@ -314,7 +257,7 @@ function ItemsDrawer() {
 
                           {/* add proof footer */}
                           <tr style={{ background: '#f2eaf4' }}>
-                            <td colSpan={6} style={{ padding: '8px 12px 8px 40px', borderTop: '1px solid #d5b6dd' }}>
+                            <td colSpan={7} style={{ padding: '8px 12px 8px 40px', borderTop: '1px solid #d5b6dd' }}>
                               <button
                                 className="btn btn-sm"
                                 style={{
@@ -374,16 +317,13 @@ function TasksDrawer() {
 
         <thead>
           <tr>
-            <th style={{ 
-              width: 24, 
-              padding: '6px 4px 6px 12px', 
-              background: '#9dc691', 
-              borderTop: 'none', borderBottom: 'none' }} />
-            <th style={{ ...taskTh              }}>Task</th>
+            <th style={{ width: 25, padding: '6px 4px 6px 12px', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }} />
+            <th style={{ width: 65, background: '#9dc691', borderTop: 'none', borderBottom: 'none' }} />
+            <th style={{ ...taskTh, width: 200 }}>Task</th>
             <th style={{ ...taskTh              }}>Note</th>
-            <th style={{ ...taskTh, width: 80   }}>Assigned</th>
-            <th style={{ ...taskTh, width: 100  }}>Updated</th>
-            <th style={{ width: 40, background: '#9dc691', borderTop: 'none', borderBottom: 'none' }} />
+            <th style={{ ...taskTh, width: 75   }}>Assigned</th>
+            <th style={{ ...taskTh              }}>Updated</th>
+            <th style={{ width: 225, background: '#9dc691', borderTop: 'none', borderBottom: 'none' }} />
           </tr>
         </thead>
 
@@ -393,17 +333,19 @@ function TasksDrawer() {
 
               <td style={{
                 padding:      '7px 4px 7px 12px',
-                width:        24,
+                width:        25,
                 cursor:       'grab',
                 borderBottom: '1px solid #9dc691',
+                borderRight:  '1px solid var(--border)',
               }}>
                 <DragDots />
               </td>
 
+              <td style={{ width: 65, borderBottom: '1px solid #9dc691', borderRight: '1px solid var(--border)' }} />
+
               <td
                 className="td-main"
                 style={{
-                  minWidth:     140,
                   borderBottom: '1px solid #9dc691',
                   borderRight:  '1px solid var(--border)',
                 }}
@@ -412,7 +354,6 @@ function TasksDrawer() {
               </td>
 
               <td style={{
-                minWidth:     120,
                 padding:      '7px 12px',
                 fontSize:     13,
                 color:        'var(--text3)',
@@ -473,7 +414,7 @@ function TasksDrawer() {
 
           {/* add task footer */}
           <tr style={{ background: '#f7fff5' }}>
-            <td colSpan={6} style={{ padding: '8px 12px 8px 40px', borderTop: '1px solid var(--border)' }}>
+            <td colSpan={7} style={{ padding: '8px 12px 8px 40px', borderTop: '1px solid var(--border)' }}>
               <button
                 className="btn btn-sm"
                 style={{
@@ -496,63 +437,58 @@ function TasksDrawer() {
 }
 
 // ── ProjectRow ────────────────────────────────────────────────────────────────
-function ProjectRow({ number, client, tags, name, itemsOpen, tasksOpen }) {
+function ProjectRow({ number, tags, name, itemsOpen, tasksOpen }) {
   return (
     <>
       <tr style={{ cursor: 'pointer' }}>
 
         {/* drag handle */}
         <td style={{
-          padding:    '12px 4px 12px 4px',
-          width:      20,
-          color:      'var(--text3)',
-          fontSize:   15,
-          cursor:     'grab',
-          userSelect: 'none',
+          padding:     '12px 4px 12px 4px',
+          width:       25,
+          color:       'var(--text3)',
+          fontSize:    15,
+          cursor:      'grab',
+          userSelect:  'none',
+          borderRight: '1px solid var(--border)',
         }}>
           ⠿
         </td>
 
         {/* expand toggles */}
-        <td style={{ 
+        <td style={{
           borderRight: '1px solid var(--border)',
-          width: 150,
-          padding: '8px 8px 8px 12px', 
+          width: 65,
+          padding: '8px 8px 8px 12px',
           whiteSpace: 'nowrap' }}>
           <button
-            className="btn btn-sm"
-            style={{
-              width:       70,
-              display:     'inline-flex',
-              alignItems:  'center',
-              gap:         4,
-              marginRight: 4,
-              background:  '#9dc691',
-              color:       '#fff',
-              border:      'none',
-            }}
+            className="btn btn-ghost btn-icon"
+            title="Toggle Tasks"
+            style={{ padding: 0, border: 'none', background: 'none', marginRight: 4, opacity: tasksOpen ? 1 : 0.45, transition: 'opacity 0.15s' }}
           >
-            <TriArrow open={tasksOpen} /> Tasks
+            <img src={iconTodo} width={25} height={25} alt="Tasks" style={{ display: 'block' }} />
           </button>
           <button
-            className="btn btn-sm"
-            style={{
-              display:    'inline-flex',
-              alignItems: 'center',
-              gap:        4,
-              background: '#89bac9',
-              color:      '#fff',
-              border:     'none',
-            }}
+            className="btn btn-ghost btn-icon"
+            title="Toggle Items"
+            style={{ padding: 0, border: 'none', background: 'none', opacity: itemsOpen ? 1 : 0.45, transition: 'opacity 0.15s' }}
           >
-            <TriArrow open={itemsOpen} /> Items
+            <img src={iconItem} width={25} height={25} alt="Items" style={{ display: 'block' }} />
           </button>
+        </td>
+
+        {/* project name */}
+        <td className="td-main" style={{
+          borderRight: '1px solid var(--border)',
+          width: 200,
+          padding: '8px 12px' }}>
+          {name}
         </td>
 
         {/* project number */}
         <td style={{
           borderRight: '1px solid var(--border)',
-          width:      60,
+          width:      75,
           color:      'var(--text2)',
           fontSize:   12,
           padding:    '8px 12px',
@@ -560,37 +496,20 @@ function ProjectRow({ number, client, tags, name, itemsOpen, tasksOpen }) {
           {number}
         </td>
 
-        {/* client */}
-        <td style={{ 
+        {/* tags / product */}
+        <td style={{
           borderRight: '1px solid var(--border)',
-          width: 150,
-          color: 'var(--text2)', 
-          fontSize: 13, 
-          padding: '8px 12px' }}>
-          {client}
-        </td>
-
-        {/* tags */}
-        <td style={{ 
-          borderRight: '1px solid var(--border)',
-          width: 75 ,
-          color: 'var(--text2)', 
-          fontSize: 13, 
-          whiteSpace: 'nowrap', 
+          color: 'var(--text2)',
+          fontSize: 13,
+          whiteSpace: 'nowrap',
           padding: '8px 12px' }}>
           {tags}
         </td>
 
-        {/* project name */}
-        <td className="td-main" style={{ 
-          borderRight: '1px solid var(--border)',
-          padding: '8px 12px' }}>
-          {name}
-        </td>
-
         {/* actions */}
-        <td style={{ 
-          whiteSpace: 'nowrap', 
+        <td style={{
+          width: 225,
+          whiteSpace: 'nowrap',
           padding: '8px 10px' }}>
           <div style={{ 
             display: 'flex', 
@@ -607,10 +526,10 @@ function ProjectRow({ number, client, tags, name, itemsOpen, tasksOpen }) {
       </tr>
 
       {itemsOpen && (
-        <tr><td colSpan={7} style={{ padding: 0 }}><ItemsDrawer /></td></tr>
+        <tr><td colSpan={6} style={{ padding: 0 }}><ItemsDrawer /></td></tr>
       )}
       {tasksOpen && (
-        <tr><td colSpan={7} style={{ padding: 0 }}><TasksDrawer /></td></tr>
+        <tr><td colSpan={6} style={{ padding: 0 }}><TasksDrawer /></td></tr>
       )}
     </>
   )
@@ -633,7 +552,7 @@ export default function ProjectsSandbox() {
               <tbody>
                 {/* client group header */}
                 <tr style={{ background: '#595958', cursor: 'default' }}>
-                  <td colSpan={7} style={{
+                  <td colSpan={6} style={{
                     padding:       '6px 16px',
                     fontWeight:    700,
                     fontSize:      13,
@@ -644,15 +563,15 @@ export default function ProjectsSandbox() {
                   </td>
                 </tr>
 
-                <ProjectRow number="8083" client="Adams Orthodontics" tags="CO"          name="Test Project"    itemsOpen tasksOpen={false} />
-                <ProjectRow number="8062" client="Adams Orthodontics" tags="ST | Website" name="Website Redesign" itemsOpen={false} tasksOpen />
-                <ProjectRow number="8041" client="Adams Orthodontics" tags="DS | Logo"    name="Brand Identity"   itemsOpen={false} tasksOpen={false} />
+                <ProjectRow number="8083" tags="CO"          name="Test Project"    itemsOpen tasksOpen={false} />
+                <ProjectRow number="8062" tags="ST | Website" name="Website Redesign" itemsOpen={false} tasksOpen />
+                <ProjectRow number="8041" tags="DS | Logo"    name="Brand Identity"   itemsOpen={false} tasksOpen={false} />
               </tbody>
 
               <tbody>
                 {/* project footer */}
                 <tr>
-                  <td colSpan={7} style={{ padding: '12px 20px' }}>
+                  <td colSpan={6} style={{ padding: '12px 20px' }}>
                     <button className="btn btn-ghost btn-sm">+ Add project</button>
                   </td>
                 </tr>

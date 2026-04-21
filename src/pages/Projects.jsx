@@ -125,12 +125,14 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
       }}
     >
       {/* drag handle */}
-      <td style={{ padding: '7px 4px 7px 12px', width: 24, cursor: 'grab', borderBottom: '1px solid #9dc691' }}>
+      <td style={{ padding: '7px 4px 7px 12px', width: 25, cursor: 'grab', borderBottom: '1px solid #9dc691', borderRight: '1px solid var(--border)' }}>
         <DragDots />
       </td>
 
+      <td style={{ width: 65, borderBottom: '1px solid #9dc691', borderRight: '1px solid var(--border)' }} />
+
       {/* task text */}
-      <td className="td-main" style={{ minWidth: 140, borderBottom: '1px solid #9dc691', borderRight: '1px solid var(--border)' }}>
+      <td className="td-main" style={{ borderBottom: '1px solid #9dc691', borderRight: '1px solid var(--border)' }}>
         {editField === 'note' ? (
           <textarea
             autoFocus
@@ -156,7 +158,7 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
       </td>
 
       {/* status note */}
-      <td style={{ minWidth: 120, padding: '7px 12px', fontSize: 13, color: 'var(--text3)', borderBottom: '1px solid #9dc691', borderRight: '1px solid var(--border)' }}>
+      <td style={{ padding: '7px 12px', fontSize: 13, color: 'var(--text3)', borderBottom: '1px solid #9dc691', borderRight: '1px solid var(--border)' }}>
         {editField === 'status_note' ? (
           <input
             autoFocus
@@ -331,12 +333,12 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
-            <th style={{ width: 24, padding: '6px 4px 6px 12px', background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
-            <th style={{ width: 215, maxWidth: 215, background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
-            <th style={{ ...thStyle, width: 250, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Item</th>
-            <th style={{ ...thStyle, width: 80, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Order</th>
+            <th style={{ width: 25, padding: '6px 4px 6px 12px', background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
+            <th style={{ width: 65, background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
+            <th style={{ ...thStyle, width: 200, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Item</th>
+            <th style={{ ...thStyle, width: 75, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Order</th>
             <th style={{ ...thStyle, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Scheduled</th>
-            <th style={{ width: 40, background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
+            <th style={{ width: 225, background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
           </tr>
         </thead>
         <tbody>
@@ -365,7 +367,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                     cursor: 'default',
                   }}
                 >
-                  <td style={{ padding: '7px 4px 7px 12px', width: 24, cursor: 'grab', color: 'var(--text3)', fontSize: 14, userSelect: 'none', borderBottom: '1px solid #89bac9' }}>⠿</td>
+                  <td style={{ padding: '7px 4px 7px 12px', width: 25, cursor: 'grab', color: 'var(--text3)', fontSize: 14, userSelect: 'none', borderBottom: '1px solid #89bac9', borderRight: '1px solid var(--border)' }}>⠿</td>
                   <td style={{ padding: '4px 0', borderBottom: '1px solid #89bac9', borderRight: '1px solid var(--border)' }}>
                     <button
                       className="btn btn-ghost btn-icon"
@@ -429,24 +431,26 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                           <tr>
-                            <th style={{ width: 125, padding: '6px 12px', background: '#d5b6dd', borderTop: 'none', borderBottom: 'none' }} />
-                            <th style={{ ...proofThStyle }}>Item</th>
-                            <th style={{ ...proofThStyle }}>Proof</th>
+                            <th style={{ width: 25, background: '#d5b6dd', borderTop: 'none', borderBottom: 'none' }} />
+                            <th style={{ width: 65, background: '#d5b6dd', borderTop: 'none', borderBottom: 'none' }} />
+                            <th style={{ ...proofThStyle, width: 200 }}>Item</th>
+                            <th style={{ ...proofThStyle, width: 75 }}>Proof</th>
                             <th style={{ ...proofThStyle }}>Status</th>
                             <th style={{ ...proofThStyle }}>Comments / Changes</th>
-                            <th style={{ width: 70, background: '#d5b6dd', borderTop: 'none', borderBottom: 'none' }} />
+                            <th style={{ width: 225, background: '#d5b6dd', borderTop: 'none', borderBottom: 'none' }} />
                           </tr>
                         </thead>
                         <tbody>
                           {(itemProofs?.[item.id] || []).map(proof => (
                             <tr key={proof.id} style={{ background: '#f2eaf4' }}>
-                              <td style={{ padding: '5px 12px 5px 40px', borderBottom: '1px solid #d5b6dd' }}>
+                              <td style={{ width: 25, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }} />
+                              <td style={{ padding: '5px 8px', borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>
                                 <img src={iconView} width={25} height={25} alt="View" style={{ display: 'block', cursor: 'pointer' }} />
                               </td>
-                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd' }}>{item.name}</td>
-                              <td style={{ padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: 12, borderBottom: '1px solid #d5b6dd' }}>{item.item_number}{String.fromCharCode(64 + proof.version)}</td>
-                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd' }}>{proof.status || '—'}</td>
-                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd' }}>{proof.comments || '—'}</td>
+                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>{item.name}</td>
+                              <td style={{ padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: 12, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>{item.item_number}{String.fromCharCode(64 + proof.version)}</td>
+                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>{proof.status || '—'}</td>
+                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>{proof.comments || '—'}</td>
                               <td style={{ padding: '5px 8px', whiteSpace: 'nowrap', borderBottom: '1px solid #d5b6dd' }}>
                                 <div style={{ display: 'flex', gap: 4 }}>
                                   <button
@@ -466,7 +470,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                             </tr>
                           ))}
                           <tr style={{ background: '#f2eaf4' }}>
-                            <td colSpan={6} style={{ padding: '8px 12px 8px 40px', borderTop: '1px solid #d5b6dd' }}>
+                            <td colSpan={7} style={{ padding: '8px 12px 8px 40px', borderTop: '1px solid #d5b6dd' }}>
                               <button
                                 className="btn btn-sm"
                                 onClick={e => { e.stopPropagation(); onAddProof(item.id, item.item_number) }}
@@ -486,7 +490,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
           {/* inline add row */}
           {addingRow !== null && (
             <tr style={{ background: 'var(--accent-glow)', borderTop: '1px solid var(--border)' }}>
-              <td style={{ padding: '7px 4px 7px 12px', width: 24 }} />
+              <td style={{ padding: '7px 4px 7px 12px', width: 25 }} />
               <td />
               <td style={{ padding: '7px 12px' }}>
                 <input
@@ -601,12 +605,13 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
-            <th style={{ width: 24, padding: '6px 4px 6px 12px', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }} />
-            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Task</th>
+            <th style={{ width: 25, padding: '6px 4px 6px 12px', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }} />
+            <th style={{ width: 65, background: '#9dc691', borderTop: 'none', borderBottom: 'none' }} />
+            <th style={{ width: 200, padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Task</th>
             <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Note</th>
-            <th style={{ width: 80, padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Assigned</th>
-            <th style={{ width: 100, padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Updated</th>
-            <th style={{ width: 40, background: '#9dc691', borderTop: 'none', borderBottom: 'none' }} />
+            <th style={{ width: 75, padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Assigned</th>
+            <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Updated</th>
+            <th style={{ width: 225, background: '#9dc691', borderTop: 'none', borderBottom: 'none' }} />
           </tr>
         </thead>
         <tbody>
@@ -636,7 +641,8 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
           {/* inline add row */}
           {addingRow !== null && (
             <tr style={{ background: 'var(--accent-glow)' }}>
-              <td style={{ padding: '7px 4px 7px 12px', width: 24 }} />
+              <td style={{ padding: '7px 4px 7px 12px', width: 25 }} />
+              <td style={{ width: 65 }} />
               <td className="td-main">
                 <input
                   ref={addInputRef}
@@ -1160,7 +1166,7 @@ function WorkView({
               <tbody key={`group-${group.name}`}>
                 {/* Client group header */}
                 <tr style={{ background: '#595958', pointerEvents: 'none' }}>
-                  <td colSpan={7} style={{
+                  <td colSpan={6} style={{
                     padding: '7px 16px',
                     fontSize: 11,
                     fontWeight: 600,
@@ -1217,7 +1223,8 @@ function WorkView({
                         {/* drag handle */}
                         <td style={{
                           cursor: 'grab', color: 'var(--text3)',
-                          fontSize: 15, userSelect: 'none', padding: '12px 4px 12px 4px', width: 20,
+                          fontSize: 15, userSelect: 'none', padding: '12px 4px 12px 4px', width: 25,
+                          borderRight: '1px solid var(--border)',
                         }}>
                           ⠿
                         </td>
@@ -1225,7 +1232,7 @@ function WorkView({
                         {/* expand toggles */}
                         <td
                           onClick={e => e.stopPropagation()}
-                          style={{ borderRight: '1px solid var(--border)', width: 150, padding: '8px 8px 8px 12px', whiteSpace: 'nowrap' }}
+                          style={{ borderRight: '1px solid var(--border)', width: 65, padding: '8px 8px 8px 12px', whiteSpace: 'nowrap' }}
                         >
                           <button
                             className="btn btn-ghost btn-icon"
@@ -1244,20 +1251,18 @@ function WorkView({
                             <img src={iconItem} width={25} height={25} alt="Items" style={{ display: 'block' }} />
                           </button>
                         </td>
+                        {/* project name */}
+                        <td className="td-main" style={{ borderRight: '1px solid var(--border)', width: 200, padding: '8px 12px' }}>{p.name}</td>
                         {/* project number */}
-                        <td style={{ borderRight: '1px solid var(--border)', width: 60, color: 'var(--text2)', fontSize: 12, padding: '8px 12px' }}>{p.project_number}</td>
-                        {/* client */}
-                        <td style={{ borderRight: '1px solid var(--border)', width: 150, color: 'var(--text2)', fontSize: 13, padding: '8px 12px' }}>{p.client?.company || '—'}</td>
-                        {/* tags */}
-                        <td style={{ borderRight: '1px solid var(--border)', width: 75, color: 'var(--text2)', fontSize: 13, whiteSpace: 'nowrap', padding: '8px 12px' }}>
+                        <td style={{ borderRight: '1px solid var(--border)', width: 75, color: 'var(--text2)', fontSize: 12, padding: '8px 12px' }}>{p.project_number}</td>
+                        {/* tags / product */}
+                        <td style={{ borderRight: '1px solid var(--border)', color: 'var(--text2)', fontSize: 13, whiteSpace: 'nowrap', padding: '8px 12px' }}>
                           {p.product
                             ? `${p.product.type}${p.product.name ? ` | ${p.product.name}` : ''}`
                             : p.product_type || '—'}
                         </td>
-                        {/* project name */}
-                        <td className="td-main" style={{ borderRight: '1px solid var(--border)', padding: '8px 12px' }}>{p.name}</td>
                         {/* actions */}
-                        <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap', padding: '8px 10px' }}>
+                        <td onClick={e => e.stopPropagation()} style={{ width: 225, whiteSpace: 'nowrap', padding: '8px 10px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
                             <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }} onClick={() => onView(p.id)}>
                               Items
@@ -1283,7 +1288,7 @@ function WorkView({
                       {/* task drawer row */}
                       {isExpanded && (
                         <tr key={`drawer-${p.id}`} className="drawer-row">
-                          <td colSpan={7} style={{ padding: 0 }}>
+                          <td colSpan={6} style={{ padding: 0 }}>
                             <TaskDrawer
                               projectId={p.id}
                               tasks={tasks}
@@ -1300,7 +1305,7 @@ function WorkView({
                       {/* items drawer row */}
                       {expandedItemRows[p.id] && (
                         <tr key={`items-drawer-${p.id}`}>
-                          <td colSpan={7} style={{ padding: 0 }}>
+                          <td colSpan={6} style={{ padding: 0 }}>
                             <ItemDrawer
                               projectId={p.id}
                               items={projectItems[p.id] || []}
@@ -1368,7 +1373,7 @@ function WorkView({
             {/* Empty state + add button when no groups */}
             {groups.length === 0 && addingRow === null && (
               <tr>
-                <td colSpan={7} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>
+                <td colSpan={6} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>
                   No projects found.{' '}
                   <button className="btn btn-ghost btn-sm" onClick={onStartAdd}>+ Add first project</button>
                 </td>
