@@ -355,6 +355,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
             return (
               <Fragment key={item.id}>
                 <tr
+                  className="item-row"
                   draggable
                   onDragStart={e => handleDragStart(e, idx)}
                   onDragOver={e => handleDragOver(e, idx)}
@@ -442,7 +443,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                         </thead>
                         <tbody>
                           {(itemProofs?.[item.id] || []).map(proof => (
-                            <tr key={proof.id} style={{ background: '#f2eaf4' }}>
+                            <tr key={proof.id} className="proof-row" style={{ background: '#f2eaf4' }}>
                               <td style={{ width: 25, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }} />
                               <td style={{ padding: '5px 8px', borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>
                                 <img src={iconView} width={25} height={25} alt="View" style={{ display: 'block', cursor: 'pointer' }} />

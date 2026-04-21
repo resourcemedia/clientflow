@@ -108,7 +108,7 @@ function ItemsDrawer() {
             return (
               <>
                 {/* ── item row ── */}
-                <tr key={item.id} style={{ background: '#e6f8fc', cursor: 'default' }}>
+                <tr key={item.id} className="item-row" style={{ background: '#e6f8fc', cursor: 'default' }}>
 
                   <td style={{
                     padding:      '7px 4px 7px 12px',
@@ -133,7 +133,11 @@ function ItemsDrawer() {
                     <button
                       className="btn btn-ghost btn-icon"
                       title="Toggle Proofs"
-                      style={{ padding: 0, border: 'none', background: 'none', opacity: proofOpen ? 1 : 0.45, transition: 'opacity 0.15s' }}
+                      style={{ 
+                        padding: 0, 
+                        border: 'none', 
+                        background: 'none', 
+                        opacity: proofOpen ? 1 : 0.45, transition: 'opacity 0.15s' }}
                     >
                       <img src={iconProofs} width={25} height={25} alt="Proofs" style={{ display: 'block' }} />
                     </button>
@@ -218,7 +222,7 @@ function ItemsDrawer() {
 
                         <tbody>
                           {PROOFS.map(proof => (
-                            <tr key={proof.id} style={{ background: '#f2eaf4' }}>
+                            <tr key={proof.id} className="proof-row" style={{ background: '#f2eaf4' }}>
 
                               <td style={{ width: 25, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }} />
                               <td style={{ padding: '5px 8px', borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>

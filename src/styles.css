@@ -390,6 +390,8 @@ tr:last-child td { border-bottom: none; }
 tr:hover td { background: var(--bg3); cursor: pointer; }
 tr.task-row:hover td { background: #f7fff5; cursor: default; }
 tr.drawer-row:hover td { background: #f7fff5; cursor: default; }
+tr.item-row:hover td  { background: #e6f8fc; cursor: default; }
+tr.proof-row:hover td { background: #f2eaf4; cursor: default; }
 
 .td-main { color: var(--text); font-weight: 500; }
 
