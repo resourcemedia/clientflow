@@ -334,7 +334,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
         <thead>
           <tr>
             <th style={{ width: 25, padding: '6px 4px 6px 12px', background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
-            <th style={{ width: 65, background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
+            <th style={{ width: 75, background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
             <th style={{ ...thStyle, width: 200, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Item</th>
             <th style={{ ...thStyle, width: 75, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Order</th>
             <th style={{ ...thStyle, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Scheduled</th>
@@ -369,7 +369,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                   }}
                 >
                   <td style={{ padding: '7px 4px 7px 12px', width: 25, cursor: 'grab', color: 'var(--text3)', fontSize: 14, userSelect: 'none', borderBottom: '1px solid #89bac9', borderRight: '1px solid var(--border)' }}>⠿</td>
-                  <td style={{ padding: '4px 0', borderBottom: '1px solid #89bac9', borderRight: '1px solid var(--border)' }}>
+                  <td style={{ padding: '4px 0', borderBottom: '1px solid #89bac9', borderRight: '1px solid var(--border)', textAlign: 'center' }}>
                     <button
                       className="btn btn-ghost btn-icon"
                       onClick={e => { e.stopPropagation(); onToggleProofExpand(item.id) }}
