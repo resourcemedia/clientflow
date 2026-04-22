@@ -393,7 +393,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                       <span style={{ cursor: 'text', display: 'block' }} onClick={() => startEdit(item, 'name')}>{item.name}</span>
                     )}
                   </td>
-                  <td style={{ padding: '7px 12px', fontSize: 12, color: 'var(--text3)', fontFamily: 'DM Mono, monospace', borderBottom: '1px solid #89bac9', borderRight: '1px solid var(--border)' }}>{item.item_number || '—'}</td>
+                  <td style={{ padding: '7px 12px', fontSize: 12, color: 'var(--text3)', fontFamily: 'DM Mono, monospace', borderBottom: '1px solid #89bac9', borderRight: '1px solid var(--border)', textAlign: 'center' }}>{item.item_number || '—'}</td>
                   <td style={{ padding: '4px 12px', fontSize: 12, fontFamily: 'DM Mono, monospace', color: isOverdue ? 'var(--red)' : 'var(--text3)', fontWeight: isOverdue ? 600 : 400, borderBottom: '1px solid #89bac9', borderRight: '1px solid var(--border)' }}>
                     {editField?.itemId === item.id && editField.field === 'scheduled_date' ? (
                       <input
@@ -449,7 +449,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                                 <img src={iconView} width={25} height={25} alt="View" style={{ display: 'block', cursor: 'pointer' }} />
                               </td>
                               <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>{item.name}</td>
-                              <td style={{ padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: 12, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>{item.item_number}{String.fromCharCode(64 + proof.version)}</td>
+                              <td style={{ padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: 12, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)', textAlign: 'center' }}>{item.item_number}{String.fromCharCode(64 + proof.version)}</td>
                               <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>{proof.status || '—'}</td>
                               <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>{proof.comments || '—'}</td>
                               <td style={{ padding: '5px 8px', whiteSpace: 'nowrap', borderBottom: '1px solid #d5b6dd' }}>
@@ -1255,7 +1255,7 @@ function WorkView({
                         {/* project name */}
                         <td className="td-main" style={{ borderRight: '1px solid var(--border)', width: 200, padding: '8px 12px' }}>{p.name}</td>
                         {/* project number */}
-                        <td style={{ borderRight: '1px solid var(--border)', width: 75, color: 'var(--text2)', fontSize: 12, padding: '8px 12px' }}>{p.project_number}</td>
+                        <td style={{ borderRight: '1px solid var(--border)', width: 75, color: 'var(--text2)', fontSize: 12, padding: '8px 12px', textAlign: 'center' }}>{p.project_number}</td>
                         {/* tags / product */}
                         <td style={{ borderRight: '1px solid var(--border)', color: 'var(--text2)', fontSize: 13, whiteSpace: 'nowrap', padding: '8px 12px' }}>
                           {p.product
