@@ -120,7 +120,7 @@ function ItemsDrawer() {
                     fontSize:     14,
                     userSelect:   'none',
                     borderBottom: '1px solid #89bac9',
-                    borderRight:  '1px solid #d5b6dd',
+                    borderRight:  '1px solid #89bac9',
                   }}>
                     <DragDots />
                   </td>
@@ -130,7 +130,7 @@ function ItemsDrawer() {
                   <td style={{
                     padding:      '4px 0',
                     borderBottom: '1px solid #89bac9',
-                    borderRight:  '1px solid #d5b6dd',
+                    borderRight:  '1px solid #89bac9',
                     textAlign:    'center',
                   }}>
                     <button
@@ -154,7 +154,7 @@ function ItemsDrawer() {
                     fontWeight:   600,
                     color:        'var(--text)',
                     borderBottom: '1px solid #89bac9',
-                    borderRight:  '1px solid #d5b6dd',
+                    borderRight:  '1px solid #89bac9',
                   }}>
                     {item.name}
                   </td>
@@ -166,7 +166,7 @@ function ItemsDrawer() {
                     fontSize:     12,
                     color:        'var(--text3)',
                     borderBottom: '1px solid #89bac9',
-                    borderRight:  '1px solid #d5b6dd',
+                    borderRight:  '1px solid #89bac9',
                     textAlign:    'center',
                   }}>
                     {item.item_number}
@@ -181,7 +181,7 @@ function ItemsDrawer() {
                     color:        isOverdue ? 'var(--red)' : 'var(--text3)',
                     fontWeight:   isOverdue ? 600 : 400,
                     borderBottom: '1px solid #89bac9',
-                    borderRight:  '1px solid #d5b6dd',
+                    borderRight:  '1px solid #89bac9',
                   }}>
                     {item.scheduled_date
                       ? (() => { const [y,m,d] = item.scheduled_date.split('-'); return `${m}/${d}/${y.slice(2)}` })()
@@ -227,26 +227,26 @@ function ItemsDrawer() {
                           {PROOFS.map(proof => (
                             <tr key={proof.id} className="proof-row" style={{ background: '#f2eaf4' }}>
 
-                              <td style={{ width: 25, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #89bac9' }} />
-                              <td style={{ padding: '5px 8px', borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #89bac9' }}>
+                              <td style={{ width: 25, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }} />
+                              <td style={{ padding: '5px 8px', borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
                                 <img src={iconView} width={25} height={25} alt="View" style={{ display: 'block', cursor: 'pointer' }} />
                               </td>
 
-                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #89bac9' }}>
+                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
                                 {item.name}
                               </td>
 
                               {/* ── proof number ── */}
 
-                              <td style={{ padding: '5px 12px', fontSize: 12, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #89bac9', textAlign: 'center' }}>
+                              <td style={{ padding: '5px 12px', fontSize: 12, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd', textAlign: 'center' }}>
                                 {item.item_number}{String.fromCharCode(64 + proof.version)}
                               </td>
 
-                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #89bac9' }}>
+                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
                                 {proof.status}
                               </td>
 
-                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #89bac9' }}>
+                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
                                 {proof.comments}
                               </td>
 
