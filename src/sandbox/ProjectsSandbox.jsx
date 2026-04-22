@@ -89,7 +89,9 @@ function ItemsDrawer() {
             {/* ── item drag ── */}
             <th style={{ width: 25, padding: '6px 4px 6px 12px', background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
             {/* ── item proofs button ── */}
-            <th style={{ width: 75, background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
+            <th style={{ width: 75, 
+              
+              background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
             {/* ── item name ── */}
             <th style={{ ...itemTh, width: 200 }}>Item</th>
             {/* ── item order ── */}
@@ -118,7 +120,7 @@ function ItemsDrawer() {
                     fontSize:     14,
                     userSelect:   'none',
                     borderBottom: '1px solid #89bac9',
-                    borderRight:  '1px solid var(--border)',
+                    borderRight:  '1px solid #d5b6dd',
                   }}>
                     <DragDots />
                   </td>
@@ -128,15 +130,16 @@ function ItemsDrawer() {
                   <td style={{
                     padding:      '4px 0',
                     borderBottom: '1px solid #89bac9',
-                    borderRight: '1px solid var(--border)', 
+                    borderRight:  '1px solid #d5b6dd',
+                    textAlign:    'center',
                   }}>
                     <button
                       className="btn btn-ghost btn-icon"
                       title="Toggle Proofs"
-                      style={{ 
-                        padding: 0, 
-                        border: 'none', 
-                        background: 'none', 
+                      style={{
+                        padding: 0,
+                        border: 'none',
+                        background: 'none',
                         opacity: proofOpen ? 1 : 0.45, transition: 'opacity 0.15s' }}
                     >
                       <img src={iconProofs} width={25} height={25} alt="Proofs" style={{ display: 'block' }} />
@@ -151,7 +154,7 @@ function ItemsDrawer() {
                     fontWeight:   600,
                     color:        'var(--text)',
                     borderBottom: '1px solid #89bac9',
-                    borderRight: '1px solid var(--border)',
+                    borderRight:  '1px solid #d5b6dd',
                   }}>
                     {item.name}
                   </td>
@@ -162,9 +165,9 @@ function ItemsDrawer() {
                     padding:      '7px 12px',
                     fontSize:     12,
                     color:        'var(--text3)',
-                    fontFamily:   'DM Mono, monospace',
                     borderBottom: '1px solid #89bac9',
-                    borderRight: '1px solid var(--border)',
+                    borderRight:  '1px solid #d5b6dd',
+                    textAlign:    'center',
                   }}>
                     {item.item_number}
                   </td>
@@ -178,7 +181,7 @@ function ItemsDrawer() {
                     color:        isOverdue ? 'var(--red)' : 'var(--text3)',
                     fontWeight:   isOverdue ? 600 : 400,
                     borderBottom: '1px solid #89bac9',
-                    borderRight: '1px solid var(--border)',
+                    borderRight:  '1px solid #d5b6dd',
                   }}>
                     {item.scheduled_date
                       ? (() => { const [y,m,d] = item.scheduled_date.split('-'); return `${m}/${d}/${y.slice(2)}` })()
@@ -224,24 +227,26 @@ function ItemsDrawer() {
                           {PROOFS.map(proof => (
                             <tr key={proof.id} className="proof-row" style={{ background: '#f2eaf4' }}>
 
-                              <td style={{ width: 25, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }} />
-                              <td style={{ padding: '5px 8px', borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>
+                              <td style={{ width: 25, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #89bac9' }} />
+                              <td style={{ padding: '5px 8px', borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #89bac9' }}>
                                 <img src={iconView} width={25} height={25} alt="View" style={{ display: 'block', cursor: 'pointer' }} />
                               </td>
 
-                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>
+                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #89bac9' }}>
                                 {item.name}
                               </td>
 
-                              <td style={{ padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: 12, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>
+                              {/* ── proof number ── */}
+
+                              <td style={{ padding: '5px 12px', fontSize: 12, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #89bac9', textAlign: 'center' }}>
                                 {item.item_number}{String.fromCharCode(64 + proof.version)}
                               </td>
 
-                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>
+                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #89bac9' }}>
                                 {proof.status}
                               </td>
 
-                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid var(--border)' }}>
+                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #89bac9' }}>
                                 {proof.comments}
                               </td>
 
@@ -340,18 +345,18 @@ function TasksDrawer() {
                 width:        25,
                 cursor:       'grab',
                 borderBottom: '1px solid #9dc691',
-                borderRight:  '1px solid var(--border)',
+                borderRight:  '1px solid #9dc691',
               }}>
                 <DragDots />
               </td>
 
-              <td style={{ width: 65, borderBottom: '1px solid #9dc691', borderRight: '1px solid var(--border)' }} />
+              <td style={{ width: 65, borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }} />
 
               <td
                 className="td-main"
                 style={{
                   borderBottom: '1px solid #9dc691',
-                  borderRight:  '1px solid var(--border)',
+                  borderRight:  '1px solid #9dc691',
                 }}
               >
                 {task.note}
@@ -362,7 +367,7 @@ function TasksDrawer() {
                 fontSize:     13,
                 color:        'var(--text3)',
                 borderBottom: '1px solid #9dc691',
-                borderRight:  '1px solid var(--border)',
+                borderRight:  '1px solid #9dc691',
               }}>
                 {task.status_note}
               </td>
@@ -372,7 +377,7 @@ function TasksDrawer() {
                 fontSize:     12,
                 color:        'var(--text3)',
                 borderBottom: '1px solid #9dc691',
-                borderRight:  '1px solid var(--border)',
+                borderRight:  '1px solid #9dc691',
               }}>
                 {task.assignee}
               </td>
@@ -384,7 +389,7 @@ function TasksDrawer() {
                 color:        'var(--text3)',
                 whiteSpace:   'nowrap',
                 borderBottom: '1px solid #9dc691',
-                borderRight:  '1px solid var(--border)',
+                borderRight:  '1px solid #9dc691',
               }}>
                 {task.updated}
               </td>
@@ -496,6 +501,7 @@ function ProjectRow({ number, tags, name, itemsOpen, tasksOpen }) {
           color:      'var(--text2)',
           fontSize:   12,
           padding:    '8px 12px',
+          textAlign: 'center', 
         }}>
           {number}
         </td>
