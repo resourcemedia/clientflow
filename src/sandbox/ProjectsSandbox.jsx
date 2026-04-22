@@ -202,6 +202,12 @@ function ItemsDrawer() {
                       >
                         <TrashIcon />
                       </button>
+                      <button
+                        className="btn btn-ghost btn-icon btn-sm"
+                        style={{ border: '1px solid #333' }}
+                      >
+                        <PlusIcon />
+                      </button>
                     </div>
                   </td>
 

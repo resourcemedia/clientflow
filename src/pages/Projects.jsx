@@ -423,6 +423,14 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                       >
                         <TrashIcon />
                       </button>
+                      <button
+                        className="btn btn-ghost btn-icon btn-sm"
+                        onClick={e => { e.stopPropagation(); startAdd() }}
+                        title="Add item"
+                        style={{ border: '1px solid #333' }}
+                      >
+                        <PlusIcon />
+                      </button>
                     </div>
                   </td>
                 </tr>
