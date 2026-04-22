@@ -414,14 +414,16 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                     )}
                   </td>
                   <td style={{ borderBottom: '1px solid #89bac9', padding: '7px 10px 7px 4px', whiteSpace: 'nowrap' }}>
-                    <button
-                      className="btn btn-ghost btn-icon btn-sm"
-                      onClick={e => { e.stopPropagation(); onDeleteItem(projectId, item.id) }}
-                      title="Delete item"
-                      style={{ color: 'var(--text3)', border: '1px solid #333' }}
-                    >
-                      <TrashIcon />
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                      <button
+                        className="btn btn-ghost btn-icon btn-sm"
+                        onClick={e => { e.stopPropagation(); onDeleteItem(projectId, item.id) }}
+                        title="Delete item"
+                        style={{ color: 'var(--text3)', border: '1px solid #333' }}
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
                   </td>
                 </tr>
 
@@ -453,7 +455,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                               <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>{proof.status || '—'}</td>
                               <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>{proof.comments || '—'}</td>
                               <td style={{ padding: '5px 8px', whiteSpace: 'nowrap', borderBottom: '1px solid #d5b6dd' }}>
-                                <div style={{ display: 'flex', gap: 4 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
                                   <button
                                     className="btn btn-ghost btn-icon btn-sm"
                                     onClick={e => { e.stopPropagation(); onDeleteProof(item.id, proof.id) }}

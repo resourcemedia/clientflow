@@ -195,12 +195,14 @@ function ItemsDrawer() {
                     whiteSpace:   'nowrap',
                     borderBottom: '1px solid #89bac9',
                   }}>
-                    <button
-                      className="btn btn-ghost btn-icon btn-sm"
-                      style={{ color: 'var(--text3)', border: '1px solid #333' }}
-                    >
-                      <TrashIcon />
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                      <button
+                        className="btn btn-ghost btn-icon btn-sm"
+                        style={{ color: 'var(--text3)', border: '1px solid #333' }}
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
                   </td>
 
                 </tr>
@@ -255,7 +257,7 @@ function ItemsDrawer() {
                                 whiteSpace:   'nowrap',
                                 borderBottom: '1px solid #d5b6dd',
                               }}>
-                                <div style={{ display: 'flex', gap: 4 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
                                   <button className="btn btn-ghost btn-icon btn-sm" style={{ border: '1px solid #333' }}><TrashIcon /></button>
                                   <button className="btn btn-ghost btn-icon btn-sm" style={{ border: '1px solid #333' }}><PlusIcon /></button>
                                 </div>
@@ -324,6 +326,8 @@ function TasksDrawer() {
     }}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
 
+         {/* ── item | header ── */} 
+
         <thead>
           <tr>
             <th style={{ width: 25, padding: '6px 4px 6px 12px', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }} />
@@ -340,6 +344,8 @@ function TasksDrawer() {
           {TASKS.map(task => (
             <tr key={task.id} style={{ background: '#f7fff5', cursor: 'default' }}>
 
+               {/* ── tasks | drag dots ── */}
+
               <td style={{
                 padding:      '7px 4px 7px 12px',
                 width:        25,
@@ -350,7 +356,11 @@ function TasksDrawer() {
                 <DragDots />
               </td>
 
+              {/* ── tasks | blank ── */}
+
               <td style={{ width: 65, borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }} />
+
+              {/* ── tasks | note ── */}
 
               <td
                 className="td-main"
@@ -361,6 +371,7 @@ function TasksDrawer() {
               >
                 {task.note}
               </td>
+               {/* ── tasks | note ── */}
 
               <td style={{
                 padding:      '7px 12px',
@@ -372,6 +383,8 @@ function TasksDrawer() {
                 {task.status_note}
               </td>
 
+              {/* ── tasks | asigned ── */}
+
               <td style={{
                 padding:      '7px 12px',
                 fontSize:     12,
@@ -381,6 +394,8 @@ function TasksDrawer() {
               }}>
                 {task.assignee}
               </td>
+
+              {/* ── tasks | updated ── */}
 
               <td style={{
                 padding:      '7px 12px',
@@ -394,12 +409,14 @@ function TasksDrawer() {
                 {task.updated}
               </td>
 
+              {/* ── tasks | buttons ── */}
+
               <td style={{
                 padding:      '7px 10px 7px 4px',
                 whiteSpace:   'nowrap',
                 borderBottom: '1px solid #9dc691',
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
                   <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--text3)', border: '1px solid #333' }}>
                     <PlusIcon />
                   </button>
