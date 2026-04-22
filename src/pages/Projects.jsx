@@ -228,7 +228,7 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
 
       {/* actions: add / done / delete */}
       <td style={{ padding: '7px 10px 7px 4px', whiteSpace: 'nowrap', borderBottom: '1px solid #9dc691' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
           <button
             className="btn btn-ghost btn-icon btn-sm"
             title="Add task below"
