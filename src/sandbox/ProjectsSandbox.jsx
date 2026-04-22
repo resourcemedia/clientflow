@@ -543,7 +543,6 @@ function ProjectRow({ number, tags, name, itemsOpen, tasksOpen }) {
             alignItems: 'center', 
             justifyContent: 'flex-end',
             gap: 4 }}>
-            <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }}>Items</button>
             <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }}>✏️</button>
             <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333', color: 'var(--red)' }}><TrashIcon /></button>
             <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }}><PlusIcon /></button>

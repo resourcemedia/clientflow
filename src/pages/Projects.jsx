@@ -1267,9 +1267,6 @@ function WorkView({
                         {/* actions */}
                         <td onClick={e => e.stopPropagation()} style={{ width: 225, whiteSpace: 'nowrap', padding: '8px 10px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-                            <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }} onClick={() => onView(p.id)}>
-                              Items
-                            </button>
                             {!showArchived && (
                               <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }} title="Edit project" onClick={() => onEdit(p)}>
                                 ✏️
