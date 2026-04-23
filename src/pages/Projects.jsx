@@ -293,7 +293,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
   function openLinkPopup(e, proofId, itemId, currentUrl) {
     e.stopPropagation()
     const rect = e.currentTarget.getBoundingClientRect()
-    setLinkPopup({ proofId, itemId, url: currentUrl || '', top: rect.bottom + 4, left: rect.left })
+    setLinkPopup({ proofId, itemId, url: currentUrl || '', top: rect.bottom + 4, right: window.innerWidth - rect.right })
   }
 
   function saveLinkUrl() {
@@ -631,7 +631,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
       {linkPopup && (
         <>
           <div style={{ position: 'fixed', inset: 0, zIndex: 999 }} onClick={() => setLinkPopup(null)} />
-          <div style={{ position: 'fixed', top: linkPopup.top, left: linkPopup.left, zIndex: 1000, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', boxShadow: '0 4px 16px rgba(0,0,0,0.18)', display: 'flex', gap: 6, alignItems: 'center', minWidth: 320 }}>
+          <div style={{ position: 'fixed', top: linkPopup.top, right: linkPopup.right, zIndex: 1000, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', boxShadow: '0 4px 16px rgba(0,0,0,0.18)', display: 'flex', gap: 6, alignItems: 'center', minWidth: 320 }}>
             <input
               autoFocus
               value={linkPopup.url}
