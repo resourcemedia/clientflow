@@ -160,18 +160,19 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
       {/* status note */}
       <td style={{ padding: '7px 12px', fontSize: 13, color: 'var(--text3)', borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }}>
         {editField === 'status_note' ? (
-          <input
+          <textarea
             autoFocus
+            ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
             value={snoteVal}
-            onChange={e => setSnoteVal(e.target.value)}
+            onChange={e => { setSnoteVal(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
             onBlur={commitStatusNote}
-            onKeyDown={e => { if (e.key === 'Enter') commitStatusNote(); if (e.key === 'Escape') { setSnoteVal(task.status_note || ''); setEditField(null) } }}
-            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitStatusNote() } if (e.key === 'Escape') { setSnoteVal(task.status_note || ''); setEditField(null) } }}
+            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13, resize: 'none', lineHeight: '1.4', boxSizing: 'border-box', overflow: 'hidden', minHeight: '28px' }}
           />
         ) : (
           <span
             onClick={() => { setSnoteVal(task.status_note || ''); setEditField('status_note') }}
-            style={{ cursor: 'text', display: 'block', minHeight: 20, color: task.status_note ? 'var(--text2)' : 'var(--text3)', fontSize: 13 }}
+            style={{ cursor: 'text', display: 'block', minHeight: 20, color: task.status_note ? 'var(--text2)' : 'var(--text3)', fontSize: 13, whiteSpace: 'pre-wrap' }}
           >
             {task.status_note || 'Add note…'}
           </span>
@@ -665,12 +666,12 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
                 />
               </td>
               <td>
-                <input
+                <textarea
                   value={addingRow.status_note}
-                  onChange={e => setAddingRow(r => ({ ...r, status_note: e.target.value }))}
+                  onChange={e => { setAddingRow(r => ({ ...r, status_note: e.target.value })); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
                   placeholder="Note…"
-                  onKeyDown={e => { if (e.key === 'Enter') commitAdd(); if (e.key === 'Escape') setAddingRow(null) }}
-                  style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitAdd() } if (e.key === 'Escape') setAddingRow(null) }}
+                  style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13, resize: 'none', lineHeight: '1.4', boxSizing: 'border-box', overflow: 'hidden', minHeight: '28px' }}
                 />
               </td>
               <td style={{ position: 'relative' }} ref={addAssignRef}>
