@@ -655,13 +655,13 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
               <td style={{ padding: '7px 4px 7px 12px', width: 25 }} />
               <td style={{ width: 65 }} />
               <td className="td-main">
-                <input
+                <textarea
                   ref={addInputRef}
                   value={addingRow.note}
-                  onChange={e => setAddingRow(r => ({ ...r, note: e.target.value }))}
+                  onChange={e => { setAddingRow(r => ({ ...r, note: e.target.value })); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
                   placeholder="Task description…"
-                  onKeyDown={e => { if (e.key === 'Enter') commitAdd(); if (e.key === 'Escape') setAddingRow(null) }}
-                  style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitAdd() } if (e.key === 'Escape') setAddingRow(null) }}
+                  style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13, resize: 'none', lineHeight: '1.4', boxSizing: 'border-box', overflow: 'hidden', minHeight: '28px' }}
                 />
               </td>
               <td>
