@@ -185,7 +185,7 @@ export const PRODUCT_TYPES = {
 }
 
 export const PRIORITIES = ['Now', 'Hot All', 'Hot Area', 'Normal']
-export const PROOF_STATUSES = ['Open', 'In Progress', 'Approved', 'Revise', 'No Go']
+export const PROOF_STATUSES = ['Open', 'In Progress', 'Review', 'Change', 'Approved', 'No Go']
 export const INV_STATUSES = ['Open', 'Sent', 'Paid']
 export const COLLECT_STATUSES = ['Open', 'In Progress', 'Approved']
 export const CLIENT_STATUSES = ['active', 'inactive']
