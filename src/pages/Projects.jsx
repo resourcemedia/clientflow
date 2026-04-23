@@ -1223,12 +1223,11 @@ function WorkView({
                         onDragOver={e => handleDragOver(e, globalIdx)}
                         onDrop={() => handleDrop(globalIdx)}
                         onDragEnd={reset}
-                        onClick={() => onView(p.id)}
                         style={{
                           opacity: dragIdx === globalIdx ? 0.4 : (p.archived ? 0.55 : 1),
                           outline: dragOverIdx === globalIdx && dragIdx !== globalIdx
                             ? '2px solid var(--accent)' : undefined,
-                          cursor: 'pointer',
+                          cursor: 'default',
                         }}
                       >
                         {/* drag handle */}
