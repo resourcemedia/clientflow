@@ -490,7 +490,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                           {(itemProofs?.[item.id] || []).map(proof => (
                             <tr key={proof.id} className="proof-row" style={{ background: '#f2eaf4' }}>
                               <td style={{ width: 25, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }} />
-                              <td style={{ padding: '5px 8px', borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
+                              <td style={{ padding: '5px 8px', borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd', textAlign: 'center', verticalAlign: 'middle' }}>
                                 <a
                                   href={proof.url || '#'}
                                   target="_blank"
