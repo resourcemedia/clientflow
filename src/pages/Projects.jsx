@@ -72,6 +72,13 @@ function TrashIcon() {
   </svg>
 }
 
+function LinkIcon() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+  </svg>
+}
+
 function fmtUpdated(updatedAt, updaterName) {
   if (!updatedAt) return ''
   const d  = new Date(updatedAt)
@@ -260,13 +267,26 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
 
 // ── TASK DRAWER ──────────────────────────────────────────────────────────
 // ── ITEM DRAWER ──────────────────────────────────────────────────────────────
-function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, onReorder, expandedProofRows, itemProofs, onToggleProofExpand, onAddProof, onDeleteProof }) {
+function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, onReorder, expandedProofRows, itemProofs, onToggleProofExpand, onAddProof, onDeleteProof, onUpdateProof }) {
   const [addingRow,   setAddingRow]   = useState(null) // null | { name, scheduled_date }
   const [dragIdx,     setDragIdx]     = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
   const [editField,   setEditField]   = useState(null) // null | { itemId, field }
   const [editVal,     setEditVal]     = useState('')
+  const [linkPopup,   setLinkPopup]   = useState(null) // { proofId, itemId, url, top, left }
   const addInputRef = useRef(null)
+
+  function openLinkPopup(e, proofId, itemId, currentUrl) {
+    e.stopPropagation()
+    const rect = e.currentTarget.getBoundingClientRect()
+    setLinkPopup({ proofId, itemId, url: currentUrl || '', top: rect.bottom + 4, left: rect.left })
+  }
+
+  function saveLinkUrl() {
+    if (!linkPopup) return
+    onUpdateProof(linkPopup.itemId, linkPopup.proofId, { url: linkPopup.url.trim() || null })
+    setLinkPopup(null)
+  }
 
   function startEdit(item, field) {
     setEditField({ itemId: item.id, field })
@@ -457,7 +477,15 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                             <tr key={proof.id} className="proof-row" style={{ background: '#f2eaf4' }}>
                               <td style={{ width: 25, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }} />
                               <td style={{ padding: '5px 8px', borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
-                                <img src={iconView} width={25} height={25} alt="View" style={{ display: 'block', cursor: 'pointer' }} />
+                                <a
+                                  href={proof.url || '#'}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={e => { e.stopPropagation(); if (!proof.url) e.preventDefault() }}
+                                  style={{ opacity: proof.url ? 1 : 0.35, cursor: proof.url ? 'pointer' : 'default', display: 'block' }}
+                                >
+                                  <img src={iconView} width={25} height={25} alt="View" style={{ display: 'block' }} />
+                                </a>
                               </td>
                               <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>{item.name}</td>
                               <td style={{ padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: 12, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd', textAlign: 'center' }}>{item.item_number}{String.fromCharCode(64 + proof.version)}</td>
@@ -465,6 +493,12 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                               <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>{proof.comments || '—'}</td>
                               <td style={{ padding: '5px 8px', whiteSpace: 'nowrap', borderBottom: '1px solid #d5b6dd' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                                  <button
+                                    className="btn btn-ghost btn-icon btn-sm"
+                                    onClick={e => openLinkPopup(e, proof.id, item.id, proof.url)}
+                                    title="Add/edit link"
+                                    style={{ border: '1px solid #333' }}
+                                  ><LinkIcon /></button>
                                   <button
                                     className="btn btn-ghost btn-icon btn-sm"
                                     onClick={e => { e.stopPropagation(); onDeleteProof(item.id, proof.id) }}
@@ -543,6 +577,23 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
           </tr>
         </tbody>
       </table>
+
+      {linkPopup && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 999 }} onClick={() => setLinkPopup(null)} />
+          <div style={{ position: 'fixed', top: linkPopup.top, left: linkPopup.left, zIndex: 1000, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', boxShadow: '0 4px 16px rgba(0,0,0,0.18)', display: 'flex', gap: 6, alignItems: 'center', minWidth: 320 }}>
+            <input
+              autoFocus
+              value={linkPopup.url}
+              onChange={e => setLinkPopup(p => ({ ...p, url: e.target.value }))}
+              placeholder="https://…"
+              onKeyDown={e => { if (e.key === 'Enter') saveLinkUrl(); if (e.key === 'Escape') setLinkPopup(null) }}
+              style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: 'var(--text)', fontSize: 13 }}
+            />
+            <button className="btn btn-primary btn-sm" onClick={saveLinkUrl} style={{ fontSize: 12 }}>Save</button>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -934,6 +985,14 @@ export default function ProjectsPage() {
     }))
   }
 
+  async function updateProof(itemId, proofId, updates) {
+    await supabase.from('proofs').update(updates).eq('id', proofId)
+    setItemProofs(prev => ({
+      ...prev,
+      [itemId]: (prev[itemId] || []).map(p => p.id === proofId ? { ...p, ...updates } : p),
+    }))
+  }
+
   async function handleArchive(project) {
     const newVal = !project.archived
     await supabase.from('projects').update({ archived: newVal }).eq('id', project.id)
@@ -1078,6 +1137,7 @@ export default function ProjectsPage() {
             onToggleProofExpand={toggleProofExpand}
             onAddProof={addProof}
             onDeleteProof={deleteProof}
+            onUpdateProof={updateProof}
             onSaveTask={saveProjectTask}
             onAddTask={addProjectTask}
             onDeleteTask={deleteProjectTask}
@@ -1132,7 +1192,7 @@ function ProjectRow({
   onStartAdd, onSaveProject,
   onSaveTask, onAddTask, onDeleteTask, onReorderTasks,
   onAddItem, onUpdateItem, onDeleteItem, onReorderItems,
-  onToggleProofExpand, onAddProof, onDeleteProof,
+  onToggleProofExpand, onAddProof, onDeleteProof, onUpdateProof,
 }) {
   const [editField, setEditField] = useState(null)
   const [editVal,   setEditVal]   = useState('')
@@ -1263,7 +1323,7 @@ function ProjectRow({
         <tr>
           <td colSpan={6} style={{ padding: 0 }}>
             <ItemDrawer projectId={p.id} items={projectItems[p.id] || []} onAddItem={onAddItem} onUpdateItem={onUpdateItem} onDeleteItem={onDeleteItem} onReorder={onReorderItems}
-              expandedProofRows={expandedProofRows} itemProofs={itemProofs} onToggleProofExpand={onToggleProofExpand} onAddProof={onAddProof} onDeleteProof={onDeleteProof} />
+              expandedProofRows={expandedProofRows} itemProofs={itemProofs} onToggleProofExpand={onToggleProofExpand} onAddProof={onAddProof} onDeleteProof={onDeleteProof} onUpdateProof={onUpdateProof} />
           </td>
         </tr>
       )}
@@ -1401,6 +1461,7 @@ function WorkView({
                       onToggleProofExpand={onToggleProofExpand}
                       onAddProof={onAddProof}
                       onDeleteProof={onDeleteProof}
+                      onUpdateProof={onUpdateProof}
                     />
                   )
                 })}
