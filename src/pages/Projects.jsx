@@ -490,16 +490,18 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                           {(itemProofs?.[item.id] || []).map(proof => (
                             <tr key={proof.id} className="proof-row" style={{ background: '#f2eaf4' }}>
                               <td style={{ width: 25, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }} />
-                              <td style={{ padding: '5px 8px', borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd', textAlign: 'center', verticalAlign: 'middle' }}>
-                                <a
-                                  href={proof.url || '#'}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={e => { e.stopPropagation(); if (!proof.url) e.preventDefault() }}
-                                  style={{ opacity: proof.url ? 1 : 0.35, cursor: proof.url ? 'pointer' : 'default', display: 'block' }}
-                                >
-                                  <img src={iconView} width={25} height={25} alt="View" style={{ display: 'block' }} />
-                                </a>
+                              <td style={{ padding: '5px 8px', borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <a
+                                    href={proof.url || '#'}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={e => { e.stopPropagation(); if (!proof.url) e.preventDefault() }}
+                                    style={{ opacity: proof.url ? 1 : 0.35, cursor: proof.url ? 'pointer' : 'default', display: 'flex' }}
+                                  >
+                                    <img src={iconView} width={25} height={25} alt="View" />
+                                  </a>
+                                </div>
                               </td>
                               <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>{item.name}</td>
                               <td style={{ padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: 12, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd', textAlign: 'center' }}>{item.item_number}{String.fromCharCode(64 + proof.version)}</td>
