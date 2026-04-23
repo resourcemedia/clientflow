@@ -756,12 +756,13 @@ export default function ProjectsPage() {
   const [loadedProofItems, setLoadedProofItems]     = useState(new Set())
   const addInputRef = useRef(null)
   const navigate = useNavigate()
+  const isAdding = addingRow !== null
 
   useEffect(() => { load() }, [])
 
   useEffect(() => {
-    if (addingRow !== null) addInputRef.current?.focus()
-  }, [addingRow])
+    if (isAdding) addInputRef.current?.focus()
+  }, [isAdding])
 
   async function load() {
     setLoading(true)
