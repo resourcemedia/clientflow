@@ -273,8 +273,22 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
   const [dragOverIdx, setDragOverIdx] = useState(null)
   const [editField,   setEditField]   = useState(null) // null | { itemId, field }
   const [editVal,     setEditVal]     = useState('')
-  const [linkPopup,   setLinkPopup]   = useState(null) // { proofId, itemId, url, top, left }
+  const [linkPopup,      setLinkPopup]      = useState(null) // { proofId, itemId, url, top, left }
+  const [proofEditField, setProofEditField] = useState(null) // { proofId, itemId, field }
+  const [proofEditVal,   setProofEditVal]   = useState('')
   const addInputRef = useRef(null)
+
+  function startProofEdit(proofId, itemId, field, val) {
+    setProofEditField({ proofId, itemId, field })
+    setProofEditVal(val || '')
+  }
+
+  function commitProofEdit() {
+    if (!proofEditField) return
+    const { proofId, itemId, field } = proofEditField
+    setProofEditField(null)
+    onUpdateProof(itemId, proofId, { [field]: proofEditVal.trim() || null })
+  }
 
   function openLinkPopup(e, proofId, itemId, currentUrl) {
     e.stopPropagation()
@@ -489,8 +503,42 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                               </td>
                               <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>{item.name}</td>
                               <td style={{ padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: 12, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd', textAlign: 'center' }}>{item.item_number}{String.fromCharCode(64 + proof.version)}</td>
-                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>{proof.status || '—'}</td>
-                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>{proof.comments || '—'}</td>
+                              <td style={{ padding: '3px 8px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
+                                {proofEditField?.proofId === proof.id && proofEditField.field === 'status' ? (
+                                  <select
+                                    autoFocus
+                                    value={proofEditVal}
+                                    onChange={e => setProofEditVal(e.target.value)}
+                                    onBlur={commitProofEdit}
+                                    onKeyDown={e => { if (e.key === 'Escape') setProofEditField(null) }}
+                                    style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 6px', color: 'var(--text)', fontSize: 13 }}
+                                  >
+                                    {PROOF_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                                  </select>
+                                ) : (
+                                  <span
+                                    onClick={() => startProofEdit(proof.id, item.id, 'status', proof.status)}
+                                    style={{ cursor: 'text', display: 'block', minHeight: 20 }}
+                                  >{proof.status || <span style={{ color: 'var(--text3)' }}>—</span>}</span>
+                                )}
+                              </td>
+                              <td style={{ padding: '3px 8px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
+                                {proofEditField?.proofId === proof.id && proofEditField.field === 'comments' ? (
+                                  <input
+                                    autoFocus
+                                    value={proofEditVal}
+                                    onChange={e => setProofEditVal(e.target.value)}
+                                    onBlur={commitProofEdit}
+                                    onKeyDown={e => { if (e.key === 'Enter') commitProofEdit(); if (e.key === 'Escape') setProofEditField(null) }}
+                                    style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
+                                  />
+                                ) : (
+                                  <span
+                                    onClick={() => startProofEdit(proof.id, item.id, 'comments', proof.comments)}
+                                    style={{ cursor: 'text', display: 'block', minHeight: 20 }}
+                                  >{proof.comments || <span style={{ color: 'var(--text3)' }}>—</span>}</span>
+                                )}
+                              </td>
                               <td style={{ padding: '5px 8px', whiteSpace: 'nowrap', borderBottom: '1px solid #d5b6dd' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
                                   <button
