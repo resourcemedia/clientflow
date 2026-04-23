@@ -944,6 +944,17 @@ export default function ProjectsPage() {
     setConfirmDelete(null)
   }
 
+  async function saveProject(projectId, updates) {
+    if (isDemo) return
+    const { data } = await supabase
+      .from('projects')
+      .update(updates)
+      .eq('id', projectId)
+      .select('*, client:clients(company,alias), product:products(id,type,name)')
+      .single()
+    if (data) setProjects(ps => ps.map(p => p.id === projectId ? data : p))
+  }
+
   function handleReorder(reordered) {
     setProjects(reordered)
     reordered.forEach((p, i) => {
@@ -1075,6 +1086,7 @@ export default function ProjectsPage() {
             onStartAdd={startAdd}
             onAddSave={handleAddSave}
             onAddKeyDown={handleAddKeyDown}
+            onSaveProject={saveProject}
           />
         ) : (
           <FinancialView
@@ -1102,6 +1114,134 @@ export default function ProjectsPage() {
   )
 }
 
+// ── PROJECT ROW ──────────────────────────────────────────────────────────
+function ProjectRow({
+  p, showArchived, confirmDelete,
+  isExpanded, expandedItemRows,
+  tasks, profiles, projectItems, expandedProofRows, itemProofs,
+  isDragging, isDragTarget,
+  onDragStart, onDragOver, onDrop, onDragEnd,
+  onToggleExpand, onToggleItemExpand,
+  onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm,
+  onStartAdd, onSaveProject,
+  onSaveTask, onAddTask, onDeleteTask, onReorderTasks,
+  onAddItem, onUpdateItem, onDeleteItem, onReorderItems,
+  onToggleProofExpand, onAddProof, onDeleteProof,
+}) {
+  const [editField, setEditField] = useState(null)
+  const [editVal,   setEditVal]   = useState('')
+
+  function startEdit(field, val) { setEditField(field); setEditVal(val || '') }
+
+  function commit() {
+    const original = editField === 'name' ? p.name : p.project_number
+    setEditField(null)
+    if (editVal.trim() !== (original || '').trim()) onSaveProject(p.id, { [editField]: editVal.trim() })
+  }
+
+  if (confirmDelete === p.id) {
+    return (
+      <Fragment>
+        <tr style={{ background: 'var(--red-bg)' }}>
+          <td></td><td></td>
+          <td colSpan={4} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
+            Delete <strong>{p.name}</strong>? This cannot be undone.
+          </td>
+          <td style={{ whiteSpace: 'nowrap' }}>
+            <button className="btn btn-sm" style={{ background: 'var(--red)', color: '#fff', marginRight: 6 }} onClick={() => onDeleteConfirm(p.id)}>Delete</button>
+            <button className="btn btn-ghost btn-sm" onClick={onDeleteCancel}>Cancel</button>
+          </td>
+        </tr>
+      </Fragment>
+    )
+  }
+
+  return (
+    <Fragment>
+      <tr
+        draggable
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+        onDragEnd={onDragEnd}
+        style={{
+          opacity: isDragging ? 0.4 : (p.archived ? 0.55 : 1),
+          outline: isDragTarget ? '2px solid var(--accent)' : undefined,
+          cursor: 'default',
+        }}
+      >
+        <td style={{ cursor: 'grab', color: 'var(--text3)', fontSize: 15, userSelect: 'none', padding: '12px 4px 12px 4px', width: 25, borderRight: '1px solid var(--border)' }}>⠿</td>
+
+        <td onClick={e => e.stopPropagation()} style={{ borderRight: '1px solid var(--border)', width: 65, padding: '8px 8px 8px 12px', whiteSpace: 'nowrap' }}>
+          <button className="btn btn-ghost btn-icon" onClick={() => onToggleExpand(p.id)} title="Toggle Tasks" style={{ padding: 0, border: 'none', background: 'none', marginRight: 4, opacity: isExpanded ? 1 : 0.45, transition: 'opacity 0.15s' }}>
+            <img src={iconTodo} width={25} height={25} alt="Tasks" style={{ display: 'block' }} />
+          </button>
+          <button className="btn btn-ghost btn-icon" onClick={() => onToggleItemExpand(p.id)} title="Toggle Items" style={{ padding: 0, border: 'none', background: 'none', opacity: expandedItemRows[p.id] ? 1 : 0.45, transition: 'opacity 0.15s' }}>
+            <img src={iconItem} width={25} height={25} alt="Items" style={{ display: 'block' }} />
+          </button>
+        </td>
+
+        {/* project name — inline editable */}
+        <td className="td-main" style={{ borderRight: '1px solid var(--border)', width: 200, padding: '8px 12px' }}>
+          {editField === 'name' ? (
+            <input autoFocus value={editVal} onChange={e => setEditVal(e.target.value)} onBlur={commit}
+              onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') setEditField(null) }}
+              style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }} />
+          ) : (
+            <span style={{ cursor: 'text', display: 'block' }} onClick={() => startEdit('name', p.name)}>{p.name}</span>
+          )}
+        </td>
+
+        {/* project number — inline editable */}
+        <td style={{ borderRight: '1px solid var(--border)', width: 75, color: 'var(--text2)', fontSize: 12, padding: '8px 12px', textAlign: 'center' }}>
+          {editField === 'project_number' ? (
+            <input autoFocus value={editVal} onChange={e => setEditVal(e.target.value)} onBlur={commit}
+              onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') setEditField(null) }}
+              style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text2)', fontSize: 12, textAlign: 'center' }} />
+          ) : (
+            <span style={{ cursor: 'text', display: 'block' }} onClick={() => startEdit('project_number', p.project_number)}>{p.project_number}</span>
+          )}
+        </td>
+
+        {/* tags / product */}
+        <td style={{ borderRight: '1px solid var(--border)', color: 'var(--text2)', fontSize: 13, whiteSpace: 'nowrap', padding: '8px 12px' }}>
+          {p.product ? `${p.product.type}${p.product.name ? ` | ${p.product.name}` : ''}` : p.product_type || '—'}
+        </td>
+
+        <td onClick={e => e.stopPropagation()} style={{ width: 225, whiteSpace: 'nowrap', padding: '8px 10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+            {!showArchived && (
+              <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }} title="Edit project" onClick={() => onEdit(p)}>✏️</button>
+            )}
+            <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }} title={p.archived ? 'Restore' : 'Archive'} onClick={() => onArchive(p)}>
+              {p.archived ? <RestoreIcon /> : <ArchiveIcon />}
+            </button>
+            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)', border: '1px solid #333' }} title="Delete project" onClick={() => onDeleteRequest(p.id)}>🗑️</button>
+            <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }} title="Add new project" onClick={onStartAdd}>+</button>
+          </div>
+        </td>
+      </tr>
+
+      {isExpanded && (
+        <tr className="drawer-row">
+          <td colSpan={6} style={{ padding: 0 }}>
+            <TaskDrawer projectId={p.id} tasks={tasks} profiles={profiles} onSaveTask={onSaveTask} onAddTask={onAddTask} onDeleteTask={onDeleteTask} onReorder={onReorderTasks} />
+          </td>
+        </tr>
+      )}
+
+      {expandedItemRows[p.id] && (
+        <tr>
+          <td colSpan={6} style={{ padding: 0 }}>
+            <ItemDrawer projectId={p.id} items={projectItems[p.id] || []} onAddItem={onAddItem} onUpdateItem={onUpdateItem} onDeleteItem={onDeleteItem} onReorder={onReorderItems}
+              expandedProofRows={expandedProofRows} itemProofs={itemProofs} onToggleProofExpand={onToggleProofExpand} onAddProof={onAddProof} onDeleteProof={onDeleteProof} />
+          </td>
+        </tr>
+      )}
+    </Fragment>
+  )
+}
+
 // ── GROUP helpers ───────────────────────────────────────────────────────
 function groupByClient(projects) {
   const map = {}
@@ -1121,7 +1261,7 @@ function WorkView({
   expandedRows, expandedItemRows, projectTasks, projectItems, onToggleExpand, onToggleItemExpand, onSaveTask, onAddTask, onDeleteTask, onReorderTasks, onAddItem, onUpdateItem, onDeleteItem, onReorderItems,
   expandedProofRows, itemProofs, onToggleProofExpand, onAddProof, onDeleteProof,
   onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm,
-  onView, onReorder, onStartAdd, onAddSave, onAddKeyDown,
+  onView, onReorder, onStartAdd, onAddSave, onAddKeyDown, onSaveProject,
 }) {
   const [dragIdx, setDragIdx]         = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
@@ -1191,145 +1331,47 @@ function WorkView({
 
                 {/* Project rows */}
                 {group.projects.map((p) => {
-                  const globalIdx  = projects.indexOf(p)
-                  const isExpanded = expandedRows[p.id]
-                  const tasks      = projectTasks[p.id] || []
-
-                  return confirmDelete === p.id ? (
-                    <Fragment key={p.id}>
-                      <tr style={{ background: 'var(--red-bg)' }}>
-                        <td></td>
-                        <td></td>
-                        <td colSpan={4} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
-                          Delete <strong>{p.name}</strong>? This cannot be undone.
-                        </td>
-                        <td style={{ whiteSpace: 'nowrap' }}>
-                          <button
-                            className="btn btn-sm"
-                            style={{ background: 'var(--red)', color: '#fff', marginRight: 6 }}
-                            onClick={() => onDeleteConfirm(p.id)}
-                          >
-                            Delete
-                          </button>
-                          <button className="btn btn-ghost btn-sm" onClick={onDeleteCancel}>Cancel</button>
-                        </td>
-                      </tr>
-                    </Fragment>
-                  ) : (
-                    <Fragment key={p.id}>
-                      <tr
-                        draggable
-                        onDragStart={e => handleDragStart(e, globalIdx)}
-                        onDragOver={e => handleDragOver(e, globalIdx)}
-                        onDrop={() => handleDrop(globalIdx)}
-                        onDragEnd={reset}
-                        style={{
-                          opacity: dragIdx === globalIdx ? 0.4 : (p.archived ? 0.55 : 1),
-                          outline: dragOverIdx === globalIdx && dragIdx !== globalIdx
-                            ? '2px solid var(--accent)' : undefined,
-                          cursor: 'default',
-                        }}
-                      >
-                        {/* drag handle */}
-                        <td style={{
-                          cursor: 'grab', color: 'var(--text3)',
-                          fontSize: 15, userSelect: 'none', padding: '12px 4px 12px 4px', width: 25,
-                          borderRight: '1px solid var(--border)',
-                        }}>
-                          ⠿
-                        </td>
-
-                        {/* expand toggles */}
-                        <td
-                          onClick={e => e.stopPropagation()}
-                          style={{ borderRight: '1px solid var(--border)', width: 65, padding: '8px 8px 8px 12px', whiteSpace: 'nowrap' }}
-                        >
-                          <button
-                            className="btn btn-ghost btn-icon"
-                            onClick={() => onToggleExpand(p.id)}
-                            title="Toggle Tasks"
-                            style={{ padding: 0, border: 'none', background: 'none', marginRight: 4, opacity: isExpanded ? 1 : 0.45, transition: 'opacity 0.15s' }}
-                          >
-                            <img src={iconTodo} width={25} height={25} alt="Tasks" style={{ display: 'block' }} />
-                          </button>
-                          <button
-                            className="btn btn-ghost btn-icon"
-                            onClick={() => onToggleItemExpand(p.id)}
-                            title="Toggle Items"
-                            style={{ padding: 0, border: 'none', background: 'none', opacity: expandedItemRows[p.id] ? 1 : 0.45, transition: 'opacity 0.15s' }}
-                          >
-                            <img src={iconItem} width={25} height={25} alt="Items" style={{ display: 'block' }} />
-                          </button>
-                        </td>
-                        {/* project name */}
-                        <td className="td-main" style={{ borderRight: '1px solid var(--border)', width: 200, padding: '8px 12px' }}>{p.name}</td>
-                        {/* project number */}
-                        <td style={{ borderRight: '1px solid var(--border)', width: 75, color: 'var(--text2)', fontSize: 12, padding: '8px 12px', textAlign: 'center' }}>{p.project_number}</td>
-                        {/* tags / product */}
-                        <td style={{ borderRight: '1px solid var(--border)', color: 'var(--text2)', fontSize: 13, whiteSpace: 'nowrap', padding: '8px 12px' }}>
-                          {p.product
-                            ? `${p.product.type}${p.product.name ? ` | ${p.product.name}` : ''}`
-                            : p.product_type || '—'}
-                        </td>
-                        {/* actions */}
-                        <td onClick={e => e.stopPropagation()} style={{ width: 225, whiteSpace: 'nowrap', padding: '8px 10px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-                            {!showArchived && (
-                              <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }} title="Edit project" onClick={() => onEdit(p)}>
-                                ✏️
-                              </button>
-                            )}
-                            <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }} title={p.archived ? 'Restore' : 'Archive'} onClick={() => onArchive(p)}>
-                              {p.archived ? <RestoreIcon /> : <ArchiveIcon />}
-                            </button>
-                            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)', border: '1px solid #333' }} title="Delete project" onClick={() => onDeleteRequest(p.id)}>
-                              🗑️
-                            </button>
-                            <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }} title="Add new project" onClick={onStartAdd}>
-                              +
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-
-                      {/* task drawer row */}
-                      {isExpanded && (
-                        <tr key={`drawer-${p.id}`} className="drawer-row">
-                          <td colSpan={6} style={{ padding: 0 }}>
-                            <TaskDrawer
-                              projectId={p.id}
-                              tasks={tasks}
-                              profiles={profiles}
-                              onSaveTask={onSaveTask}
-                              onAddTask={onAddTask}
-                              onDeleteTask={onDeleteTask}
-                              onReorder={onReorderTasks}
-                            />
-                          </td>
-                        </tr>
-                      )}
-
-                      {/* items drawer row */}
-                      {expandedItemRows[p.id] && (
-                        <tr key={`items-drawer-${p.id}`}>
-                          <td colSpan={6} style={{ padding: 0 }}>
-                            <ItemDrawer
-                              projectId={p.id}
-                              items={projectItems[p.id] || []}
-                              onAddItem={onAddItem}
-                              onUpdateItem={onUpdateItem}
-                              onDeleteItem={onDeleteItem}
-                              onReorder={onReorderItems}
-                              expandedProofRows={expandedProofRows}
-                              itemProofs={itemProofs}
-                              onToggleProofExpand={onToggleProofExpand}
-                              onAddProof={onAddProof}
-                              onDeleteProof={onDeleteProof}
-                            />
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
+                  const globalIdx = projects.indexOf(p)
+                  return (
+                    <ProjectRow
+                      key={p.id}
+                      p={p}
+                      showArchived={showArchived}
+                      confirmDelete={confirmDelete}
+                      isExpanded={expandedRows[p.id]}
+                      expandedItemRows={expandedItemRows}
+                      tasks={projectTasks[p.id] || []}
+                      profiles={profiles}
+                      projectItems={projectItems}
+                      expandedProofRows={expandedProofRows}
+                      itemProofs={itemProofs}
+                      isDragging={dragIdx === globalIdx}
+                      isDragTarget={dragOverIdx === globalIdx && dragIdx !== null && dragIdx !== globalIdx}
+                      onDragStart={e => handleDragStart(e, globalIdx)}
+                      onDragOver={e => handleDragOver(e, globalIdx)}
+                      onDrop={() => handleDrop(globalIdx)}
+                      onDragEnd={reset}
+                      onToggleExpand={onToggleExpand}
+                      onToggleItemExpand={onToggleItemExpand}
+                      onEdit={onEdit}
+                      onArchive={onArchive}
+                      onDeleteRequest={onDeleteRequest}
+                      onDeleteCancel={onDeleteCancel}
+                      onDeleteConfirm={onDeleteConfirm}
+                      onStartAdd={onStartAdd}
+                      onSaveProject={onSaveProject}
+                      onSaveTask={onSaveTask}
+                      onAddTask={onAddTask}
+                      onDeleteTask={onDeleteTask}
+                      onReorderTasks={onReorderTasks}
+                      onAddItem={onAddItem}
+                      onUpdateItem={onUpdateItem}
+                      onDeleteItem={onDeleteItem}
+                      onReorderItems={onReorderItems}
+                      onToggleProofExpand={onToggleProofExpand}
+                      onAddProof={onAddProof}
+                      onDeleteProof={onDeleteProof}
+                    />
                   )
                 })}
               </tbody>
