@@ -1036,7 +1036,8 @@ export default function ProjectsPage() {
   }
 
   async function updateProof(itemId, proofId, updates) {
-    await supabase.from('proofs').update(updates).eq('id', proofId)
+    const { error } = await supabase.from('proofs').update(updates).eq('id', proofId)
+    if (error) { console.error('updateProof failed:', error.message); return }
     setItemProofs(prev => ({
       ...prev,
       [itemId]: (prev[itemId] || []).map(p => p.id === proofId ? { ...p, ...updates } : p),
