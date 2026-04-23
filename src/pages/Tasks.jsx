@@ -649,6 +649,17 @@ export default function TasksPage() {
                   </tr>
                 ) : (
                   <>
+                    {newRows.map(row => (
+                      <NewTaskRow
+                        key={row._tempId}
+                        row={row}
+                        projects={projects}
+                        profiles={profiles}
+                        onChange={(f, v) => updateNewRow(row._tempId, f, v)}
+                        onCommit={() => commitNewRow(row)}
+                        onDiscard={() => setNewRows(rs => rs.filter(r => r._tempId !== row._tempId))}
+                      />
+                    ))}
                     {filtered.map((task, idx) => (
                       <TaskRow
                         key={task.id}
@@ -665,17 +676,6 @@ export default function TasksPage() {
                         onDragStart={() => handleDragStart(idx)}
                         onDragOver={e => handleDragOver(e, idx)}
                         onDrop={handleDrop}
-                      />
-                    ))}
-                    {newRows.map(row => (
-                      <NewTaskRow
-                        key={row._tempId}
-                        row={row}
-                        projects={projects}
-                        profiles={profiles}
-                        onChange={(f, v) => updateNewRow(row._tempId, f, v)}
-                        onCommit={() => commitNewRow(row)}
-                        onDiscard={() => setNewRows(rs => rs.filter(r => r._tempId !== row._tempId))}
                       />
                     ))}
                   </>
