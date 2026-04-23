@@ -962,11 +962,13 @@ export default function ProjectsPage() {
     })
   }
 
-  function startAdd() {
+  function startAdd(clientId) {
     setAddingRow({
-      client_id:    clientFilter || (clients[0]?.id || ''),
-      name:         '',
-      product_type: 'CO',
+      client_id:      clientId || clientFilter || (clients[0]?.id || ''),
+      name:           '',
+      project_number: '',
+      product_id:     '',
+      product_type:   '',
     })
   }
 
@@ -975,23 +977,24 @@ export default function ProjectsPage() {
     if (!name) { setAddingRow(null); return }
     if (isDemo) { setAddingRow(null); return }
 
-    // Auto-generate next project number
     const nums = projects.map(p => parseInt(p.project_number, 10)).filter(n => !isNaN(n))
-    const nextNumber = nums.length ? String(Math.max(...nums) + 1) : '1000'
+    const nextNumber = addingRow.project_number?.trim()
+      || (nums.length ? String(Math.max(...nums) + 1) : '1000')
 
     const { data } = await supabase
       .from('projects')
       .insert({
         name,
-        client_id:    addingRow.client_id || null,
-        product_type: addingRow.product_type,
+        client_id:      addingRow.client_id || null,
+        product_id:     addingRow.product_id || null,
+        product_type:   addingRow.product_type || null,
         project_number: nextNumber,
-        priority:     'Normal',
-        proof_status: 'Open',
-        inv_status:   'Open',
+        priority:       'Normal',
+        proof_status:   'Open',
+        inv_status:     'Open',
         collect_status: 'Open',
       })
-      .select('*, client:clients(company,alias)')
+      .select('*, client:clients(company,alias), product:products(id,type,name)')
       .single()
     if (data) setProjects(prev => [...prev, data])
     setAddingRow(null)
@@ -1241,7 +1244,7 @@ function ProjectRow({
               {p.archived ? <RestoreIcon /> : <ArchiveIcon />}
             </button>
             <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)', border: '1px solid #333' }} title="Delete project" onClick={() => onDeleteRequest(p.id)}>🗑️</button>
-            <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }} title="Add new project" onClick={onStartAdd}>+</button>
+            <button className="btn btn-ghost btn-sm" style={{ border: '1px solid #333' }} title="Add new project" onClick={() => onStartAdd(p.client_id)}>+</button>
           </div>
         </td>
       </tr>
@@ -1272,7 +1275,7 @@ function groupByClient(projects) {
   for (const p of projects) {
     const key  = p.client_id || '__none__'
     const name = p.client?.company || p.client?.alias || 'No client'
-    if (!map[key]) map[key] = { name, projects: [] }
+    if (!map[key]) map[key] = { clientId: key, name, projects: [] }
     map[key].projects.push(p)
   }
   return Object.values(map).sort((a, b) => a.name.localeCompare(b.name))
@@ -1399,50 +1402,58 @@ function WorkView({
                     />
                   )
                 })}
+
+                {/* Inline add row — appears at bottom of matching client group */}
+                {addingRow !== null && addingRow.client_id === group.clientId && (
+                  <tr style={{ background: 'var(--accent-glow)' }}>
+                    <td style={{ width: 25 }} />
+                    <td style={{ width: 65 }} />
+                    <td style={{ padding: '7px 12px' }}>
+                      <input
+                        ref={addInputRef}
+                        value={addingRow.name}
+                        onChange={e => setAddingRow(r => ({ ...r, name: e.target.value }))}
+                        placeholder="Project name…"
+                        onKeyDown={onAddKeyDown}
+                        style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
+                      />
+                    </td>
+                    <td style={{ padding: '7px 8px' }}>
+                      <input
+                        value={addingRow.project_number}
+                        onChange={e => setAddingRow(r => ({ ...r, project_number: e.target.value }))}
+                        placeholder="Auto"
+                        onKeyDown={onAddKeyDown}
+                        style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13, textAlign: 'center' }}
+                      />
+                    </td>
+                    <td style={{ padding: '7px 8px' }}>
+                      <select
+                        value={addingRow.product_id}
+                        onChange={e => {
+                          const sel = products.find(pr => pr.id === e.target.value)
+                          setAddingRow(r => ({ ...r, product_id: e.target.value, product_type: sel?.type || '' }))
+                        }}
+                        style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
+                      >
+                        <option value="">— Product —</option>
+                        {products.map(pr => (
+                          <option key={pr.id} value={pr.id}>{pr.type}{pr.name ? ` | ${pr.name}` : ''}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td style={{ padding: '7px 10px', whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
+                        <button className="btn btn-primary btn-sm" onClick={onAddSave}>Save</button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => setAddingRow(null)}>Cancel</button>
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             ))}
 
           <tbody>
-            {/* Inline add row */}
-            {addingRow !== null && (
-              <tr style={{ background: 'var(--accent-glow)' }}>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <input
-                      ref={addInputRef}
-                      value={addingRow.name}
-                      onChange={e => setAddingRow(r => ({ ...r, name: e.target.value }))}
-                      placeholder="Project name…"
-                      onKeyDown={onAddKeyDown}
-                      style={{ flex: 1 }}
-                    />
-                    {!clientFilter && (
-                      <select
-                        value={addingRow.client_id}
-                        onChange={e => setAddingRow(r => ({ ...r, client_id: e.target.value }))}
-                        style={{ width: 140 }}
-                      >
-                        <option value="">No client</option>
-                        {clients.map(c => <option key={c.id} value={c.id}>{c.company}</option>)}
-                      </select>
-                    )}
-                  </div>
-                </td>
-                <td style={{ whiteSpace: 'nowrap' }}>
-                  <button className="btn btn-primary btn-sm" style={{ marginRight: 4 }} onClick={onAddSave}>
-                    Save
-                  </button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setAddingRow(null)}>
-                    Cancel
-                  </button>
-                </td>
-              </tr>
-            )}
 
             {/* Empty state + add button when no groups */}
             {groups.length === 0 && addingRow === null && (
