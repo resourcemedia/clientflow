@@ -1049,6 +1049,7 @@ export default function ProjectsPage() {
             projects={filtered}
             clients={clients}
             productMap={productMap}
+            products={products}
             profiles={profiles}
             loading={loading}
             showArchived={showArchived}
@@ -1116,7 +1117,7 @@ export default function ProjectsPage() {
 
 // ── PROJECT ROW ──────────────────────────────────────────────────────────
 function ProjectRow({
-  p, showArchived, confirmDelete,
+  p, showArchived, confirmDelete, products,
   isExpanded, expandedItemRows,
   tasks, profiles, projectItems, expandedProofRows, itemProofs,
   isDragging, isDragTarget,
@@ -1203,9 +1204,32 @@ function ProjectRow({
           )}
         </td>
 
-        {/* tags / product */}
-        <td style={{ borderRight: '1px solid var(--border)', color: 'var(--text2)', fontSize: 13, whiteSpace: 'nowrap', padding: '8px 12px' }}>
-          {p.product ? `${p.product.type}${p.product.name ? ` | ${p.product.name}` : ''}` : p.product_type || '—'}
+        {/* tags / product — inline dropdown */}
+        <td style={{ borderRight: '1px solid var(--border)', color: 'var(--text2)', fontSize: 13, whiteSpace: 'nowrap', padding: '4px 12px' }}>
+          {editField === 'product' ? (
+            <select
+              autoFocus
+              defaultValue={p.product_id || ''}
+              onChange={e => {
+                const selected = products.find(pr => pr.id === e.target.value)
+                onSaveProject(p.id, { product_id: e.target.value || null, product_type: selected?.type || null })
+                setEditField(null)
+              }}
+              onBlur={() => setEditField(null)}
+              style={{ background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
+            >
+              <option value="">— None —</option>
+              {products.map(pr => (
+                <option key={pr.id} value={pr.id}>
+                  {pr.type}{pr.name ? ` | ${pr.name}` : ''}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span style={{ cursor: 'pointer', display: 'block' }} onClick={() => setEditField('product')}>
+              {p.product ? `${p.product.type}${p.product.name ? ` | ${p.product.name}` : ''}` : p.product_type || '—'}
+            </span>
+          )}
         </td>
 
         <td onClick={e => e.stopPropagation()} style={{ width: 225, whiteSpace: 'nowrap', padding: '8px 10px' }}>
@@ -1256,7 +1280,7 @@ function groupByClient(projects) {
 
 // ── WORK VIEW ───────────────────────────────────────────────────────────
 function WorkView({
-  projects, clients, productMap, profiles, loading, showArchived, confirmDelete,
+  projects, clients, productMap, products, profiles, loading, showArchived, confirmDelete,
   addingRow, setAddingRow, addInputRef, clientFilter,
   expandedRows, expandedItemRows, projectTasks, projectItems, onToggleExpand, onToggleItemExpand, onSaveTask, onAddTask, onDeleteTask, onReorderTasks, onAddItem, onUpdateItem, onDeleteItem, onReorderItems,
   expandedProofRows, itemProofs, onToggleProofExpand, onAddProof, onDeleteProof,
@@ -1360,6 +1384,7 @@ function WorkView({
                       onDeleteConfirm={onDeleteConfirm}
                       onStartAdd={onStartAdd}
                       onSaveProject={onSaveProject}
+                      products={products}
                       onSaveTask={onSaveTask}
                       onAddTask={onAddTask}
                       onDeleteTask={onDeleteTask}
