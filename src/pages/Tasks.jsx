@@ -435,7 +435,12 @@ export default function TasksPage() {
         .order('order_num', { nullsFirst: false }),
     ])
     setTasks(taskRows || [])
-    setProjects(projectRows || [])
+    setProjects((projectRows || []).sort((a, b) => {
+      const ca = a.client?.company || a.client?.alias || ''
+      const cb = b.client?.company || b.client?.alias || ''
+      if (ca !== cb) return ca.localeCompare(cb)
+      return (a.name || '').localeCompare(b.name || '')
+    }))
     setProfiles(profileRows || [])
     const map = {}
     ;(productRows || []).forEach(p => { if (p.type) map[p.type] = p.name })
