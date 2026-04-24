@@ -27,7 +27,12 @@ import './styles.css'
 const CLIENT_ROLES = ['client_admin', 'client_team']
 
 function ClientRoute({ children }) {
-  const { user, profile } = useAuth()
+  const { user, profile, loading } = useAuth()
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg)' }}>
+      <div style={{ width: 28, height: 28, border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+    </div>
+  )
   if (!user) return <Navigate to="/login" replace />
   if (!CLIENT_ROLES.includes(profile?.role)) return <Navigate to="/" replace />
   return children
