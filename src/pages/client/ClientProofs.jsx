@@ -5,8 +5,8 @@ import { useAuth } from '../../lib/auth'
 import { StatusBadge, StatCard, PillNav, Breadcrumb } from '../../components/ui'
 
 const FILTER_TABS = [
-  { id: 'Open',     label: 'Open'     },
   { id: 'Review',   label: 'Review'   },
+  { id: 'Revise',   label: 'Revise'   },
   { id: 'Approved', label: 'Approved' },
   { id: 'all',      label: 'All'      },
 ]
@@ -20,7 +20,7 @@ export default function ClientProofs() {
   const { profile } = useAuth()
   const [proofs, setProofs]   = useState([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter]   = useState('Open')
+  const [filter, setFilter]   = useState('Review')
 
   useEffect(() => {
     if (profile?.client_id) load()
@@ -47,8 +47,8 @@ export default function ClientProofs() {
 
   const filtered = filter === 'all' ? proofs : proofs.filter(p => p.status === filter)
 
-  const openCount     = proofs.filter(p => p.status === 'Open').length
   const reviewCount   = proofs.filter(p => p.status === 'Review').length
+  const reviseCount   = proofs.filter(p => p.status === 'Revise').length
   const approvedCount = proofs.filter(p => p.status === 'Approved').length
 
   return (
@@ -63,8 +63,8 @@ export default function ClientProofs() {
 
       <div className="page-content">
         <div className="stat-grid mb-24">
-          <StatCard label="Open"     value={loading ? '—' : openCount}     color="blue"  />
           <StatCard label="Review"   value={loading ? '—' : reviewCount}   color="amber" />
+          <StatCard label="Revise"   value={loading ? '—' : reviseCount}   color="red"   />
           <StatCard label="Approved" value={loading ? '—' : approvedCount} color="green" />
         </div>
 
