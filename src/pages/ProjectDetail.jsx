@@ -1,7 +1,19 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../lib/auth'
 import { StatusBadge, Modal, FormGroup, Breadcrumb } from '../components/ui'
+
+function formatDate(ts) {
+  if (!ts) return ''
+  const d = new Date(ts)
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  let h = d.getHours()
+  const ampm = h >= 12 ? 'pm' : 'am'
+  h = h % 12 || 12
+  const m = String(d.getMinutes()).padStart(2, '0')
+  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()} ${h}:${m} ${ampm}`
+}
 
 const ITEM_STATUSES  = ['Open', 'In Progress', 'Review', 'Revise', 'Approved', 'Complete', 'No Go']
 const PROOF_STATUSES = ['Open', 'In Progress', 'Review', 'Revise', 'Approved', 'Complete', 'No Go']
@@ -447,10 +459,41 @@ function ProofsSection({ project, productMap, item, proofs, confirmDelete, onBac
 
 // ── PROOF DETAIL SECTION ────────────────────────────────────────────────────
 function ProofDetailSection({ item, proof, userRole, onBack, onSave }) {
-  const [form, setForm]     = useState({ ...proof })
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved]   = useState(false)
-  const [error, setError]   = useState('')
+  const { profile } = useAuth()
+  const [form, setForm]         = useState({ ...proof })
+  const [saving, setSaving]     = useState(false)
+  const [saved, setSaved]       = useState(false)
+  const [error, setError]       = useState('')
+  const [comments, setComments] = useState([])
+  const [newComment, setNewComment]   = useState('')
+  const [isInternal, setIsInternal]   = useState(false)
+  const [submitting, setSubmitting]   = useState(false)
+
+  useEffect(() => { loadComments() }, [proof.id])
+
+  async function loadComments() {
+    const { data } = await supabase
+      .from('proof_comments')
+      .select('id, body, is_internal, created_at, profile_id')
+      .eq('proof_id', proof.id)
+      .order('created_at', { ascending: true })
+    setComments(data || [])
+  }
+
+  async function submitComment() {
+    if (!newComment.trim()) return
+    setSubmitting(true)
+    await supabase.from('proof_comments').insert({
+      proof_id:    proof.id,
+      profile_id:  profile.id,
+      body:        newComment.trim(),
+      is_internal: isInternal,
+    })
+    setNewComment('')
+    setIsInternal(false)
+    await loadComments()
+    setSubmitting(false)
+  }
 
   const isClient      = userRole === 'client' || userRole === 'client_team'
   const isManager     = !isClient
@@ -587,6 +630,66 @@ function ProofDetailSection({ item, proof, userRole, onBack, onSave }) {
           </button>
           {saved  && <span style={{ fontSize: 12, color: 'var(--green)' }}>Saved</span>}
           {error  && <span style={{ fontSize: 12, color: 'var(--red)' }}>{error}</span>}
+        </div>
+
+        {/* Comment log */}
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 20, marginTop: 4 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Comments
+          </div>
+
+          {comments.length === 0 ? (
+            <div style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 16 }}>No comments yet.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
+              {comments.map(c => {
+                const authorLabel = c.profile_id === profile?.id ? 'You' : 'Client'
+                return (
+                  <div key={c.id} style={{ fontSize: 13 }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 3 }}>
+                      <span style={{ fontWeight: 600 }}>{authorLabel}</span>
+                      {c.is_internal && (
+                        <span style={{ fontSize: 11, background: 'var(--amber-bg, #fef3cd)', color: 'var(--amber, #b45309)', borderRadius: 4, padding: '1px 6px', fontWeight: 500 }}>
+                          🔒 Internal
+                        </span>
+                      )}
+                      <span style={{ fontSize: 11, color: 'var(--text3)' }}>{formatDate(c.created_at)}</span>
+                    </div>
+                    <div style={{ color: 'var(--text2)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{c.body}</div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* New comment input */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <textarea
+              value={newComment}
+              onChange={e => setNewComment(e.target.value)}
+              placeholder="Add a comment…"
+              rows={2}
+              style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit', fontSize: 13, width: '100%' }}
+            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <button
+                className="btn btn-primary btn-sm"
+                disabled={submitting || !newComment.trim()}
+                onClick={submitComment}
+              >
+                {submitting ? 'Submitting…' : 'Submit'}
+              </button>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text2)', cursor: 'pointer', userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={isInternal}
+                  onChange={e => setIsInternal(e.target.checked)}
+                  style={{ cursor: 'pointer' }}
+                />
+                Internal note
+              </label>
+            </div>
+          </div>
         </div>
       </div>
     </div>
