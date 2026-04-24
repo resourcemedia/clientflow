@@ -50,24 +50,26 @@ export default function ClientDashboard() {
       return query
     }
 
-    const [projectsRes, proofsRes, tasksRes] = await Promise.allSettled([
-      applyProjectFilter(
-        supabase.from('projects').select('id, name, project_number, product:products(type,name)')
-      ).order('name'),
+    const { data: projectsData } = await applyProjectFilter(
+      supabase.from('projects').select('id, name, project_number, product:products(type,name)')
+    ).order('name')
 
+    const allProjects = projectsData || []
+    const projectIds  = allProjects.map(p => p.id)
+    const projectIdSet = new Set(projectIds)
+
+    const [proofsRes, tasksRes] = await Promise.allSettled([
       supabase.from('proofs')
         .select('id, version, status, item:project_items(name, item_number, project:projects(id, name, client_id))')
         .eq('status', 'Review')
         .order('created_at', { ascending: false })
         .limit(10),
 
-      applyProjectFilter(
-        supabase.from('tasks').select('id', { count: 'exact' })
-      ).eq('status', 'Open'),
+      supabase.from('tasks')
+        .select('id', { count: 'exact' })
+        .in('project_id', projectIds.length ? projectIds : [''])
+        .eq('status', 'Open'),
     ])
-
-    const allProjects = projectsRes.status === 'fulfilled' ? (projectsRes.value.data || []) : []
-    const projectIdSet = new Set(allProjects.map(p => p.id))
 
     // Filter proofs to this client's projects
     const allProofs = proofsRes.status === 'fulfilled' ? (proofsRes.value.data || []) : []
