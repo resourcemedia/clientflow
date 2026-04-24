@@ -5,11 +5,13 @@ const AuthContext = createContext(null)
 const DEFAULT_PROFILE = { id: null, role: 'manager', client_id: null, full_name: null }
 
 async function fetchProfile(userId) {
+  console.log('fetchProfile called with userId:', userId)
   const { data, error } = await supabase
     .from('profiles')
     .select('id, role, client_id, full_name')
     .eq('id', userId)
     .single()
+  console.log('fetchProfile result:', { data, error })
   if (error) return { ...DEFAULT_PROFILE, id: userId }
   return data
 }
