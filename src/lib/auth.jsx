@@ -29,21 +29,34 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let cancelled = false
+
+    const timeout = setTimeout(() => {
+      if (!cancelled) setLoading(false)
+    }, 5000)
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (cancelled) return
       const u = session?.user ?? null
       setUser(u)
       setProfile(u ? await fetchProfile(u.id) : null)
       setLoading(false)
+      clearTimeout(timeout)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (cancelled) return
       const u = session?.user ?? null
       setUser(u)
       setProfile(u ? await fetchProfile(u.id) : null)
       setLoading(false)
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      cancelled = true
+      clearTimeout(timeout)
+      subscription.unsubscribe()
+    }
   }, [])
 
   async function signIn(email, password) {
