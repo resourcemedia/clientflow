@@ -50,7 +50,7 @@ export default function ClientProofDetail() {
     const { data } = await supabase
       .from('proofs')
       .select(`
-        id, version, status, file_url,
+        id, version, status, image_url, proof_link, url,
         item:project_items(
           item_number, name,
           project:projects(id, name, client_id)
@@ -149,17 +149,38 @@ export default function ClientProofDetail() {
           </div>
         </div>
 
-        {/* File link */}
-        {proof.file_url && (
-          <div style={{ marginBottom: 16 }}>
-            <a
-              href={proof.file_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-ghost btn-sm"
-            >
-              View / Download File
-            </a>
+        {/* Proof image / links */}
+        {(proof.image_url || proof.proof_link || proof.url) && (
+          <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {proof.image_url && (
+              <img
+                src={proof.image_url}
+                alt="Proof"
+                style={{ maxWidth: '100%', borderRadius: 6, border: '1px solid var(--border)' }}
+              />
+            )}
+            {proof.proof_link && (
+              <a
+                href={proof.proof_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost btn-sm"
+                style={{ alignSelf: 'flex-start' }}
+              >
+                View Proof
+              </a>
+            )}
+            {proof.url && (
+              <a
+                href={proof.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost btn-sm"
+                style={{ alignSelf: 'flex-start' }}
+              >
+                View File
+              </a>
+            )}
           </div>
         )}
 
