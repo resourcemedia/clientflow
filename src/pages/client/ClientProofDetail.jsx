@@ -59,8 +59,15 @@ export default function ClientProofDetail() {
       .eq('id', id)
       .single()
 
-    setProof(data || null)
-    if (data) await loadComments()
+    if (data) {
+      const normalizedStatus = ['Review', 'Revise', 'Approved'].includes(data.status)
+        ? data.status
+        : 'Review'
+      setProof({ ...data, status: normalizedStatus })
+      await loadComments()
+    } else {
+      setProof(null)
+    }
     setLoading(false)
   }
 
