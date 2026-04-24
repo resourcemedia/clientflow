@@ -4,7 +4,7 @@ import { useTheme } from '../../lib/theme'
 import { useAuth } from '../../lib/auth'
 import { supabase } from '../../lib/supabase'
 
-const NAV = [
+const MANAGER_NAV = [
   { to: '/',          label: 'Dashboard', exact: true, icon: GridIcon },
   { to: '/clients',   label: 'Clients',               icon: UsersIcon },
   { to: '/projects',  label: 'Projects',               icon: FolderIcon,  badgeKey: 'projects', badgeWarn: true },
@@ -12,18 +12,48 @@ const NAV = [
   { to: '/proofs',    label: 'Proofs',                 icon: FileIcon,    badgeKey: 'proofs' },
   { to: '/tasks',     label: 'Tasks',                  icon: TasksIcon,   badgeKey: 'tasks', badgeWarn: true },
   { to: '/calendar',  label: 'Calendar',               icon: CalendarIcon },
-  { to: '/timeboard', label: 'Time board',              icon: ClockIcon },
+  { to: '/timeboard', label: 'Time board',             icon: ClockIcon },
   { to: '/billing',   label: 'Billing',                icon: DollarIcon },
   { to: '/products',  label: 'Products',               icon: ProductsIcon },
 ]
 
+const CLIENT_NAV_BASE = [
+  { to: '/client',         label: 'My Projects', exact: true, icon: FolderIcon },
+  { to: '/client/proofs',  label: 'Proofs',                   icon: FileIcon },
+  { to: '/client/tasks',   label: 'Tasks',                    icon: TasksIcon },
+  { to: '/calendar',       label: 'Calendar',                 icon: CalendarIcon },
+]
+
+const CLIENT_ADMIN_NAV = [
+  ...CLIENT_NAV_BASE,
+  { to: '/client/invoices', label: 'Invoices', icon: DollarIcon },
+]
+
+const ROLE_LABELS = {
+  manager:      'Manager',
+  client_admin: 'Client Admin',
+  client_team:  'Client Team',
+}
+
+function initials(name) {
+  if (!name) return '?'
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+}
+
 export default function Sidebar() {
   const { theme, toggle } = useTheme()
-  const { signOut } = useAuth()
+  const { signOut, profile } = useAuth()
   const loc = useLocation()
   const [badges, setBadges] = useState({ projects: 0, proofs: 0, tasks: 0 })
 
+  const role = profile?.role
+  const isClient = role === 'client_admin' || role === 'client_team'
+  const nav = isClient
+    ? (role === 'client_admin' ? CLIENT_ADMIN_NAV : CLIENT_NAV_BASE)
+    : MANAGER_NAV
+
   useEffect(() => {
+    if (isClient) return
     Promise.allSettled([
       supabase.from('projects').select('id', { count: 'exact' }).neq('inv_status', 'Paid'),
       supabase.from('proofs').select('id', { count: 'exact' }).eq('status', 'Open'),
@@ -35,7 +65,10 @@ export default function Sidebar() {
         tasks:    tasks.status    === 'fulfilled' ? (tasks.value.count    || 0) : 0,
       })
     })
-  }, [])
+  }, [isClient])
+
+  const displayName = profile?.full_name || ''
+  const roleLabel   = ROLE_LABELS[role] ?? 'Manager'
 
   return (
     <aside className="sidebar">
@@ -50,7 +83,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
-        {NAV.map(item => {
+        {nav.map(item => {
           const Icon = item.icon
           const isActive = item.exact
             ? loc.pathname === item.to
@@ -64,7 +97,7 @@ export default function Sidebar() {
             >
               <Icon className="nav-icon" />
               {item.label}
-              {item.badgeKey && badges[item.badgeKey] > 0 && (
+              {!isClient && item.badgeKey && badges[item.badgeKey] > 0 && (
                 <span className={`nav-badge${item.badgeWarn ? ' warn' : ''}`}>
                   {badges[item.badgeKey]}
                 </span>
@@ -76,10 +109,10 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="sidebar-footer">
-        <div className="user-avatar">JO</div>
+        <div className="user-avatar">{initials(displayName)}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="user-name">Jim OConnell</div>
-          <div className="user-role">Manager</div>
+          <div className="user-name">{displayName}</div>
+          <div className="user-role">{roleLabel}</div>
         </div>
         <button
           className="theme-toggle"
