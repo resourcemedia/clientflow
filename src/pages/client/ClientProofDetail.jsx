@@ -194,6 +194,7 @@ export default function ClientProofDetail() {
               <button
                 className="btn btn-primary btn-sm"
                 disabled={isApproved || updating}
+                style={{ opacity: isApproved ? 0.4 : 1 }}
                 onClick={() => updateStatus('Approved')}
               >
                 Approve
