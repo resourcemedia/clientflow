@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 
 const AuthContext = createContext(null)
@@ -27,6 +27,7 @@ export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const initialized = useRef(false)
 
   useEffect(() => {
     let cancelled = false
@@ -42,10 +43,12 @@ export function AuthProvider({ children }) {
       setProfile(u ? await fetchProfile(u.id) : null)
       setLoading(false)
       clearTimeout(timeout)
+      initialized.current = true
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (cancelled) return
+      if (!initialized.current) return
       const u = session?.user ?? null
       setUser(u)
       setProfile(u ? await fetchProfile(u.id) : null)
