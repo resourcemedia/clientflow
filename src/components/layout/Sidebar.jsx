@@ -67,7 +67,7 @@ export default function Sidebar() {
     })
   }, [isClient])
 
-  const displayName = profile?.full_name || ''
+  const displayName = profile?.name || ''
   const roleLabel   = ROLE_LABELS[role] ?? 'Manager'
 
   return (

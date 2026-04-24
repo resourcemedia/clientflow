@@ -2,17 +2,24 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from './supabase'
 
 const AuthContext = createContext(null)
-const DEFAULT_PROFILE = { id: null, role: 'manager', client_id: null, full_name: null }
+const DEFAULT_PROFILE = { id: null, role: 'manager', client_id: null, name: null }
 
-async function fetchProfile(userId) {
-  console.log('fetchProfile called with userId:', userId)
+async function fetchProfile(userId, attempt = 1) {
+  console.log('fetchProfile called with userId:', userId, 'attempt:', attempt)
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, role, client_id, full_name')
+    .select('id, role, client_id, name')
     .eq('id', userId)
     .single()
   console.log('fetchProfile result:', { data, error })
-  if (error) return { ...DEFAULT_PROFILE, id: userId }
+  if (error) {
+    console.log('fetchProfile error details:', error.code, error.message)
+    if (attempt < 3) {
+      await new Promise(r => setTimeout(r, 500 * attempt))
+      return fetchProfile(userId, attempt + 1)
+    }
+    return { ...DEFAULT_PROFILE, id: userId }
+  }
   return data
 }
 
