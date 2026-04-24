@@ -56,16 +56,16 @@ function AppShell() {
     )
   }
 
-  const homeRedirect = CLIENT_ROLES.includes(profile?.role)
-    ? <Navigate to="/client" replace />
-    : <Dashboard />
-
   return (
     <div className="app-layout">
       <Sidebar />
       <main className="main-content">
         <Routes>
-          <Route path="/"                    element={homeRedirect} />
+          <Route path="/" element={
+            CLIENT_ROLES.includes(profile?.role)
+              ? <Navigate to="/client" replace />
+              : <Dashboard />
+          } />
           <Route path="/clients"             element={<ClientsPage />} />
           <Route path="/clients/:id"         element={<ClientDetail />} />
           <Route path="/projects"            element={<ProjectsPage />} />
