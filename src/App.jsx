@@ -21,7 +21,7 @@ import ClientProofs        from './pages/client/ClientProofs'
 import ClientProofDetail   from './pages/client/ClientProofDetail'
 import ClientTasks         from './pages/client/ClientTasks'
 import ClientInvoices      from './pages/client/ClientInvoices'
-import ClientProjects      from './pages/client/ClientProjects'
+import ClientProjectsPage  from './pages/client/ClientProjects'
 import './styles.css'
 
 const CLIENT_ROLES = ['client_admin', 'client_team']
@@ -80,9 +80,9 @@ function AppShell() {
           <Route path="/products"            element={<ProductsPage />} />
           <Route path="/sandbox"             element={<ProjectsSandbox />} />
           <Route path="/login"               element={<Navigate to="/" replace />} />
-          <Route path="/client"              element={<ClientRoute><ClientDashboard /></ClientRoute>} />
+          <Route path="/client"               element={<ClientRoute><ClientDashboard /></ClientRoute>} />
+          <Route path="/client/projects"     element={<ClientRoute><ClientProjectsPage /></ClientRoute>} />
           <Route path="/client/projects/:id" element={<ClientRoute><ClientProjectDetail /></ClientRoute>} />
-          <Route path="/client/projects"      element={<ClientRoute><ClientProjects /></ClientRoute>} />
           <Route path="/client/proofs"       element={<ClientRoute><ClientProofs /></ClientRoute>} />
           <Route path="/client/proofs/:id"   element={<ClientRoute><ClientProofDetail /></ClientRoute>} />
           <Route path="/client/tasks"        element={<ClientRoute><ClientTasks /></ClientRoute>} />
