@@ -35,6 +35,16 @@ export default function ClientProofDetail() {
     if (profile?.client_id) loadProof()
   }, [id, profile?.client_id])
 
+  useEffect(() => {
+    if (!loading && proof) {
+      console.log('proof.item.project.client_id:', proof.item?.project?.client_id)
+      console.log('profile.client_id:', profile?.client_id)
+      if (proof.item?.project?.client_id !== profile?.client_id) {
+        navigate('/client', { replace: true })
+      }
+    }
+  }, [loading, proof])
+
   async function loadProof() {
     setLoading(true)
     const { data } = await supabase
@@ -49,12 +59,8 @@ export default function ClientProofDetail() {
       .eq('id', id)
       .single()
 
-    if (!data || data.item?.project?.client_id !== profile.client_id) {
-      navigate('/client', { replace: true })
-      return
-    }
-    setProof(data)
-    await loadComments()
+    setProof(data || null)
+    if (data) await loadComments()
     setLoading(false)
   }
 
