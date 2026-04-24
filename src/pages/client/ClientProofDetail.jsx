@@ -67,7 +67,7 @@ export default function ClientProofDetail() {
   async function loadComments() {
     const { data } = await supabase
       .from('proof_comments')
-      .select('id, body, is_internal, created_at, profile:profiles(id, role)')
+      .select('id, body, is_internal, created_at, profile_id')
       .eq('proof_id', id)
       .order('created_at', { ascending: true })
     setComments((data || []).filter(c => !c.is_internal))
@@ -103,7 +103,18 @@ export default function ClientProofDetail() {
     </div>
   )
 
-  const item      = proof.item
+  if (!proof) return (
+    <div className="fade-in">
+      <div className="topbar"><div className="topbar-title">Proof Detail</div></div>
+      <div className="page-content">
+        <div className="card">
+          <div className="empty-state text-dim">Proof not found.</div>
+        </div>
+      </div>
+    </div>
+  )
+
+  const item      = proof?.item
   const project   = item?.project
   const proofId   = item ? versionLabel(item.item_number, proof.version) : `v${proof.version}`
   const isApproved = proof.status === 'Approved'
@@ -198,7 +209,7 @@ export default function ClientProofDetail() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginBottom: 24 }}>
                 {comments.map(c => {
-                  const authorLabel = c.profile?.role === 'manager' ? 'Resource Media' : 'Client'
+                  const authorLabel = c.profile_id === profile?.id ? 'Client' : 'Resource Media'
                   return (
                     <div key={c.id}>
                       <div style={{ display: 'flex', gap: 10, alignItems: 'baseline', marginBottom: 4 }}>
