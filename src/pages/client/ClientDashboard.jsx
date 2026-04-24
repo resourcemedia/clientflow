@@ -57,7 +57,7 @@ export default function ClientDashboard() {
 
       supabase.from('proofs')
         .select('id, version, status, item:project_items(name, item_number, project:projects(id, name, client_id))')
-        .eq('status', 'Open')
+        .eq('status', 'Review')
         .order('created_at', { ascending: false })
         .limit(10),
 
@@ -99,7 +99,7 @@ export default function ClientDashboard() {
         {/* ── STAT CARDS ── */}
         <div className="stat-grid mb-24">
           <StatCard label="Active Projects" value={loading ? '—' : stats.projects} color="blue"   delta="Active" />
-          <StatCard label="Open Proofs"     value={loading ? '—' : stats.proofs}   color="amber"  delta="Awaiting review" />
+          <StatCard label="Proofs to Review" value={loading ? '—' : stats.proofs}   color="amber"  delta="Awaiting review" />
           <StatCard label="Open Tasks"      value={loading ? '—' : stats.tasks}    color="accent" delta="In progress" />
         </div>
 
