@@ -18,8 +18,9 @@ const MANAGER_NAV = [
 ]
 
 const CLIENT_NAV_BASE = [
-  { to: '/client',         label: 'My Projects', exact: true, icon: FolderIcon },
-  { to: '/client/proofs',  label: 'Proofs',                   icon: FileIcon },
+  { to: '/client',          label: 'Dashboard',  exact: true, icon: GridIcon },
+  { to: '/client/projects', label: 'Projects',               icon: FolderIcon },
+  { to: '/client/proofs',   label: 'Proofs',                 icon: FileIcon },
   { to: '/client/tasks',   label: 'Tasks',                    icon: TasksIcon },
   { to: '/calendar',       label: 'Calendar',                 icon: CalendarIcon },
 ]
