@@ -117,9 +117,7 @@ export default function ClientProofDetail() {
   const item     = proof?.item
   const project  = item?.project
   const proofId  = item ? versionLabel(item.item_number, proof.version) : `v${proof.version}`
-  const isManager = profile?.role === 'manager'
-  const CLIENT_EDITABLE = new Set(['Revise', 'Approved'])
-  const STATUSES = ['Open', 'In Progress', 'Review', 'Revise', 'Approved']
+  const STATUSES = ['Review', 'Revise', 'Approved']
 
   return (
     <div className="fade-in">
@@ -194,22 +192,21 @@ export default function ClientProofDetail() {
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {STATUSES.map(s => {
-                const isActive  = proof.status === s
-                const canClick  = isManager || CLIENT_EDITABLE.has(s)
+                const isActive = proof.status === s
                 return (
                   <button
                     key={s}
                     disabled={updating}
-                    onClick={canClick ? () => updateStatus(s) : undefined}
+                    onClick={() => updateStatus(s)}
                     style={{
                       padding: '5px 14px',
                       borderRadius: 'var(--radius)',
                       border: isActive ? 'none' : '1px solid var(--border)',
                       background: isActive ? 'var(--accent)' : 'transparent',
-                      color: isActive ? '#fff' : canClick ? 'var(--text)' : 'var(--text3)',
+                      color: isActive ? '#fff' : 'var(--text)',
                       fontWeight: isActive ? 600 : 400,
                       fontSize: 13,
-                      cursor: canClick && !updating ? 'pointer' : 'default',
+                      cursor: updating ? 'default' : 'pointer',
                       opacity: updating ? 0.5 : 1,
                       transition: 'background 0.15s, color 0.15s',
                     }}

@@ -6,12 +6,10 @@ import { StatusBadge, StatCard, PillNav, Breadcrumb } from '../components/ui'
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 
 const FILTER_TABS = [
-  { id: 'Open',        label: 'Open'        },
-  { id: 'In Progress', label: 'In Progress' },
-  { id: 'Review',      label: 'Review'      },
-  { id: 'Revise',      label: 'Revise'      },
-  { id: 'Approved',    label: 'Approved'    },
-  { id: 'all',         label: 'All'         },
+  { id: 'Review',   label: 'Review'   },
+  { id: 'Revise',   label: 'Revise'   },
+  { id: 'Approved', label: 'Approved' },
+  { id: 'all',      label: 'All'      },
 ]
 
 function versionLabel(itemNumber, version) {
@@ -22,7 +20,7 @@ export default function ProofsPage() {
   const navigate = useNavigate()
   const [proofs, setProofs]     = useState([])
   const [loading, setLoading]   = useState(true)
-  const [filter, setFilter]     = useState('Open')
+  const [filter, setFilter]     = useState('Review')
 
   useEffect(() => { load() }, [])
 
@@ -46,7 +44,6 @@ export default function ProofsPage() {
 
   const filtered = filter === 'all' ? proofs : proofs.filter(p => p.status === filter)
 
-  const openCount     = proofs.filter(p => p.status === 'Open').length
   const reviewCount   = proofs.filter(p => p.status === 'Review').length
   const reviseCount   = proofs.filter(p => p.status === 'Revise').length
   const approvedCount = proofs.filter(p => p.status === 'Approved').length
@@ -63,10 +60,9 @@ export default function ProofsPage() {
 
       <div className="page-content">
         <div className="stat-grid mb-24">
-          <StatCard label="Open"     value={loading ? '—' : openCount}     color="blue"   />
-          <StatCard label="Review"   value={loading ? '—' : reviewCount}   color="amber"  />
-          <StatCard label="Revise"   value={loading ? '—' : reviseCount}   color="red"    />
-          <StatCard label="Approved" value={loading ? '—' : approvedCount} color="green"  />
+          <StatCard label="Review"   value={loading ? '—' : reviewCount}   color="amber" />
+          <StatCard label="Revise"   value={loading ? '—' : reviseCount}   color="red"   />
+          <StatCard label="Approved" value={loading ? '—' : approvedCount} color="green" />
         </div>
 
         <div className="card">
