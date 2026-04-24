@@ -114,10 +114,12 @@ export default function ClientProofDetail() {
     </div>
   )
 
-  const item      = proof?.item
-  const project   = item?.project
-  const proofId   = item ? versionLabel(item.item_number, proof.version) : `v${proof.version}`
-  const isApproved = proof.status === 'Approved'
+  const item     = proof?.item
+  const project  = item?.project
+  const proofId  = item ? versionLabel(item.item_number, proof.version) : `v${proof.version}`
+  const isManager = profile?.role === 'manager'
+  const CLIENT_EDITABLE = new Set(['Revise', 'Approved'])
+  const STATUSES = ['Open', 'In Progress', 'Review', 'Revise', 'Approved']
 
   return (
     <div className="fade-in">
@@ -184,35 +186,38 @@ export default function ClientProofDetail() {
           </div>
         )}
 
-        {/* Status action bar */}
+        {/* Status buttons */}
         <div className="card" style={{ marginBottom: 16 }}>
           <div style={{ padding: '16px 24px' }}>
             <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Proof Actions
+              Proof Status
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                className="btn btn-primary btn-sm"
-                disabled={isApproved || updating}
-                style={{ opacity: isApproved ? 0.4 : 1 }}
-                onClick={() => updateStatus('Approved')}
-              >
-                Approve
-              </button>
-              <button
-                className="btn btn-ghost btn-sm"
-                disabled={isApproved || updating}
-                onClick={() => updateStatus('Revise')}
-              >
-                Request Changes
-              </button>
-              <button
-                className="btn btn-ghost btn-sm"
-                disabled={isApproved || updating}
-                onClick={() => updateStatus('Review')}
-              >
-                In Review
-              </button>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {STATUSES.map(s => {
+                const isActive  = proof.status === s
+                const canClick  = isManager || CLIENT_EDITABLE.has(s)
+                return (
+                  <button
+                    key={s}
+                    disabled={updating}
+                    onClick={canClick ? () => updateStatus(s) : undefined}
+                    style={{
+                      padding: '5px 14px',
+                      borderRadius: 'var(--radius)',
+                      border: isActive ? 'none' : '1px solid var(--border)',
+                      background: isActive ? 'var(--accent)' : 'transparent',
+                      color: isActive ? '#fff' : canClick ? 'var(--text)' : 'var(--text3)',
+                      fontWeight: isActive ? 600 : 400,
+                      fontSize: 13,
+                      cursor: canClick && !updating ? 'pointer' : 'default',
+                      opacity: updating ? 0.5 : 1,
+                      transition: 'background 0.15s, color 0.15s',
+                    }}
+                  >
+                    {s}
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>

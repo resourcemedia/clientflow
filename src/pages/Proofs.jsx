@@ -6,11 +6,12 @@ import { StatusBadge, StatCard, PillNav, Breadcrumb } from '../components/ui'
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 
 const FILTER_TABS = [
-  { id: 'Open',     label: 'Open'     },
-  { id: 'Review',   label: 'Review'   },
-  { id: 'Revise',   label: 'Revise'   },
-  { id: 'Approved', label: 'Approved' },
-  { id: 'all',      label: 'All'      },
+  { id: 'Open',        label: 'Open'        },
+  { id: 'In Progress', label: 'In Progress' },
+  { id: 'Review',      label: 'Review'      },
+  { id: 'Revise',      label: 'Revise'      },
+  { id: 'Approved',    label: 'Approved'    },
+  { id: 'all',         label: 'All'         },
 ]
 
 function versionLabel(itemNumber, version) {
