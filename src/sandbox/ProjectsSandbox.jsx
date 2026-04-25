@@ -5,9 +5,19 @@
 import iconTodo   from '../assets/icon_todo.svg'
 import iconItem   from '../assets/icon_item.svg'
 import iconProofs from '../assets/icon_proofs.svg'
-import iconView   from '../assets/icon_view.svg'
 
 // ── icons ─────────────────────────────────────────────────────────────────────
+const CommentIcon = ({ hasUrl }) => (
+  <svg width="25" height="25" viewBox="0 0 25 25" xmlns="http://www.w3.org/2000/svg"
+    style={{ display: 'block', opacity: hasUrl ? 1 : 0.35 }}>
+    <circle cx="12.5" cy="12.5" r="12.5"/>
+    <g>
+      <path fill="#fff" d="M12.5,5.08c-4.57,0-8.28,3.16-8.28,7.07,0,2.27,1.26,4.29,3.21,5.59v3.57l2.67-2.4c.76.2,1.56.3,2.4.3,4.57,0,8.28-3.16,8.28-7.07s-3.71-7.07-8.28-7.07Z"/>
+      <path d="M16.74,10.99h-8.48c-.28,0-.5-.22-.5-.5s.22-.5.5-.5h8.48c.28,0,.5.22.5.5s-.22.5-.5.5Z"/>
+      <path d="M16.74,14.31h-8.48c-.28,0-.5-.22-.5-.5s.22-.5.5-.5h8.48c.28,0,.5.22.5.5s-.22.5-.5.5Z"/>
+    </g>
+  </svg>
+)
 const TrashIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <polyline points="3 6 5 6 21 6"/>
@@ -33,8 +43,8 @@ const ITEMS = [
   { id: 3, name: 'Brand Guidelines',         item_number: '03', scheduled_date: '2026-05-01' },
 ]
 const PROOFS = [
-  { id: 1, version: 1, status: 'In Review', comments: 'Lighten the tagline color' },
-  { id: 1, version: 1, status: 'In Review', comments: 'Lighten the tagline color' },
+  { id: 1, version: 1, status: 'In Review', comments: 'Lighten the tagline color', url: 'https://drive.google.com/asdfjpashdga' },
+  { id: 2, version: 2, status: 'Approved',  comments: '',                           url: '' },
 ]
 const TASKS = [
   { id: 1, note: 'Write homepage copy',   status_note: 'Draft due by end of week', assignee: 'JO', updated: '4/10/26', done: false },
@@ -227,6 +237,7 @@ function ItemsDrawer() {
                             <th style={{ ...proofTh, width: 75 }}>Proof</th>
                             <th style={{ ...proofTh }}>Status</th>
                             <th style={{ ...proofTh }}>Comments / Changes</th>
+                            <th style={{ ...proofTh }}>URL</th>
                             <th style={{ width: 225, background: '#d5b6dd', borderTop: 'none', borderBottom: 'none' }} />
                           </tr>
                         </thead>
@@ -236,9 +247,18 @@ function ItemsDrawer() {
                             <tr key={proof.id} className="proof-row" style={{ background: '#f2eaf4' }}>
 
                               <td style={{ width: 25, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }} />
+
+                            {/* ── proof icon ── */}
+
                               <td style={{ padding: '5px 8px', borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
-                                <img src={iconView} width={25} height={25} alt="View" style={{ display: 'block', cursor: 'pointer' }} />
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <button style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer' }}>
+                                    <CommentIcon hasUrl={!!proof.url} />
+                                  </button>
+                                </div>
                               </td>
+
+                               {/* ── proof item ── */}
 
                               <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
                                 {item.name}
@@ -255,7 +275,14 @@ function ItemsDrawer() {
                               </td>
 
                               <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
-                                {proof.comments}
+                                {proof.comments || <span style={{ color: 'var(--text3)' }}>—</span>}
+                              </td>
+
+                              <td style={{ padding: '5px 12px', fontSize: 12, fontFamily: 'DM Mono, monospace', borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {proof.url
+                                  ? <span title={proof.url}>{proof.url}</span>
+                                  : <span style={{ color: 'var(--text3)' }}>URL</span>
+                                }
                               </td>
 
                               <td style={{
@@ -274,7 +301,7 @@ function ItemsDrawer() {
 
                           {/* add proof footer */}
                           <tr style={{ background: '#f2eaf4' }}>
-                            <td colSpan={7} style={{ padding: '8px 12px 8px 40px', borderTop: '1px solid #d5b6dd' }}>
+                            <td colSpan={8} style={{ padding: '8px 12px 8px 40px', borderTop: '1px solid #d5b6dd' }}>
                               <button
                                 className="btn btn-sm"
                                 style={{

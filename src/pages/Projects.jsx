@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, Fragment } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../lib/auth'
 import { DEMO_PROJECTS, DEMO_CLIENTS, PRIORITIES, PROOF_STATUSES, INV_STATUSES, COLLECT_STATUSES } from '../lib/demo-data'
 import { StatusBadge, Modal, EmptyState, PillNav, FormGroup, fmt$, initials } from '../components/ui'
 import iconTodo   from '../assets/icon_todo.svg'
 import iconItem   from '../assets/icon_item.svg'
 import iconProofs from '../assets/icon_proofs.svg'
-import iconView   from '../assets/icon_view.svg'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 const PRODUCT_TYPES = ['ST', 'CO', 'DS', 'OH']
@@ -72,11 +72,40 @@ function TrashIcon() {
   </svg>
 }
 
-function LinkIcon() {
-  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-  </svg>
+function CommentIcon({ hasUrl }) {
+  return (
+    <svg width="25" height="25" viewBox="0 0 25 25" xmlns="http://www.w3.org/2000/svg"
+      style={{ display: 'block', opacity: hasUrl ? 1 : 0.35 }}>
+      <circle cx="12.5" cy="12.5" r="12.5"/>
+      <g>
+        <path fill="#fff" d="M12.5,5.08c-4.57,0-8.28,3.16-8.28,7.07,0,2.27,1.26,4.29,3.21,5.59v3.57l2.67-2.4c.76.2,1.56.3,2.4.3,4.57,0,8.28-3.16,8.28-7.07s-3.71-7.07-8.28-7.07Z"/>
+        <path d="M16.74,10.99h-8.48c-.28,0-.5-.22-.5-.5s.22-.5.5-.5h8.48c.28,0,.5.22.5.5s-.22.5-.5.5Z"/>
+        <path d="M16.74,14.31h-8.48c-.28,0-.5-.22-.5-.5s.22-.5.5-.5h8.48c.28,0,.5.22.5.5s-.22.5-.5.5Z"/>
+      </g>
+    </svg>
+  )
+}
+
+function fmtCommentDate(ts) {
+  if (!ts) return ''
+  const d = new Date(ts)
+  const mo = d.getMonth() + 1
+  const dy = d.getDate()
+  const yr = String(d.getFullYear()).slice(2)
+  let h = d.getHours()
+  const ampm = h >= 12 ? 'pm' : 'am'
+  h = h % 12 || 12
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${mo}/${dy}/${yr}  |  ${h}:${min} ${ampm}`
+}
+
+function ViewOpenIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 25 25" fill="currentColor">
+      <path d="M18.22,11.18c-.28,0-.5.22-.5.5v5.49c0,.89-.72,1.62-1.62,1.62H7.93c-.89,0-1.62-.72-1.62-1.62v-8.17c0-.89.73-1.62,1.62-1.62h5.32c.28,0,.5-.22.5-.5s-.22-.5-.5-.5h-5.32c-1.44,0-2.62,1.17-2.62,2.62v8.17c0,1.44,1.17,2.62,2.62,2.62h8.17c1.44,0,2.62-1.17,2.62-2.62v-5.49c0-.28-.22-.5-.5-.5Z"/>
+      <path d="M14.8,5.22c-.28,0-.5.22-.5.5s.22.5.5.5h3.18l-8.69,8.69c-.2.2-.2.51,0,.71.1.1.23.15.35.15s.26-.05.35-.15l8.69-8.69v3.18c0,.28.22.5.5.5s.5-.22.5-.5v-4.89h-4.89Z"/>
+    </svg>
+  )
 }
 
 function fmtUpdated(updatedAt, updaterName) {
@@ -268,15 +297,59 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
 // ── TASK DRAWER ──────────────────────────────────────────────────────────
 // ── ITEM DRAWER ──────────────────────────────────────────────────────────────
 function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, onReorder, expandedProofRows, itemProofs, onToggleProofExpand, onAddProof, onDeleteProof, onUpdateProof }) {
+  const { profile } = useAuth()
   const [addingRow,   setAddingRow]   = useState(null) // null | { name, scheduled_date }
   const [dragIdx,     setDragIdx]     = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
   const [editField,   setEditField]   = useState(null) // null | { itemId, field }
   const [editVal,     setEditVal]     = useState('')
-  const [linkPopup,      setLinkPopup]      = useState(null) // { proofId, itemId, url, top, left }
-  const [proofEditField, setProofEditField] = useState(null) // { proofId, itemId, field }
-  const [proofEditVal,   setProofEditVal]   = useState('')
+  const [proofEditField,    setProofEditField]    = useState(null) // { proofId, itemId, field }
+  const [proofEditVal,      setProofEditVal]      = useState('')
+  const [openCommentDrawer, setOpenCommentDrawer] = useState(null) // proofId | null
+  const [commentVal,        setCommentVal]        = useState('')
+  const [drawerStatus,      setDrawerStatus]      = useState('')
+  const [submitLabel,       setSubmitLabel]       = useState('Submit')
+  const [proofComments,     setProofComments]     = useState({}) // { [proofId]: Comment[] }
   const addInputRef = useRef(null)
+
+  async function loadProofComments(proofId) {
+    const { data } = await supabase
+      .from('proof_comments')
+      .select('id, body, created_at, profile_id, is_internal, profile:profiles(name)')
+      .eq('proof_id', proofId)
+      .order('created_at', { ascending: false })
+    setProofComments(prev => ({ ...prev, [proofId]: data || [] }))
+  }
+
+  function toggleCommentDrawer(proofId, currentStatus) {
+    if (openCommentDrawer === proofId) {
+      setOpenCommentDrawer(null)
+      setCommentVal('')
+      setDrawerStatus('')
+      setSubmitLabel('Submit')
+    } else {
+      setOpenCommentDrawer(proofId)
+      setCommentVal('')
+      setDrawerStatus(currentStatus || 'Review')
+      setSubmitLabel('Submit')
+      loadProofComments(proofId)
+    }
+  }
+
+  async function handleCommentSubmit(proofId) {
+    if (!commentVal.trim()) return
+    const { error } = await supabase.from('proof_comments').insert({
+      proof_id:    proofId,
+      profile_id:  profile?.id,
+      body:        commentVal.trim(),
+      is_internal: false,
+    })
+    if (error) { console.error('proof_comments insert failed:', error.message); return }
+    setCommentVal('')
+    setSubmitLabel('Saved!')
+    setTimeout(() => setSubmitLabel('Submit'), 1500)
+    await loadProofComments(proofId)
+  }
 
   function startProofEdit(proofId, itemId, field, val) {
     setProofEditField({ proofId, itemId, field })
@@ -288,18 +361,6 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
     const { proofId, itemId, field } = proofEditField
     setProofEditField(null)
     onUpdateProof(itemId, proofId, { [field]: proofEditVal.trim() || null })
-  }
-
-  function openLinkPopup(e, proofId, itemId, currentUrl) {
-    e.stopPropagation()
-    const rect = e.currentTarget.getBoundingClientRect()
-    setLinkPopup({ proofId, itemId, url: currentUrl || '', top: rect.bottom + 4, right: window.innerWidth - rect.right })
-  }
-
-  function saveLinkUrl() {
-    if (!linkPopup) return
-    onUpdateProof(linkPopup.itemId, linkPopup.proofId, { url: linkPopup.url.trim() || null })
-    setLinkPopup(null)
   }
 
   function startEdit(item, field) {
@@ -483,90 +544,199 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                             <th style={{ ...proofThStyle, width: 75 }}>Proof</th>
                             <th style={{ ...proofThStyle }}>Status</th>
                             <th style={{ ...proofThStyle }}>Comments / Changes</th>
+                            <th style={{ ...proofThStyle }}>URL</th>
                             <th style={{ width: 225, background: '#d5b6dd', borderTop: 'none', borderBottom: 'none' }} />
                           </tr>
                         </thead>
                         <tbody>
                           {(itemProofs?.[item.id] || []).map(proof => (
-                            <tr key={proof.id} className="proof-row" style={{ background: '#f2eaf4' }}>
-                              <td style={{ width: 25, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }} />
-                              <td style={{ padding: '5px 8px', borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  <a
-                                    href={proof.url || '#'}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={e => { e.stopPropagation(); if (!proof.url) e.preventDefault() }}
-                                    style={{ opacity: proof.url ? 1 : 0.35, cursor: proof.url ? 'pointer' : 'default', display: 'flex' }}
-                                  >
-                                    <img src={iconView} width={25} height={25} alt="View" />
-                                  </a>
-                                </div>
-                              </td>
-                              <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>{item.name}</td>
-                              <td style={{ padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: 12, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd', textAlign: 'center' }}>{item.item_number}{String.fromCharCode(64 + proof.version)}</td>
-                              <td style={{ padding: '3px 8px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
-                                {proofEditField?.proofId === proof.id && proofEditField.field === 'status' ? (
-                                  <select
-                                    autoFocus
-                                    value={proofEditVal}
-                                    onChange={e => setProofEditVal(e.target.value)}
-                                    onBlur={commitProofEdit}
-                                    onKeyDown={e => { if (e.key === 'Escape') setProofEditField(null) }}
-                                    style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 6px', color: 'var(--text)', fontSize: 13 }}
-                                  >
-                                    {PROOF_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                                  </select>
-                                ) : (
-                                  <span
-                                    onClick={() => startProofEdit(proof.id, item.id, 'status', proof.status)}
-                                    style={{ cursor: 'text', display: 'block', minHeight: 20 }}
-                                  >{proof.status || <span style={{ color: 'var(--text3)' }}>—</span>}</span>
-                                )}
-                              </td>
-                              <td style={{ padding: '3px 8px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
-                                {proofEditField?.proofId === proof.id && proofEditField.field === 'comments' ? (
-                                  <input
-                                    autoFocus
-                                    value={proofEditVal}
-                                    onChange={e => setProofEditVal(e.target.value)}
-                                    onBlur={commitProofEdit}
-                                    onKeyDown={e => { if (e.key === 'Enter') commitProofEdit(); if (e.key === 'Escape') setProofEditField(null) }}
-                                    style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
-                                  />
-                                ) : (
-                                  <span
-                                    onClick={() => startProofEdit(proof.id, item.id, 'comments', proof.comments)}
-                                    style={{ cursor: 'text', display: 'block', minHeight: 20 }}
-                                  >{proof.comments || <span style={{ color: 'var(--text3)' }}>—</span>}</span>
-                                )}
-                              </td>
-                              <td style={{ padding: '5px 8px', whiteSpace: 'nowrap', borderBottom: '1px solid #d5b6dd' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-                                  <button
-                                    className="btn btn-ghost btn-icon btn-sm"
-                                    onClick={e => openLinkPopup(e, proof.id, item.id, proof.url)}
-                                    title="Add/edit link"
-                                    style={{ border: '1px solid #333' }}
-                                  ><LinkIcon /></button>
-                                  <button
-                                    className="btn btn-ghost btn-icon btn-sm"
-                                    onClick={e => { e.stopPropagation(); onDeleteProof(item.id, proof.id) }}
-                                    title="Delete proof"
-                                    style={{ border: '1px solid #333' }}
-                                  ><TrashIcon /></button>
-                                  <button
-                                    className="btn btn-ghost btn-icon btn-sm"
-                                    onClick={e => { e.stopPropagation(); onAddProof(item.id, item.item_number) }}
-                                    title="Add proof version"
-                                    style={{ border: '1px solid #333' }}
-                                  ><PlusIcon /></button>
-                                </div>
-                              </td>
-                            </tr>
+                            <Fragment key={proof.id}>
+                              <tr className="proof-row" style={{ background: '#f2eaf4' }}>
+                                <td style={{ width: 25, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }} />
+                                <td style={{ padding: '5px 8px', borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <button
+                                      className="btn btn-ghost btn-icon"
+                                      onClick={e => { e.stopPropagation(); toggleCommentDrawer(proof.id, proof.status) }}
+                                      style={{ padding: 0, border: 'none', background: 'none' }}
+                                    >
+                                      <CommentIcon hasUrl={!!proof.url} />
+                                    </button>
+                                  </div>
+                                </td>
+                                <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>{item.name}</td>
+                                <td style={{ padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: 12, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd', textAlign: 'center' }}>{item.item_number}{String.fromCharCode(64 + proof.version)}</td>
+                                <td style={{ padding: '3px 8px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
+                                  {proofEditField?.proofId === proof.id && proofEditField.field === 'status' ? (
+                                    <select
+                                      autoFocus
+                                      value={proofEditVal}
+                                      onChange={e => setProofEditVal(e.target.value)}
+                                      onBlur={commitProofEdit}
+                                      onKeyDown={e => { if (e.key === 'Escape') setProofEditField(null) }}
+                                      style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 6px', color: 'var(--text)', fontSize: 13 }}
+                                    >
+                                      {PROOF_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                  ) : (
+                                    <span
+                                      onClick={() => startProofEdit(proof.id, item.id, 'status', proof.status)}
+                                      style={{ cursor: 'text', display: 'block', minHeight: 20 }}
+                                    >{proof.status || <span style={{ color: 'var(--text3)' }}>—</span>}</span>
+                                  )}
+                                </td>
+                                <td style={{ padding: '3px 8px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
+                                  {proofEditField?.proofId === proof.id && proofEditField.field === 'comments' ? (
+                                    <input
+                                      autoFocus
+                                      value={proofEditVal}
+                                      onChange={e => setProofEditVal(e.target.value)}
+                                      onBlur={commitProofEdit}
+                                      onKeyDown={e => { if (e.key === 'Enter') commitProofEdit(); if (e.key === 'Escape') setProofEditField(null) }}
+                                      style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
+                                    />
+                                  ) : (
+                                    <span
+                                      onClick={() => startProofEdit(proof.id, item.id, 'comments', proof.comments)}
+                                      style={{ cursor: 'text', display: 'block', minHeight: 20 }}
+                                    >{proof.comments || <span style={{ color: 'var(--text3)' }}>—</span>}</span>
+                                  )}
+                                </td>
+                                <td style={{ padding: '3px 8px', fontSize: 12, fontFamily: 'DM Mono, monospace', borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
+                                  {proofEditField?.proofId === proof.id && proofEditField.field === 'url' ? (
+                                    <input
+                                      autoFocus
+                                      value={proofEditVal}
+                                      onChange={e => setProofEditVal(e.target.value)}
+                                      onBlur={commitProofEdit}
+                                      onKeyDown={e => { if (e.key === 'Enter') commitProofEdit(); if (e.key === 'Escape') setProofEditField(null) }}
+                                      placeholder="https://…"
+                                      style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 12, fontFamily: 'DM Mono, monospace' }}
+                                    />
+                                  ) : (
+                                    <span
+                                      onClick={() => startProofEdit(proof.id, item.id, 'url', proof.url)}
+                                      title={proof.url || undefined}
+                                      style={{ cursor: 'text', display: 'block', minHeight: 20, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: proof.url ? 'var(--text)' : 'var(--text3)' }}
+                                    >{proof.url || 'URL'}</span>
+                                  )}
+                                </td>
+                                <td style={{ padding: '5px 8px', whiteSpace: 'nowrap', borderBottom: '1px solid #d5b6dd' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                                    <button
+                                      className="btn btn-ghost btn-icon btn-sm"
+                                      onClick={e => { e.stopPropagation(); onDeleteProof(item.id, proof.id) }}
+                                      title="Delete proof"
+                                      style={{ border: '1px solid #333' }}
+                                    ><TrashIcon /></button>
+                                    <button
+                                      className="btn btn-ghost btn-icon btn-sm"
+                                      onClick={e => { e.stopPropagation(); onAddProof(item.id, item.item_number) }}
+                                      title="Add proof version"
+                                      style={{ border: '1px solid #333' }}
+                                    ><PlusIcon /></button>
+                                  </div>
+                                </td>
+                              </tr>
+
+                              {/* ── comment drawer ── */}
+                              {openCommentDrawer === proof.id && (
+                                <tr style={{ background: '#faf5fb' }}>
+                                  <td colSpan={8} style={{ padding: 0, borderBottom: '1px solid #d5b6dd' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px 8px 90px' }}>
+
+                                      {/* View button */}
+                                      <button
+                                        onClick={() => { if (proof.url) window.open(proof.url, '_blank', 'noopener,noreferrer') }}
+                                        style={{
+                                          display: 'flex', alignItems: 'center', gap: 5,
+                                          opacity: proof.url ? 1 : 0.4,
+                                          cursor: proof.url ? 'pointer' : 'default',
+                                          border: '1px solid var(--border)', borderRadius: 6,
+                                          padding: '4px 10px', background: 'none',
+                                          fontSize: 13, color: 'var(--text)',
+                                        }}
+                                      >
+                                        <ViewOpenIcon /> View
+                                      </button>
+
+                                      {/* Status toggle buttons */}
+                                      <div style={{ display: 'flex', border: '1px solid #c9a6d4', borderRadius: 6, overflow: 'hidden' }}>
+                                        {['Review', 'Revise', 'Approved'].map((s, i) => {
+                                          const active = drawerStatus === s
+                                          return (
+                                            <button
+                                              key={s}
+                                              onClick={() => {
+                                                setDrawerStatus(s)
+                                                onUpdateProof(item.id, proof.id, { status: s })
+                                              }}
+                                              style={{
+                                                padding: '4px 14px', fontSize: 13,
+                                                border: 'none',
+                                                borderRight: i < 2 ? '1px solid #c9a6d4' : 'none',
+                                                background: active ? '#d5b6dd' : 'transparent',
+                                                color: active ? '#fff' : 'var(--text)',
+                                                cursor: 'pointer', fontWeight: active ? 600 : 400,
+                                              }}
+                                            >{s}</button>
+                                          )
+                                        })}
+                                      </div>
+
+                                      {/* Comments input */}
+                                      <input
+                                        value={commentVal}
+                                        onChange={e => setCommentVal(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter') handleCommentSubmit(proof.id) }}
+                                        placeholder="Comments"
+                                        style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', fontSize: 13, color: 'var(--text)' }}
+                                      />
+
+                                      {/* Submit */}
+                                      <button
+                                        className="btn btn-primary btn-sm"
+                                        onClick={() => handleCommentSubmit(proof.id)}
+                                        style={{ fontSize: 13, minWidth: 68 }}
+                                      >{submitLabel}</button>
+
+                                    </div>
+
+                                    {/* ── comment thread ── */}
+                                    {(proofComments[proof.id] || []).length > 0 && (
+                                      <div style={{ borderTop: '1px solid #e8d8ef', paddingLeft: 90, paddingRight: 16 }}>
+                                        {(proofComments[proof.id] || []).map((c, i) => {
+                                          const authorName = c.profile?.name || 'Team'
+                                          return (
+                                            <div
+                                              key={c.id}
+                                              style={{
+                                                padding: '10px 0',
+                                                borderBottom: i < (proofComments[proof.id].length - 1) ? '1px solid #e8d8ef' : 'none',
+                                              }}
+                                            >
+                                              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 4 }}>
+                                                {authorName}
+                                                <span style={{ fontWeight: 400, color: 'var(--text3)', marginLeft: 6 }}>
+                                                  {fmtCommentDate(c.created_at)}
+                                                </span>
+                                              </div>
+                                              <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                                                {c.body}
+                                              </div>
+                                            </div>
+                                          )
+                                        })}
+                                      </div>
+                                    )}
+
+                                  </td>
+                                </tr>
+                              )}
+                            </Fragment>
                           ))}
                           <tr style={{ background: '#f2eaf4' }}>
-                            <td colSpan={7} style={{ padding: '8px 12px 8px 40px', borderTop: '1px solid #d5b6dd' }}>
+                            <td colSpan={8} style={{ padding: '8px 12px 8px 40px', borderTop: '1px solid #d5b6dd' }}>
                               <button
                                 className="btn btn-sm"
                                 onClick={e => { e.stopPropagation(); onAddProof(item.id, item.item_number) }}
@@ -628,22 +798,6 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
         </tbody>
       </table>
 
-      {linkPopup && (
-        <>
-          <div style={{ position: 'fixed', inset: 0, zIndex: 999 }} onClick={() => setLinkPopup(null)} />
-          <div style={{ position: 'fixed', top: linkPopup.top, right: linkPopup.right, zIndex: 1000, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', boxShadow: '0 4px 16px rgba(0,0,0,0.18)', display: 'flex', gap: 6, alignItems: 'center', minWidth: 320 }}>
-            <input
-              autoFocus
-              value={linkPopup.url}
-              onChange={e => setLinkPopup(p => ({ ...p, url: e.target.value }))}
-              placeholder="https://…"
-              onKeyDown={e => { if (e.key === 'Enter') saveLinkUrl(); if (e.key === 'Escape') setLinkPopup(null) }}
-              style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: 'var(--text)', fontSize: 13 }}
-            />
-            <button className="btn btn-primary btn-sm" onClick={saveLinkUrl} style={{ fontSize: 12 }}>Save</button>
-          </div>
-        </>
-      )}
     </div>
   )
 }
@@ -1037,11 +1191,12 @@ export default function ProjectsPage() {
 
   async function updateProof(itemId, proofId, updates) {
     const { error } = await supabase.from('proofs').update(updates).eq('id', proofId)
-    if (error) { console.error('updateProof failed:', error.message); return }
+    if (error) { console.error('updateProof failed:', error.message); return false }
     setItemProofs(prev => ({
       ...prev,
       [itemId]: (prev[itemId] || []).map(p => p.id === proofId ? { ...p, ...updates } : p),
     }))
+    return true
   }
 
   async function handleArchive(project) {
