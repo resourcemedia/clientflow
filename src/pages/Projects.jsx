@@ -1620,8 +1620,13 @@ function WorkView({
   onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm,
   onView, onReorder, onStartAdd, onAddSave, onAddKeyDown, onSaveProject,
 }) {
-  const [dragIdx, setDragIdx]         = useState(null)
-  const [dragOverIdx, setDragOverIdx] = useState(null)
+  const [dragIdx, setDragIdx]               = useState(null)
+  const [dragOverIdx, setDragOverIdx]       = useState(null)
+  const [expandedClientId, setExpandedClientId] = useState(null)
+
+  function toggleClient(clientId) {
+    setExpandedClientId(prev => prev === clientId ? null : clientId)
+  }
 
   function handleDragStart(e, idx) {
     e.dataTransfer.effectAllowed = 'move'
@@ -1673,7 +1678,10 @@ function WorkView({
           {groups.map(group => (
               <tbody key={`group-${group.name}`}>
                 {/* Client group header */}
-                <tr style={{ background: '#595958', pointerEvents: 'none' }}>
+                <tr
+                  style={{ background: '#595958', cursor: 'pointer' }}
+                  onClick={() => toggleClient(group.clientId)}
+                >
                   <td colSpan={6} style={{
                     padding: '7px 16px',
                     fontSize: 11,
@@ -1681,13 +1689,14 @@ function WorkView({
                     letterSpacing: '0.07em',
                     textTransform: 'uppercase',
                     color: '#fff',
+                    userSelect: 'none',
                   }}>
                     {group.name}
                   </td>
                 </tr>
 
-                {/* Project rows */}
-                {group.projects.map((p) => {
+                {/* Project rows — only visible when this client is expanded */}
+                {expandedClientId === group.clientId && group.projects.map((p) => {
                   const globalIdx = projects.indexOf(p)
                   return (
                     <ProjectRow
@@ -1735,7 +1744,7 @@ function WorkView({
                 })}
 
                 {/* Inline add row — appears at bottom of matching client group */}
-                {addingRow !== null && addingRow.client_id === group.clientId && (
+                {expandedClientId === group.clientId && addingRow !== null && addingRow.client_id === group.clientId && (
                   <tr style={{ background: 'var(--accent-glow)' }}>
                     <td style={{ width: 25 }} />
                     <td style={{ width: 65 }} />
