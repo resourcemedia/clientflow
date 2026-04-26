@@ -1751,6 +1751,15 @@ function WorkView({
                   )
                 })}
 
+                {/* Add project button — only visible when this client is expanded and not already adding */}
+                {expandedClientId === group.clientId && addingRow === null && (
+                  <tr>
+                    <td colSpan={6} style={{ padding: '8px 16px', border: 'none' }}>
+                      <button className="btn btn-ghost btn-sm" onClick={() => onStartAdd(group.clientId)}>+ Add project</button>
+                    </td>
+                  </tr>
+                )}
+
                 {/* Inline add row — appears at bottom of matching client group */}
                 {expandedClientId === group.clientId && addingRow !== null && addingRow.client_id === group.clientId && (
                   <tr style={{ background: 'var(--accent-glow)' }}>
@@ -1815,12 +1824,6 @@ function WorkView({
           </tbody>
         </table>
 
-        {/* Add button below table */}
-        {groups.length > 0 && addingRow === null && (
-          <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)' }}>
-            <button className="btn btn-ghost btn-sm" onClick={onStartAdd}>+ Add project</button>
-          </div>
-        )}
       </div>
     </div>
   )
