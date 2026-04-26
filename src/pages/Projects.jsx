@@ -310,7 +310,30 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
   const [drawerStatus,      setDrawerStatus]      = useState('')
   const [submitLabel,       setSubmitLabel]       = useState('Submit')
   const [proofComments,     setProofComments]     = useState({}) // { [proofId]: Comment[] }
+  const [editingCommentId,  setEditingCommentId]  = useState(null)
+  const [editingCommentVal, setEditingCommentVal] = useState('')
   const addInputRef = useRef(null)
+
+  async function deleteComment(proofId, commentId) {
+    const { error } = await supabase.from('proof_comments').delete().eq('id', commentId)
+    if (error) { console.error('deleteComment failed:', error.message); return }
+    setProofComments(prev => ({
+      ...prev,
+      [proofId]: (prev[proofId] || []).filter(c => c.id !== commentId),
+    }))
+  }
+
+  async function saveComment(proofId, commentId, newBody) {
+    const trimmed = newBody.trim()
+    if (!trimmed) return
+    const { error } = await supabase.from('proof_comments').update({ body: trimmed }).eq('id', commentId)
+    if (error) { console.error('saveComment failed:', error.message); return }
+    setProofComments(prev => ({
+      ...prev,
+      [proofId]: (prev[proofId] || []).map(c => c.id === commentId ? { ...c, body: trimmed } : c),
+    }))
+    setEditingCommentId(null)
+  }
 
   async function loadProofComments(proofId) {
     const { data } = await supabase
@@ -338,17 +361,24 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
 
   async function handleCommentSubmit(proofId) {
     if (!commentVal.trim()) return
-    const { error } = await supabase.from('proof_comments').insert({
-      proof_id:    proofId,
-      profile_id:  profile?.id,
-      body:        commentVal.trim(),
-      is_internal: false,
-    })
+    const { data, error } = await supabase
+      .from('proof_comments')
+      .insert({
+        proof_id:    proofId,
+        profile_id:  profile?.id,
+        body:        commentVal.trim(),
+        is_internal: false,
+      })
+      .select('id, body, created_at, profile_id, is_internal, profile:profiles(name)')
+      .single()
     if (error) { console.error('proof_comments insert failed:', error.message); return }
     setCommentVal('')
     setSubmitLabel('Saved!')
     setTimeout(() => setSubmitLabel('Submit'), 1500)
-    await loadProofComments(proofId)
+    setProofComments(prev => ({
+      ...prev,
+      [proofId]: [data, ...(prev[proofId] || [])],
+    }))
   }
 
   function startProofEdit(proofId, itemId, field, val) {
@@ -707,6 +737,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                                       <div style={{ borderTop: '1px solid #e8d8ef', paddingLeft: 90, paddingRight: 16 }}>
                                         {(proofComments[proof.id] || []).map((c, i) => {
                                           const authorName = c.profile?.name || 'Team'
+                                          const isEditing = editingCommentId === c.id
                                           return (
                                             <div
                                               key={c.id}
@@ -715,15 +746,46 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                                                 borderBottom: i < (proofComments[proof.id].length - 1) ? '1px solid #e8d8ef' : 'none',
                                               }}
                                             >
-                                              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 4 }}>
-                                                {authorName}
-                                                <span style={{ fontWeight: 400, color: 'var(--text3)', marginLeft: 6 }}>
-                                                  {fmtCommentDate(c.created_at)}
-                                                </span>
+                                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                                                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>
+                                                  {authorName}
+                                                  <span style={{ fontWeight: 400, color: 'var(--text3)', marginLeft: 6 }}>
+                                                    {fmtCommentDate(c.created_at)}
+                                                  </span>
+                                                </div>
+                                                <button
+                                                  className="btn btn-ghost btn-icon btn-sm"
+                                                  onClick={() => deleteComment(proof.id, c.id)}
+                                                  title="Delete comment"
+                                                  style={{ color: 'var(--text3)', border: '1px solid #333', flexShrink: 0 }}
+                                                ><TrashIcon /></button>
                                               </div>
-                                              <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-                                                {c.body}
-                                              </div>
+                                              {isEditing ? (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                                  <textarea
+                                                    autoFocus
+                                                    value={editingCommentVal}
+                                                    onChange={e => setEditingCommentVal(e.target.value)}
+                                                    onKeyDown={e => {
+                                                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveComment(proof.id, c.id, editingCommentVal) }
+                                                      if (e.key === 'Escape') setEditingCommentId(null)
+                                                    }}
+                                                    rows={2}
+                                                    style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '5px 8px', fontSize: 13, color: 'var(--text)', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 }}
+                                                  />
+                                                  <div style={{ display: 'flex', gap: 6 }}>
+                                                    <button className="btn btn-primary btn-sm" style={{ fontSize: 12 }} onClick={() => saveComment(proof.id, c.id, editingCommentVal)}>Save</button>
+                                                    <button className="btn btn-ghost btn-sm" style={{ fontSize: 12 }} onClick={() => setEditingCommentId(null)}>Cancel</button>
+                                                  </div>
+                                                </div>
+                                              ) : (
+                                                <div
+                                                  onClick={() => { setEditingCommentId(c.id); setEditingCommentVal(c.body) }}
+                                                  style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, whiteSpace: 'pre-wrap', cursor: 'text', borderRadius: 4, padding: '2px 4px', marginLeft: -4 }}
+                                                >
+                                                  {c.body}
+                                                </div>
+                                              )}
                                             </div>
                                           )
                                         })}
