@@ -1675,23 +1675,31 @@ function WorkView({
     <div className="card">
       <div className="table-wrap">
         <table>
-          {groups.map(group => (
+          {groups.map((group, groupIdx) => (
               <tbody key={`group-${group.name}`}>
+                {/* Gap between client bars */}
+                {groupIdx > 0 && (
+                  <tr aria-hidden="true"><td colSpan={6} style={{ padding: 0, height: 8, background: 'transparent', border: 'none' }} /></tr>
+                )}
                 {/* Client group header */}
                 <tr
-                  style={{ background: '#595958', cursor: 'pointer' }}
+                  style={{ cursor: 'pointer' }}
                   onClick={() => toggleClient(group.clientId)}
                 >
-                  <td colSpan={6} style={{
-                    padding: '7px 16px',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    letterSpacing: '0.07em',
-                    textTransform: 'uppercase',
-                    color: '#fff',
-                    userSelect: 'none',
-                  }}>
-                    {group.name}
+                  <td colSpan={6} style={{ padding: 0, border: 'none' }}>
+                    <div style={{
+                      background: '#595958',
+                      borderRadius: 8,
+                      padding: '7px 16px',
+                      fontSize: 11,
+                      fontWeight: 600,
+                      letterSpacing: '0.07em',
+                      textTransform: 'uppercase',
+                      color: '#fff',
+                      userSelect: 'none',
+                    }}>
+                      {group.name}
+                    </div>
                   </td>
                 </tr>
 
