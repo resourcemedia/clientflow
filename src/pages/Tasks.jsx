@@ -627,15 +627,15 @@ export default function TasksPage() {
             <table>
               <thead>
                 <tr>
-                  <th style={{ width: 28, padding: '10px 6px 10px 4px', background: '#9dc691' }} />
-                  <th style={{ background: '#9dc691' }}>Alias</th>
-                  <th style={{ background: '#9dc691' }}>Project</th>
-                  <th style={{ background: '#9dc691' }}>Task</th>
-                  <th style={{ background: '#9dc691' }}>Note</th>
-                  <th style={{ background: '#9dc691' }}>Status</th>
-                  <th style={{ background: '#9dc691' }}>Assigned</th>
-                  <th style={{ background: '#9dc691' }}>Updated</th>
-                  <th style={{ width: 72, background: '#9dc691' }} />
+                  <th style={{ width: 28, padding: '10px 6px 10px 4px', background: '#9dc691', color: '#fff' }} />
+                  <th style={{ background: '#9dc691', color: '#fff' }}>Alias</th>
+                  <th style={{ background: '#9dc691', color: '#fff' }}>Project</th>
+                  <th style={{ background: '#9dc691', color: '#fff' }}>Task</th>
+                  <th style={{ background: '#9dc691', color: '#fff' }}>Note</th>
+                  <th style={{ background: '#9dc691', color: '#fff' }}>Status</th>
+                  <th style={{ background: '#9dc691', color: '#fff' }}>Assigned</th>
+                  <th style={{ background: '#9dc691', color: '#fff' }}>Updated</th>
+                  <th style={{ width: 72, background: '#9dc691', color: '#fff' }} />
                 </tr>
               </thead>
               <tbody>
