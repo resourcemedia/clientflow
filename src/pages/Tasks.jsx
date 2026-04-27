@@ -109,7 +109,7 @@ function TaskRow({ task, idx, profiles, projects, productMap, onSave, onAddBelow
 
   const rowStyle = {
     opacity: isDragging ? 0.4 : 1,
-    background: isDragTarget ? 'var(--accent-glow)' : undefined,
+    background: isDragTarget ? 'var(--accent-glow)' : '#f7fff5',
     transition: 'background 0.1s',
   }
 
@@ -627,15 +627,15 @@ export default function TasksPage() {
             <table>
               <thead>
                 <tr>
-                  <th style={{ width: 28, padding: '10px 6px 10px 4px' }} />
-                  <th>Alias</th>
-                  <th>Project</th>
-                  <th>Task</th>
-                  <th>Note</th>
-                  <th>Status</th>
-                  <th>Assigned</th>
-                  <th>Updated</th>
-                  <th style={{ width: 72 }} />
+                  <th style={{ width: 28, padding: '10px 6px 10px 4px', background: '#9dc691' }} />
+                  <th style={{ background: '#9dc691' }}>Alias</th>
+                  <th style={{ background: '#9dc691' }}>Project</th>
+                  <th style={{ background: '#9dc691' }}>Task</th>
+                  <th style={{ background: '#9dc691' }}>Note</th>
+                  <th style={{ background: '#9dc691' }}>Status</th>
+                  <th style={{ background: '#9dc691' }}>Assigned</th>
+                  <th style={{ background: '#9dc691' }}>Updated</th>
+                  <th style={{ width: 72, background: '#9dc691' }} />
                 </tr>
               </thead>
               <tbody>
