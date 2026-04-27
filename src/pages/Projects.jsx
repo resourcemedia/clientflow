@@ -1470,7 +1470,9 @@ function ProjectRow({
   function commit() {
     const original = editField === 'name' ? p.name : p.project_number
     setEditField(null)
-    if (editVal.trim() !== (original || '').trim()) onSaveProject(p.id, { [editField]: editVal.trim() })
+    const trimmed = editVal.trim()
+    const saveVal = editField === 'project_number' ? (trimmed || null) : trimmed
+    if (trimmed !== (original || '').trim()) onSaveProject(p.id, { [editField]: saveVal })
   }
 
   if (confirmDelete === p.id) {
@@ -1533,7 +1535,9 @@ function ProjectRow({
               onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') setEditField(null) }}
               style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text2)', fontSize: 12, textAlign: 'center' }} />
           ) : (
-            <span style={{ cursor: 'text', display: 'block' }} onClick={() => startEdit('project_number', p.project_number)}>{p.project_number}</span>
+            <span style={{ cursor: 'text', display: 'block' }} onClick={() => startEdit('project_number', p.project_number)}>
+              {p.project_number || <span style={{ color: 'var(--text3)', fontStyle: 'italic' }}>—</span>}
+            </span>
           )}
         </td>
 
