@@ -4,9 +4,9 @@ import { supabase } from '../lib/supabase'
 import { PillNav, Breadcrumb } from '../components/ui'
 
 const STATUS_TABS = [
-  { id: 'Open', label: 'Open' },
-  { id: 'Done', label: 'Done' },
-  { id: 'All',  label: 'All'  },
+  { id: 'Normal', label: 'Normal' },
+  { id: 'High',   label: 'High'   },
+  { id: 'Hot',    label: 'Hot'    },
 ]
 
 function initials(str) {
@@ -126,13 +126,8 @@ function TaskRow({ task, idx, profiles, projects, productMap, onSave, onAddBelow
         <DragHandle />
       </td>
 
-      {/* client */}
-      <td>{clientLabel(task.project)}</td>
-
-      {/* product */}
-      <td style={{ whiteSpace: 'nowrap', color: 'var(--text3)', fontSize: 12 }}>
-        {productLabel(task.project, productMap)}
-      </td>
+      {/* alias */}
+      <td>{task.project?.client?.alias || '—'}</td>
 
       {/* project */}
       <td>{task.project?.name || '—'}</td>
@@ -157,6 +152,30 @@ function TaskRow({ task, idx, profiles, projects, productMap, onSave, onAddBelow
           </span>
         )}
       </td>
+
+      {/* status note */}
+      <td style={{ minWidth: 140 }}>
+        {editField === 'status_note' ? (
+          <input
+            autoFocus
+            value={snoteVal}
+            onChange={e => setSnoteVal(e.target.value)}
+            onBlur={commitStatusNote}
+            onKeyDown={e => { if (e.key === 'Enter') commitStatusNote(); if (e.key === 'Escape') { setSnoteVal(task.status_note || ''); setEditField(null) } }}
+            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '4px 8px', color: 'var(--text)', fontSize: 13 }}
+          />
+        ) : (
+          <span
+            onClick={() => { setSnoteVal(task.status_note || ''); setEditField('status_note') }}
+            style={{ cursor: 'text', display: 'block', minHeight: 22, color: task.status_note ? 'var(--text2)' : 'var(--text3)' }}
+          >
+            {task.status_note || 'Add note…'}
+          </span>
+        )}
+      </td>
+
+      {/* status */}
+      <td style={{ fontWeight: 600, fontSize: 13 }}>{task.status || '—'}</td>
 
       {/* assigned */}
       <td style={{ position: 'relative' }} ref={assignRef}>
@@ -199,27 +218,6 @@ function TaskRow({ task, idx, profiles, projects, productMap, onSave, onAddBelow
               </div>
             ))}
           </div>
-        )}
-      </td>
-
-      {/* status note */}
-      <td style={{ minWidth: 140 }}>
-        {editField === 'status_note' ? (
-          <input
-            autoFocus
-            value={snoteVal}
-            onChange={e => setSnoteVal(e.target.value)}
-            onBlur={commitStatusNote}
-            onKeyDown={e => { if (e.key === 'Enter') commitStatusNote(); if (e.key === 'Escape') { setSnoteVal(task.status_note || ''); setEditField(null) } }}
-            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '4px 8px', color: 'var(--text)', fontSize: 13 }}
-          />
-        ) : (
-          <span
-            onClick={() => { setSnoteVal(task.status_note || ''); setEditField('status_note') }}
-            style={{ cursor: 'text', display: 'block', minHeight: 22, color: task.status_note ? 'var(--text2)' : 'var(--text3)' }}
-          >
-            {task.status_note || 'Add note…'}
-          </span>
         )}
       </td>
 
@@ -274,8 +272,8 @@ function NewTaskRow({ row, projects, profiles, onChange, onCommit, onDiscard }) 
       {/* drag handle placeholder */}
       <td style={{ width: 28 }} />
 
-      {/* project selector (drives client + product display) */}
-      <td colSpan={3}>
+      {/* project selector (covers alias + project cols) */}
+      <td colSpan={2}>
         <select
           value={row.project_id}
           onChange={e => onChange('project_id', e.target.value)}
@@ -307,6 +305,23 @@ function NewTaskRow({ row, projects, profiles, onChange, onCommit, onDiscard }) 
           }}
         />
       </td>
+
+      {/* note */}
+      <td>
+        <input
+          placeholder="Add note…"
+          value={row.status_note}
+          onChange={e => onChange('status_note', e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') onCommit(); if (e.key === 'Escape') onDiscard() }}
+          style={{
+            width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)',
+            borderRadius: 6, padding: '4px 8px', color: 'var(--text)', fontSize: 13,
+          }}
+        />
+      </td>
+
+      {/* status placeholder */}
+      <td />
 
       {/* assigned */}
       <td style={{ position: 'relative' }} ref={assignRef}>
@@ -346,20 +361,7 @@ function NewTaskRow({ row, projects, profiles, onChange, onCommit, onDiscard }) 
         )}
       </td>
 
-      {/* note */}
-      <td>
-        <input
-          placeholder="Status note…"
-          value={row.status_note}
-          onChange={e => onChange('status_note', e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') onCommit(); if (e.key === 'Escape') onDiscard() }}
-          style={{
-            width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)',
-            borderRadius: 6, padding: '4px 8px', color: 'var(--text)', fontSize: 13,
-          }}
-        />
-      </td>
-
+      {/* updated placeholder */}
       <td />
 
       {/* save / discard */}
@@ -396,7 +398,7 @@ export default function TasksPage() {
   const [projects,     setProjects]     = useState([])
   const [profiles,     setProfiles]     = useState([])
   const [loading,      setLoading]      = useState(true)
-  const [statusFilter, setStatusFilter] = useState('Open')
+  const [statusFilter, setStatusFilter] = useState('Normal')
   const [clientFilter, setClientFilter] = useState('')
   const [searchQuery,  setSearchQuery]  = useState('')
   const [newRows,      setNewRows]      = useState([])
@@ -457,7 +459,7 @@ export default function TasksPage() {
   ).values()].sort((a, b) => (a.company || a.alias || '').localeCompare(b.company || b.alias || ''))
 
   const filtered = tasks.filter(t => {
-    if (statusFilter !== 'All' && t.status !== statusFilter) return false
+    if (t.status !== statusFilter) return false
     if (clientFilter) {
       const label = t.project?.client?.company || t.project?.client?.alias || ''
       if (label !== clientFilter) return false
@@ -525,7 +527,7 @@ export default function TasksPage() {
       note:       '',
       assigned_to: null,
       status_note: '',
-      status:     'Open',
+      status:     statusFilter,
     }])
   }
 
@@ -544,7 +546,7 @@ export default function TasksPage() {
       note:        tempRow.note.trim(),
       assigned_to: tempRow.assigned_to || null,
       status_note: tempRow.status_note.trim() || null,
-      status:      'Open',
+      status:      tempRow.status || statusFilter,
       sort_order:  maxOrder + 1,
     })
     if (saved) setNewRows(rs => rs.filter(r => r._tempId !== tempRow._tempId))
@@ -570,7 +572,7 @@ export default function TasksPage() {
     reordered.splice(to, 0, moved)
 
     // Merge back if filtered (non-All view keeps other-status tasks)
-    const others = tasks.filter(t => statusFilter !== 'All' && t.status !== statusFilter)
+    const others = tasks.filter(t => t.status !== statusFilter)
     setTasks([...reordered, ...others])
 
     reordered.forEach((t, i) => {
@@ -583,10 +585,7 @@ export default function TasksPage() {
   return (
     <div className="fade-in">
       <div className="topbar">
-        <Breadcrumb segments={[
-          { label: 'Dashboard', onClick: () => navigate('/') },
-          { label: 'Tasks' },
-        ]} />
+        <Breadcrumb segments={[{ label: 'Tasks' }]} />
         <PillNav tabs={STATUS_TABS} active={statusFilter} onChange={setStatusFilter} />
         <select
           value={clientFilter}
@@ -629,12 +628,12 @@ export default function TasksPage() {
               <thead>
                 <tr>
                   <th style={{ width: 28, padding: '10px 6px 10px 4px' }} />
-                  <th>Client</th>
-                  <th>Product</th>
+                  <th>Alias</th>
                   <th>Project</th>
                   <th>Task</th>
-                  <th>Assigned</th>
                   <th>Note</th>
+                  <th>Status</th>
+                  <th>Assigned</th>
                   <th>Updated</th>
                   <th style={{ width: 72 }} />
                 </tr>
@@ -649,7 +648,7 @@ export default function TasksPage() {
                 ) : filtered.length === 0 && newRows.length === 0 ? (
                   <tr>
                     <td colSpan={9} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text3)' }}>
-                      No {statusFilter !== 'All' ? statusFilter.toLowerCase() + ' ' : ''}tasks
+                      No {statusFilter.toLowerCase()} tasks
                     </td>
                   </tr>
                 ) : (
