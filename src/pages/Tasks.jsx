@@ -228,18 +228,18 @@ function TaskRow({ task, idx, profiles, projects, productMap, onSave, onAddBelow
 
       {/* actions */}
       <td style={{ padding: '8px 12px 8px 4px' }}>
-        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'flex-end' }}>
           <button
             className="btn btn-ghost btn-icon btn-sm"
             onClick={onAddBelow}
             title="Add task below"
-            style={{ color: 'var(--text3)' }}
-          >+</button>
+            style={{ color: 'var(--text3)', border: '1px solid #333' }}
+          ><PlusIcon /></button>
           <button
             className="btn btn-ghost btn-icon btn-sm"
             onClick={() => onDelete(task.id)}
             title="Delete task"
-            style={{ color: 'var(--red)' }}
+            style={{ color: 'var(--text3)', border: '1px solid #333' }}
           >
             <TrashIcon />
           </button>
@@ -380,6 +380,12 @@ function CheckIcon({ done }) {
   return done
     ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
     : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/></svg>
+}
+
+function PlusIcon() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>
 }
 
 function TrashIcon() {
