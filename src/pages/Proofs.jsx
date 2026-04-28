@@ -108,19 +108,26 @@ export default function ProofsPage() {
 
   async function load() {
     setLoading(true)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('proofs')
       .select(`
-        id, proof_number, status, url,
-        item:project_items(
+        id,
+        proof_number,
+        status,
+        url,
+        project_items(
           name,
-          project:projects(
-            name, client_id,
-            client:clients(name)
+          projects(
+            name,
+            client_id,
+            clients(
+              name
+            )
           )
         )
       `)
       .order('created_at', { ascending: false })
+    if (error) console.error('proofs fetch error:', error.message)
     setProofs(data || [])
     setLoading(false)
   }
@@ -181,8 +188,8 @@ export default function ProofsPage() {
   const filtered = statusFilter ? proofs.filter(p => p.status === statusFilter) : proofs
 
   const groupMap = filtered.reduce((acc, proof) => {
-    const clientId   = proof.item?.project?.client_id || '__none__'
-    const clientName = proof.item?.project?.client?.name || '—'
+    const clientId   = proof.project_items?.projects?.client_id || '__none__'
+    const clientName = proof.project_items?.projects?.clients?.name || '—'
     if (!acc[clientId]) acc[clientId] = { clientId, clientName, rows: [] }
     acc[clientId].rows.push(proof)
     return acc
@@ -191,8 +198,8 @@ export default function ProofsPage() {
   const clientGroups = Object.values(groupMap)
   clientGroups.forEach(group => {
     group.rows.sort((a, b) => {
-      const pa = a.item?.project?.name || ''
-      const pb = b.item?.project?.name || ''
+      const pa = a.project_items?.projects?.name || ''
+      const pb = b.project_items?.projects?.name || ''
       if (pa !== pb) return pa.localeCompare(pb)
       return (a.proof_number || '').localeCompare(b.proof_number || '')
     })
@@ -279,8 +286,8 @@ export default function ProofsPage() {
                           <td style={{ padding: '8px 4px 8px 12px', width: 32 }}>
                             <StatusIcon status={proof.status} />
                           </td>
-                          <td>{proof.item?.project?.name || '—'}</td>
-                          <td>{proof.item?.name || '—'}</td>
+                          <td>{proof.project_items?.projects?.name || '—'}</td>
+                          <td>{proof.project_items?.name || '—'}</td>
                           <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, fontWeight: 600 }}>
                             {proof.proof_number || '—'}
                           </td>
