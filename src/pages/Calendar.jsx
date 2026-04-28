@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Breadcrumb } from '../components/ui'
 import {
@@ -33,7 +33,8 @@ function colorFor(channel) {
 }
 
 export default function CalendarPage() {
-  const navigate = useNavigate()
+  const navigate  = useNavigate()
+  const location  = useLocation()
   const [events, setEvents]           = useState([])
   const [loading, setLoading]         = useState(true)
   const [current, setCurrent]         = useState(new Date())
@@ -41,9 +42,10 @@ export default function CalendarPage() {
   const [channelFilter, setChannelFilter] = useState('all')
 
   useEffect(() => {
+    setLoading(true)
     loadEvents()
     setSelectedDay(null)
-  }, [current])
+  }, [current, location.pathname])
 
   async function loadEvents() {
     setLoading(true)
