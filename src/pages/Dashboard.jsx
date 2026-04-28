@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { StatCard } from '../components/ui'
 
@@ -38,7 +38,8 @@ function Avatar({ name, size = 24 }) {
 }
 
 export default function Dashboard() {
-  const navigate = useNavigate()
+  const navigate  = useNavigate()
+  const location  = useLocation()
   const [stats,          setStats]          = useState({ projects: 0, proofs: 0, tasks: 0, scheduled: 0, openInvoices: 0 })
   const [projects,       setProjects]       = useState([])
   const [proofsToReview, setProofsToReview] = useState([])
@@ -122,8 +123,9 @@ export default function Dashboard() {
       setLoading(false)
     }
 
+    setLoading(true)
     load()
-  }, [])
+  }, [location.pathname])
 
   function proofLabel(proof) {
     const item = proof.item
