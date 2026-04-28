@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { StatusBadge, StatCard, PillNav, Breadcrumb } from '../components/ui'
 
@@ -17,12 +17,13 @@ function versionLabel(itemNumber, version) {
 }
 
 export default function ProofsPage() {
-  const navigate = useNavigate()
+  const navigate  = useNavigate()
+  const location  = useLocation()
   const [proofs, setProofs]     = useState([])
   const [loading, setLoading]   = useState(true)
   const [filter, setFilter]     = useState('Review')
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { setLoading(true); load() }, [location.pathname])
 
   async function load() {
     setLoading(true)
