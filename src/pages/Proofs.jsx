@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../lib/auth'
 import { Breadcrumb } from '../components/ui'
 
 const STATUS_TABS = [
@@ -13,6 +14,19 @@ const thStyle = {
   padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600,
   letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff',
   background: '#d5b6dd', borderTop: 'none', borderBottom: 'none',
+}
+
+function fmtCommentDate(ts) {
+  if (!ts) return ''
+  const d    = new Date(ts)
+  const mo   = d.getMonth() + 1
+  const dy   = d.getDate()
+  const yr   = String(d.getFullYear()).slice(2)
+  let h      = d.getHours()
+  const ampm = h >= 12 ? 'pm' : 'am'
+  h = h % 12 || 12
+  const min  = String(d.getMinutes()).padStart(2, '0')
+  return `${mo}/${dy}/${yr}  |  ${h}:${min} ${ampm}`
 }
 
 // ── STATUS ICON ───────────────────────────────────────────────────────────────
@@ -72,9 +86,16 @@ function PlusIcon() {
 export default function ProofsPage() {
   const navigate      = useNavigate()
   const location      = useLocation()
-  const [proofs,       setProofs]       = useState([])
-  const [loading,      setLoading]      = useState(true)
-  const [statusFilter, setStatusFilter] = useState('Review')
+  const { profile }   = useAuth()
+
+  const [proofs,          setProofs]          = useState([])
+  const [loading,         setLoading]         = useState(true)
+  const [statusFilter,    setStatusFilter]    = useState('Review')
+  const [expandedProofId, setExpandedProofId] = useState(null)
+  const [drawerStatus,    setDrawerStatus]    = useState('')
+  const [commentVal,      setCommentVal]      = useState('')
+  const [submitLabel,     setSubmitLabel]     = useState('Submit')
+  const [proofComments,   setProofComments]   = useState({})
 
   useEffect(() => { setLoading(true); load() }, [location.pathname])
 
@@ -97,14 +118,61 @@ export default function ProofsPage() {
     setLoading(false)
   }
 
+  // ── DRAWER ────────────────────────────────────────────────────────────────
+  function toggleDrawer(proofId, currentStatus) {
+    if (expandedProofId === proofId) {
+      setExpandedProofId(null)
+      setCommentVal('')
+      setDrawerStatus('')
+    } else {
+      setExpandedProofId(proofId)
+      setCommentVal('')
+      setDrawerStatus(currentStatus || 'Review')
+      setSubmitLabel('Submit')
+      loadComments(proofId)
+    }
+  }
+
+  async function loadComments(proofId) {
+    const { data } = await supabase
+      .from('proof_comments')
+      .select('id, body, created_at, profile:profiles(name, role)')
+      .eq('proof_id', proofId)
+      .order('created_at', { ascending: false })
+    setProofComments(prev => ({ ...prev, [proofId]: data || [] }))
+  }
+
+  async function updateProofStatus(proofId, newStatus) {
+    await supabase.from('proofs').update({ status: newStatus }).eq('id', proofId)
+    setProofs(ps => ps.map(p => p.id === proofId ? { ...p, status: newStatus } : p))
+    setDrawerStatus(newStatus)
+  }
+
+  async function submitComment(proofId) {
+    if (!commentVal.trim()) return
+    const { data } = await supabase
+      .from('proof_comments')
+      .insert({
+        proof_id:   proofId,
+        profile_id: profile?.id,
+        body:       commentVal.trim(),
+      })
+      .select('id, body, created_at, profile:profiles(name, role)')
+      .single()
+    if (!data) return
+    setCommentVal('')
+    setSubmitLabel('Saved!')
+    setTimeout(() => setSubmitLabel('Submit'), 1500)
+    setProofComments(prev => ({ ...prev, [proofId]: [data, ...(prev[proofId] || [])] }))
+  }
+
+  // ── FILTER + GROUP ────────────────────────────────────────────────────────
   function toggleFilter(val) {
     setStatusFilter(f => f === val ? null : val)
   }
 
-  // null = show all
   const filtered = statusFilter ? proofs.filter(p => p.status === statusFilter) : proofs
 
-  // Group by client, sort within each group by project name then proof_number
   const groupMap = filtered.reduce((acc, proof) => {
     const clientId   = proof.item?.project?.client_id || '__none__'
     const clientName = proof.item?.project?.client?.name || '—'
@@ -124,6 +192,7 @@ export default function ProofsPage() {
   })
   clientGroups.sort((a, b) => a.clientName.localeCompare(b.clientName))
 
+  // ── RENDER ────────────────────────────────────────────────────────────────
   return (
     <div className="fade-in">
       <div className="topbar">
@@ -193,49 +262,160 @@ export default function ProofsPage() {
                   </thead>
                   <tbody>
                     {group.rows.map(proof => (
-                      <tr key={proof.id} style={{ background: '#f2eaf4' }}>
-                        <td style={{ padding: '8px 4px 8px 12px', width: 32 }}>
-                          <StatusIcon status={proof.status} />
-                        </td>
-                        <td>{proof.item?.project?.name || '—'}</td>
-                        <td>{proof.item?.name || '—'}</td>
-                        <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, fontWeight: 600 }}>
-                          {proof.proof_number || '—'}
-                        </td>
-                        <td>{proof.status || '—'}</td>
-                        <td style={{ maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {proof.url
-                            ? <a href={proof.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text2)', fontSize: 12 }}>{proof.url}</a>
-                            : <span style={{ color: 'var(--text3)' }}>—</span>
-                          }
-                        </td>
-                        <td style={{ padding: '8px 12px 8px 4px' }}>
-                          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                            <button
-                              className="btn btn-ghost btn-icon btn-sm"
-                              title="View proof"
-                              style={{ color: 'var(--text3)', border: '1px solid #333' }}
-                              onClick={() => proof.url && window.open(proof.url, '_blank')}
-                            >
-                              <ViewIcon />
-                            </button>
-                            <button
-                              className="btn btn-ghost btn-icon btn-sm"
-                              title="Delete proof"
-                              style={{ color: 'var(--text3)', border: '1px solid #333' }}
-                            >
-                              <TrashIcon />
-                            </button>
-                            <button
-                              className="btn btn-ghost btn-icon btn-sm"
-                              title="Add new version"
-                              style={{ color: 'var(--text3)', border: '1px solid #333' }}
-                            >
-                              <PlusIcon />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                      <Fragment key={proof.id}>
+
+                        {/* Proof row */}
+                        <tr
+                          style={{ background: '#f2eaf4', cursor: 'pointer' }}
+                          onClick={() => toggleDrawer(proof.id, proof.status)}
+                        >
+                          <td style={{ padding: '8px 4px 8px 12px', width: 32 }}>
+                            <StatusIcon status={proof.status} />
+                          </td>
+                          <td>{proof.item?.project?.name || '—'}</td>
+                          <td>{proof.item?.name || '—'}</td>
+                          <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, fontWeight: 600 }}>
+                            {proof.proof_number || '—'}
+                          </td>
+                          <td>{proof.status || '—'}</td>
+                          <td style={{ maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {proof.url
+                              ? <a href={proof.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: 'var(--text2)', fontSize: 12 }}>{proof.url}</a>
+                              : <span style={{ color: 'var(--text3)' }}>—</span>
+                            }
+                          </td>
+                          <td style={{ padding: '8px 12px 8px 4px' }} onClick={e => e.stopPropagation()}>
+                            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                              <button
+                                className="btn btn-ghost btn-icon btn-sm"
+                                title="View proof"
+                                style={{ color: 'var(--text3)', border: '1px solid #333' }}
+                                onClick={() => proof.url && window.open(proof.url, '_blank')}
+                              >
+                                <ViewIcon />
+                              </button>
+                              <button
+                                className="btn btn-ghost btn-icon btn-sm"
+                                title="Delete proof"
+                                style={{ color: 'var(--text3)', border: '1px solid #333' }}
+                              >
+                                <TrashIcon />
+                              </button>
+                              <button
+                                className="btn btn-ghost btn-icon btn-sm"
+                                title="Add new version"
+                                style={{ color: 'var(--text3)', border: '1px solid #333' }}
+                              >
+                                <PlusIcon />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+
+                        {/* Comment drawer */}
+                        {expandedProofId === proof.id && (
+                          <tr style={{ background: '#faf5fb' }}>
+                            <td colSpan={7} style={{ padding: 0, borderBottom: '1px solid #d5b6dd' }}>
+
+                              {/* Controls row */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px' }}>
+
+                                {/* View button */}
+                                <button
+                                  onClick={() => proof.url && window.open(proof.url, '_blank', 'noopener,noreferrer')}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: 5,
+                                    opacity: proof.url ? 1 : 0.4,
+                                    cursor: proof.url ? 'pointer' : 'default',
+                                    border: '1px solid var(--border)', borderRadius: 6,
+                                    padding: '4px 10px', background: 'none',
+                                    fontSize: 13, color: 'var(--text)',
+                                  }}
+                                >
+                                  <ViewIcon /> View
+                                </button>
+
+                                {/* Status toggles */}
+                                <div style={{ display: 'flex', border: '1px solid #c9a6d4', borderRadius: 6, overflow: 'hidden' }}>
+                                  {['Review', 'Revise', 'Approved'].map((s, i) => {
+                                    const active = drawerStatus === s
+                                    return (
+                                      <button
+                                        key={s}
+                                        onClick={() => updateProofStatus(proof.id, s)}
+                                        style={{
+                                          padding: '4px 14px', fontSize: 13,
+                                          border: 'none',
+                                          borderRight: i < 2 ? '1px solid #c9a6d4' : 'none',
+                                          background: active ? '#d5b6dd' : 'transparent',
+                                          color: active ? '#fff' : 'var(--text)',
+                                          cursor: 'pointer', fontWeight: active ? 600 : 400,
+                                        }}
+                                      >
+                                        {s}
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+
+                                {/* Comment input */}
+                                <input
+                                  value={commentVal}
+                                  onChange={e => setCommentVal(e.target.value)}
+                                  onKeyDown={e => { if (e.key === 'Enter') submitComment(proof.id) }}
+                                  placeholder="Comments"
+                                  style={{
+                                    flex: 1, background: 'var(--bg3)',
+                                    border: '1px solid var(--border)', borderRadius: 6,
+                                    padding: '5px 10px', fontSize: 13, color: 'var(--text)',
+                                  }}
+                                />
+
+                                {/* Submit */}
+                                <button
+                                  className="btn btn-primary btn-sm"
+                                  onClick={() => submitComment(proof.id)}
+                                  style={{ fontSize: 13, minWidth: 68 }}
+                                >
+                                  {submitLabel}
+                                </button>
+
+                              </div>
+
+                              {/* Comment thread */}
+                              {(proofComments[proof.id] || []).length > 0 && (
+                                <div style={{ borderTop: '1px solid #e8d8ef', padding: '0 16px' }}>
+                                  {(proofComments[proof.id] || []).map((c, i) => {
+                                    const roleLabel = c.profile?.role === 'client' ? 'Client' : 'Manager'
+                                    const isLast    = i === (proofComments[proof.id].length - 1)
+                                    return (
+                                      <div
+                                        key={c.id}
+                                        style={{
+                                          padding: '10px 0',
+                                          borderBottom: isLast ? 'none' : '1px solid #e8d8ef',
+                                        }}
+                                      >
+                                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 4 }}>
+                                          {roleLabel}
+                                          <span style={{ fontWeight: 400, color: 'var(--text3)', marginLeft: 6 }}>
+                                            {fmtCommentDate(c.created_at)}
+                                          </span>
+                                        </div>
+                                        <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                                          {c.body}
+                                        </div>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )}
+
+                            </td>
+                          </tr>
+                        )}
+
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>
