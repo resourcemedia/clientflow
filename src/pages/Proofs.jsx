@@ -1,53 +1,64 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { StatusBadge, StatCard, PillNav, Breadcrumb } from '../components/ui'
+import { PillNav, Breadcrumb } from '../components/ui'
 
-const isDemo = !import.meta.env.VITE_SUPABASE_URL
-
-const FILTER_TABS = [
+const STATUS_TABS = [
   { id: 'Review',   label: 'Review'   },
   { id: 'Revise',   label: 'Revise'   },
   { id: 'Approved', label: 'Approved' },
-  { id: 'all',      label: 'All'      },
 ]
 
-function versionLabel(itemNumber, version) {
-  return `${itemNumber}${String.fromCharCode(64 + version)}`
-}
-
 export default function ProofsPage() {
-  const navigate  = useNavigate()
-  const location  = useLocation()
-  const [proofs, setProofs]     = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [filter, setFilter]     = useState('Review')
+  const navigate      = useNavigate()
+  const location      = useLocation()
+  const [proofs,       setProofs]       = useState([])
+  const [loading,      setLoading]      = useState(true)
+  const [statusFilter, setStatusFilter] = useState('Review')
 
   useEffect(() => { setLoading(true); load() }, [location.pathname])
 
   async function load() {
     setLoading(true)
-    if (!isDemo) {
-      const { data } = await supabase
-        .from('proofs')
-        .select(`
-          id, version, status,
-          item:project_items(
-            item_number, name,
-            project:projects(id, name, product_type, client:clients(company, alias))
+    const { data } = await supabase
+      .from('proofs')
+      .select(`
+        id, proof_number, status, url,
+        item:project_items(
+          name,
+          project:projects(
+            name, client_id,
+            client:clients(name)
           )
-        `)
-        .order('created_at', { ascending: false })
-      setProofs(data || [])
-    }
+        )
+      `)
+      .order('created_at', { ascending: false })
+    setProofs(data || [])
     setLoading(false)
   }
 
-  const filtered = filter === 'all' ? proofs : proofs.filter(p => p.status === filter)
+  // Apply status filter
+  const filtered = proofs.filter(p => p.status === statusFilter)
 
-  const reviewCount   = proofs.filter(p => p.status === 'Review').length
-  const reviseCount   = proofs.filter(p => p.status === 'Revise').length
-  const approvedCount = proofs.filter(p => p.status === 'Approved').length
+  // Group by client, sort within each group by project name then proof_number
+  const groupMap = filtered.reduce((acc, proof) => {
+    const clientId   = proof.item?.project?.client_id || '__none__'
+    const clientName = proof.item?.project?.client?.name || '—'
+    if (!acc[clientId]) acc[clientId] = { clientId, clientName, rows: [] }
+    acc[clientId].rows.push(proof)
+    return acc
+  }, {})
+
+  const clientGroups = Object.values(groupMap)
+  clientGroups.forEach(group => {
+    group.rows.sort((a, b) => {
+      const pa = a.item?.project?.name || ''
+      const pb = b.item?.project?.name || ''
+      if (pa !== pb) return pa.localeCompare(pb)
+      return (a.proof_number || '').localeCompare(b.proof_number || '')
+    })
+  })
+  clientGroups.sort((a, b) => a.clientName.localeCompare(b.clientName))
 
   return (
     <div className="fade-in">
@@ -56,77 +67,23 @@ export default function ProofsPage() {
           { label: 'Dashboard', onClick: () => navigate('/') },
           { label: 'Proofs' },
         ]} />
-        <PillNav tabs={FILTER_TABS} active={filter} onChange={setFilter} />
+        <PillNav tabs={STATUS_TABS} active={statusFilter} onChange={setStatusFilter} />
       </div>
 
       <div className="page-content">
-        <div className="stat-grid mb-24">
-          <StatCard label="Review"   value={loading ? '—' : reviewCount}   color="amber" />
-          <StatCard label="Revise"   value={loading ? '—' : reviseCount}   color="red"   />
-          <StatCard label="Approved" value={loading ? '—' : approvedCount} color="green" />
-        </div>
-
-        <div className="card">
-          <div className="card-header">
-            <span className="card-title">Proofs</span>
-            {!loading && <span style={{ fontSize: 12, color: 'var(--text3)' }}>{filtered.length} shown</span>}
+        {loading ? (
+          <div className="empty-state text-dim">Loading…</div>
+        ) : clientGroups.length === 0 ? (
+          <div className="empty-state text-dim">
+            No {statusFilter.toLowerCase()} proofs found.
           </div>
-          <div className="table-wrap">
-            {loading ? (
-              <div className="empty-state text-dim">Loading…</div>
-            ) : filtered.length === 0 ? (
-              <div className="empty-state text-dim">
-                No {filter === 'all' ? '' : filter.toLowerCase() + ' '}proofs found.
-              </div>
-            ) : (
-              <table>
-                <thead>
-                  <tr>
-                    <th>Client</th>
-                    <th>Product</th>
-                    <th>Project</th>
-                    <th>Item</th>
-                    <th>Proof</th>
-                    <th>Status</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map(proof => {
-                    const item    = proof.item
-                    const project = item?.project
-                    const client  = project?.client
-                    return (
-                      <tr key={proof.id}>
-                        <td className="td-main">{client?.company || client?.alias || '—'}</td>
-                        <td><StatusBadge status={project?.product_type} /></td>
-                        <td style={{ color: 'var(--text2)' }}>{project?.name || '—'}</td>
-                        <td style={{ color: 'var(--text2)', fontFamily: 'DM Mono, monospace', fontSize: 13 }}>
-                          {item ? `${item.item_number} ${item.name}` : '—'}
-                        </td>
-                        <td className="text-mono" style={{ fontWeight: 600 }}>
-                          {item
-                            ? versionLabel(item.item_number, proof.version)
-                            : `v${proof.version}`}
-                        </td>
-                        <td><StatusBadge status={proof.status} /></td>
-                        <td>
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            disabled={!project?.id}
-                            onClick={() => project?.id && navigate(`/projects/${project.id}`)}
-                          >
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
+        ) : (
+          clientGroups.map(group => (
+            <div key={group.clientId} style={{ marginBottom: 32 }}>
+              {/* TODO: client bar, table, and drawer */}
+            </div>
+          ))
+        )}
       </div>
     </div>
   )
