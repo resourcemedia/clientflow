@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { PillNav, Breadcrumb } from '../components/ui'
 
@@ -399,7 +399,8 @@ function TrashIcon() {
 
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 export default function TasksPage() {
-  const navigate = useNavigate()
+  const navigate  = useNavigate()
+  const location  = useLocation()
   const [tasks,        setTasks]        = useState([])
   const [projects,     setProjects]     = useState([])
   const [profiles,     setProfiles]     = useState([])
@@ -412,7 +413,7 @@ export default function TasksPage() {
   const [productMap,   setProductMap]   = useState({})
   const dragOver = useRef(null)
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { setLoading(true); load() }, [location.pathname])
 
   async function load() {
     setLoading(true)
