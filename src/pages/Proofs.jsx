@@ -109,15 +109,16 @@ export default function ProofsPage() {
 
   async function load() {
     setLoading(true)
-    const [{ data, error }, { data: clientsData }] = await Promise.all([
+    const [{ data: proofsData, error }, { data: clientsData }] = await Promise.all([
       supabase
         .from('proofs')
         .select(`
           id,
-          proof_number,
+          version,
           status,
           url,
           project_items(
+            id,
             name,
             projects(
               id,
@@ -134,7 +135,7 @@ export default function ProofsPage() {
     if (error) console.error('proofs fetch error:', error.message)
     const clientMap = new Map((clientsData || []).map(c => [c.id, c.name]))
     setClientMap(clientMap)
-    setProofs(data || [])
+    setProofs(proofsData || [])
     setLoading(false)
   }
 
@@ -207,7 +208,7 @@ export default function ProofsPage() {
       const pa = a.project_items?.projects?.name || ''
       const pb = b.project_items?.projects?.name || ''
       if (pa !== pb) return pa.localeCompare(pb)
-      return (a.proof_number || '').localeCompare(b.proof_number || '')
+      return String(a.version || '').localeCompare(String(b.version || ''))
     })
   })
   clientGroups.sort((a, b) => a.clientName.localeCompare(b.clientName))
@@ -295,7 +296,7 @@ export default function ProofsPage() {
                           <td>{proof.project_items?.projects?.name || '—'}</td>
                           <td>{proof.project_items?.name || '—'}</td>
                           <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, fontWeight: 600 }}>
-                            {proof.proof_number || '—'}
+                            {proof.version ?? '—'}
                           </td>
                           <td>{proof.status || '—'}</td>
                           <td style={{ maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
