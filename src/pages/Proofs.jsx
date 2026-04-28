@@ -96,6 +96,7 @@ export default function ProofsPage() {
   const [commentVal,      setCommentVal]      = useState('')
   const [submitLabel,     setSubmitLabel]     = useState('Submit')
   const [proofComments,   setProofComments]   = useState({})
+  const [clientMap,       setClientMap]       = useState(new Map())
 
   useEffect(() => {
     setLoading(true)
@@ -108,26 +109,31 @@ export default function ProofsPage() {
 
   async function load() {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('proofs')
-      .select(`
-        id,
-        proof_number,
-        status,
-        url,
-        project_items(
-          name,
-          projects(
+    const [{ data, error }, { data: clientsData }] = await Promise.all([
+      supabase
+        .from('proofs')
+        .select(`
+          id,
+          proof_number,
+          status,
+          url,
+          project_items(
             name,
-            client_id,
-            clients(
-              name
+            projects(
+              id,
+              name,
+              client_id
             )
           )
-        )
-      `)
-      .order('created_at', { ascending: false })
+        `)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('clients')
+        .select('id, name'),
+    ])
     if (error) console.error('proofs fetch error:', error.message)
+    const clientMap = new Map((clientsData || []).map(c => [c.id, c.name]))
+    setClientMap(clientMap)
     setProofs(data || [])
     setLoading(false)
   }
@@ -189,7 +195,7 @@ export default function ProofsPage() {
 
   const groupMap = filtered.reduce((acc, proof) => {
     const clientId   = proof.project_items?.projects?.client_id || '__none__'
-    const clientName = proof.project_items?.projects?.clients?.name || '—'
+    const clientName = clientMap.get(proof.project_items?.projects?.client_id) || '—'
     if (!acc[clientId]) acc[clientId] = { clientId, clientName, rows: [] }
     acc[clientId].rows.push(proof)
     return acc
