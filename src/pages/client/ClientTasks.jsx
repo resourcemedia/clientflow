@@ -39,16 +39,16 @@ export default function ClientTasks() {
     const clientId = profile?.client_id
     if (!clientId) { setTasks([]); setLoading(false); return }
 
+    const { data: projects } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('client_id', clientId)
+    const projectIds = (projects || []).map(p => p.id)
+
     const { data: taskRows } = await supabase
       .from('tasks')
-      .select(`
-        *,
-        project:projects!inner(id, name, product_type,
-          client:clients(company, alias)
-        ),
-        updater:profiles!tasks_updated_by_fkey(name)
-      `)
-      .eq('projects.client_id', clientId)
+      .select('*, project:projects(name)')
+      .in('project_id', projectIds.length ? projectIds : [''])
       .order('sort_order')
       .order('created_at')
     setTasks(taskRows || [])
