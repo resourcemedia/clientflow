@@ -90,14 +90,21 @@ export default function ProofsPage() {
 
   const [proofs,          setProofs]          = useState([])
   const [loading,         setLoading]         = useState(true)
-  const [statusFilter,    setStatusFilter]    = useState('Review')
+  const [statusFilter,    setStatusFilter]    = useState(null)
   const [expandedProofId, setExpandedProofId] = useState(null)
   const [drawerStatus,    setDrawerStatus]    = useState('')
   const [commentVal,      setCommentVal]      = useState('')
   const [submitLabel,     setSubmitLabel]     = useState('Submit')
   const [proofComments,   setProofComments]   = useState({})
 
-  useEffect(() => { setLoading(true); load() }, [location.pathname])
+  useEffect(() => {
+    setLoading(true)
+    setStatusFilter(null)
+    setExpandedProofId(null)
+    setCommentVal('')
+    setDrawerStatus('')
+    load()
+  }, [location.pathname])
 
   async function load() {
     setLoading(true)
