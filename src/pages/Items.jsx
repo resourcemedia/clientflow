@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { StatusBadge, Breadcrumb } from '../components/ui'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 
 export default function ItemsPage() {
-  const navigate = useNavigate()
+  const navigate      = useNavigate()
+  const location      = useLocation()
   const [searchParams] = useSearchParams()
 
   const [items, setItems]                 = useState([])
@@ -19,7 +20,7 @@ export default function ItemsPage() {
   const [dragOverIdx, setDragOverIdx]     = useState(null)
   const dragFrom = useRef(null)
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { setLoading(true); load() }, [location.pathname])
 
   async function load() {
     setLoading(true)
