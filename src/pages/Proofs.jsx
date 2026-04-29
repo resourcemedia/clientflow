@@ -205,6 +205,15 @@ export default function ProofsPage() {
     await load()
   }
 
+  async function deleteComment(proofId, commentId) {
+    if (!window.confirm('Delete this comment? This cannot be undone.')) return
+    await supabase.from('proof_comments').delete().eq('id', commentId)
+    setProofComments(prev => ({
+      ...prev,
+      [proofId]: (prev[proofId] || []).filter(c => c.id !== commentId),
+    }))
+  }
+
   // ── FILTER + GROUP ────────────────────────────────────────────────────────
   function toggleFilter(val) {
     setStatusFilter(f => f === val ? null : val)
@@ -557,20 +566,33 @@ export default function ProofsPage() {
                                     return (
                                       <div
                                         key={c.id}
+                                        onMouseEnter={e => { const btn = e.currentTarget.querySelector('.comment-delete-btn'); if (btn) btn.style.opacity = '1' }}
+                                        onMouseLeave={e => { const btn = e.currentTarget.querySelector('.comment-delete-btn'); if (btn) btn.style.opacity = '0' }}
                                         style={{
                                           padding: '10px 0',
                                           borderBottom: isLast ? 'none' : '1px solid #e8d8ef',
+                                          display: 'flex', alignItems: 'flex-start', gap: 8,
                                         }}
                                       >
-                                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 4 }}>
-                                          {roleLabel}
-                                          <span style={{ fontWeight: 400, color: 'var(--text3)', marginLeft: 6 }}>
-                                            {fmtCommentDate(c.created_at)}
-                                          </span>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 4 }}>
+                                            {roleLabel}
+                                            <span style={{ fontWeight: 400, color: 'var(--text3)', marginLeft: 6 }}>
+                                              {fmtCommentDate(c.created_at)}
+                                            </span>
+                                          </div>
+                                          <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                                            {c.body}
+                                          </div>
                                         </div>
-                                        <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-                                          {c.body}
-                                        </div>
+                                        <button
+                                          className="btn btn-ghost btn-icon btn-sm comment-delete-btn"
+                                          title="Delete comment"
+                                          onClick={() => deleteComment(proof.id, c.id)}
+                                          style={{ color: 'var(--text3)', flexShrink: 0, opacity: 0, transition: 'opacity 0.15s' }}
+                                        >
+                                          <TrashIcon />
+                                        </button>
                                       </div>
                                     )
                                   })}
