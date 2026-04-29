@@ -249,7 +249,10 @@ export default function ProofsPage() {
       const pa = a.project_items?.projects?.name || ''
       const pb = b.project_items?.projects?.name || ''
       if (pa !== pb) return pa.localeCompare(pb)
-      return String(a.version || '').localeCompare(String(b.version || ''))
+      const ia = parseInt(a.project_items?.item_number, 10) || 0
+      const ib = parseInt(b.project_items?.item_number, 10) || 0
+      if (ia !== ib) return ia - ib
+      return (a.version || 0) - (b.version || 0)
     })
   })
   clientGroups.sort((a, b) => a.clientName.localeCompare(b.clientName))
