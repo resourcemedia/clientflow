@@ -207,15 +207,16 @@ export default function ProofsPage() {
     <div className="fade-in">
       <div className="topbar">
         <Breadcrumb segments={[{ label: 'Proofs' }]} />
-        <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
-          {STATUS_TABS.map(tab => (
+        <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden', marginLeft: 'auto' }}>
+          {STATUS_TABS.map((tab, i) => (
             <button
               key={tab.id}
               onClick={() => toggleFilter(tab.id)}
               style={{
-                padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 500,
+                padding: '4px 14px', fontSize: 12, fontWeight: 500,
                 cursor: 'pointer',
-                border: `1px solid ${statusFilter === tab.id ? 'var(--accent)' : 'var(--border)'}`,
+                border: 'none',
+                borderLeft: i > 0 ? '1px solid var(--border)' : 'none',
                 background: statusFilter === tab.id ? 'var(--accent)' : 'transparent',
                 color: statusFilter === tab.id ? '#fff' : 'var(--text2)',
                 transition: 'all 0.15s',
