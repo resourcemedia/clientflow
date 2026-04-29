@@ -1,5 +1,5 @@
 import { useState, useEffect, Fragment } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { Breadcrumb } from '../components/ui'
@@ -30,25 +30,16 @@ function fmtCommentDate(ts) {
 }
 
 // ── STATUS ICON ───────────────────────────────────────────────────────────────
-function StatusIcon({ status }) {
-  if (status === 'Review') {
-    return (
-      <svg width="22" height="22" viewBox="0 0 22 22">
-        <circle cx="11" cy="11" r="10" fill="#333" />
-      </svg>
-    )
-  }
-  if (status === 'Revise') {
-    return (
-      <svg width="22" height="22" viewBox="0 0 22 22">
-        <circle cx="11" cy="11" r="10" fill="none" stroke="#333" strokeWidth="1.5" />
-        <path d="M11,1 A10,10 0 0 1 11,21 Z" fill="#333" />
-      </svg>
-    )
-  }
+function StatusIcon({ hasUrl }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 22 22">
-      <circle cx="11" cy="11" r="10" fill="none" stroke="#999" strokeWidth="1.5" />
+    <svg width="25" height="25" viewBox="0 0 25 25" xmlns="http://www.w3.org/2000/svg"
+      style={{ display: 'block', opacity: hasUrl ? 1 : 0.35 }}>
+      <circle cx="12.5" cy="12.5" r="12.5"/>
+      <g>
+        <path fill="#fff" d="M12.5,5.08c-4.57,0-8.28,3.16-8.28,7.07,0,2.27,1.26,4.29,3.21,5.59v3.57l2.67-2.4c.76.2,1.56.3,2.4.3,4.57,0,8.28-3.16,8.28-7.07s-3.71-7.07-8.28-7.07Z"/>
+        <path d="M16.74,10.99h-8.48c-.28,0-.5-.22-.5-.5s.22-.5.5-.5h8.48c.28,0,.5.22.5.5s-.22.5-.5.5Z"/>
+        <path d="M16.74,14.31h-8.48c-.28,0-.5-.22-.5-.5s.22-.5.5-.5h8.48c.28,0,.5.22.5.5s-.22.5-.5.5Z"/>
+      </g>
     </svg>
   )
 }
@@ -84,7 +75,6 @@ function PlusIcon() {
 
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 export default function ProofsPage() {
-  const navigate      = useNavigate()
   const location      = useLocation()
   const { profile }   = useAuth()
 
@@ -109,31 +99,30 @@ export default function ProofsPage() {
 
   async function load() {
     setLoading(true)
-    const [{ data: proofsData, error }, { data: clientsData }] = await Promise.all([
-      supabase
-        .from('proofs')
-        .select(`
+    const { data: proofsData, error } = await supabase
+      .from('proofs')
+      .select(`
+        id,
+        version,
+        status,
+        url,
+        project_items(
           id,
-          version,
-          status,
-          url,
-          project_items(
+          name,
+          projects(
             id,
             name,
-            projects(
-              id,
-              name,
-              client_id
-            )
+            client_id
           )
-        `)
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('clients')
-        .select('id, name'),
-    ])
+        )
+      `)
+      .order('created_at', { ascending: false })
     if (error) console.error('proofs fetch error:', error.message)
-    const clientMap = new Map((clientsData || []).map(c => [c.id, c.name]))
+    const clientMap = new Map()
+    proofsData?.forEach(p => {
+      const proj = p.project_items?.projects
+      if (proj?.client_id) clientMap.set(proj.client_id, proj.client_id)
+    })
     setClientMap(clientMap)
     setProofs(proofsData || [])
     setLoading(false)
@@ -217,10 +206,7 @@ export default function ProofsPage() {
   return (
     <div className="fade-in">
       <div className="topbar">
-        <Breadcrumb segments={[
-          { label: 'Dashboard', onClick: () => navigate('/') },
-          { label: 'Proofs' },
-        ]} />
+        <Breadcrumb segments={[{ label: 'Proofs' }]} />
         <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
           {STATUS_TABS.map(tab => (
             <button
@@ -229,8 +215,8 @@ export default function ProofsPage() {
               style={{
                 padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 500,
                 cursor: 'pointer',
-                border: `1px solid ${statusFilter === tab.id ? '#d5b6dd' : 'var(--border)'}`,
-                background: statusFilter === tab.id ? '#d5b6dd' : 'transparent',
+                border: `1px solid ${statusFilter === tab.id ? 'var(--accent)' : 'var(--border)'}`,
+                background: statusFilter === tab.id ? 'var(--accent)' : 'transparent',
                 color: statusFilter === tab.id ? '#fff' : 'var(--text2)',
                 transition: 'all 0.15s',
               }}
@@ -291,7 +277,7 @@ export default function ProofsPage() {
                           onClick={() => toggleDrawer(proof.id, proof.status)}
                         >
                           <td style={{ padding: '8px 4px 8px 12px', width: 32 }}>
-                            <StatusIcon status={proof.status} />
+                            <StatusIcon hasUrl={!!proof.url} />
                           </td>
                           <td>{proof.project_items?.projects?.name || '—'}</td>
                           <td>{proof.project_items?.name || '—'}</td>
