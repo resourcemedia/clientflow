@@ -279,12 +279,14 @@ export default function ProofsPage() {
                       <Fragment key={proof.id}>
 
                         {/* Proof row */}
-                        <tr
-                          style={{ background: '#f2eaf4', cursor: 'pointer' }}
-                          onClick={() => toggleDrawer(proof.id, proof.status)}
-                        >
-                          <td style={{ padding: '8px 4px 8px 12px', width: 32 }}>
-                            <StatusIcon hasUrl={!!proof.url} />
+                        <tr style={{ background: '#f2eaf4' }}>
+                          <td
+                            style={{ padding: '4px 4px 4px 8px', width: 32, cursor: 'pointer' }}
+                            onClick={() => toggleDrawer(proof.id, proof.status)}
+                          >
+                            <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <StatusIcon hasUrl={!!proof.url} />
+                            </div>
                           </td>
                           <td>{proof.project_items?.projects?.name || '—'}</td>
                           <td>{proof.project_items?.name || '—'}</td>
