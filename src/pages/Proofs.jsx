@@ -93,10 +93,14 @@ export default function ProofsPage() {
   const [clientMap,       setClientMap]       = useState(new Map())
   const [editingUrlId,    setEditingUrlId]    = useState(null)
   const [urlDraft,        setUrlDraft]        = useState('')
+  const [clientFilter,    setClientFilter]    = useState('')
+  const [searchQuery,     setSearchQuery]     = useState('')
 
   useEffect(() => {
     setLoading(true)
     setStatusFilter(null)
+    setClientFilter('')
+    setSearchQuery('')
     setExpandedProofId(null)
     setCommentVal('')
     setDrawerStatus('')
@@ -206,12 +210,30 @@ export default function ProofsPage() {
     setStatusFilter(f => f === val ? null : val)
   }
 
+  const clientOptions = Array.from(clientMap.entries())
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+
   const validProofs = proofs.filter(p =>
     p.project_items?.name &&
     p.project_items?.projects?.name &&
     p.project_items?.projects?.clients?.company
   )
-  const filtered = statusFilter ? validProofs.filter(p => p.status === statusFilter) : validProofs
+  let filtered = statusFilter ? validProofs.filter(p => p.status === statusFilter) : validProofs
+  if (clientFilter) {
+    filtered = filtered.filter(p => p.project_items?.projects?.client_id === clientFilter)
+  }
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase()
+    filtered = filtered.filter(p => {
+      const project = p.project_items?.projects?.name || ''
+      const item    = p.project_items?.name || ''
+      const ver     = p.project_items?.item_number && p.version
+        ? versionLabel(p.project_items.item_number, p.version)
+        : String(p.version || '')
+      return [project, item, ver].join(' ').toLowerCase().includes(q)
+    })
+  }
 
   const groupMap = filtered.reduce((acc, proof) => {
     const clientId   = proof.project_items?.projects?.client_id || '__none__'
@@ -237,6 +259,34 @@ export default function ProofsPage() {
     <div className="fade-in">
       <div className="topbar">
         <Breadcrumb segments={[{ label: 'Proofs' }]} />
+
+        <select
+          value={clientFilter}
+          onChange={e => setClientFilter(e.target.value)}
+          style={{
+            background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 20,
+            padding: '4px 10px', fontSize: 12, color: clientFilter ? 'var(--text)' : 'var(--text3)',
+            outline: 'none', cursor: 'pointer',
+          }}
+        >
+          <option value="">Client</option>
+          {clientOptions.map(c => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+
+        <input
+          type="text"
+          placeholder="Search"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          style={{
+            background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 20,
+            padding: '4px 10px', fontSize: 12, color: 'var(--text)',
+            outline: 'none', width: 160,
+          }}
+        />
+
         <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden', marginLeft: 'auto' }}>
           {STATUS_TABS.map((tab, i) => (
             <button
