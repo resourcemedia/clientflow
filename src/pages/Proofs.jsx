@@ -293,7 +293,25 @@ export default function ProofsPage() {
                           <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, fontWeight: 600 }}>
                             {proof.version ?? '—'}
                           </td>
-                          <td>{proof.status || '—'}</td>
+                          <td onClick={e => e.stopPropagation()}>
+                            <select
+                              value={proof.status || 'Review'}
+                              onChange={async e => {
+                                const newStatus = e.target.value
+                                await supabase.from('proofs').update({ status: newStatus }).eq('id', proof.id)
+                                setProofs(ps => ps.map(p => p.id === proof.id ? { ...p, status: newStatus } : p))
+                              }}
+                              style={{
+                                background: 'transparent', border: '1px solid var(--border)',
+                                borderRadius: 6, padding: '3px 6px', fontSize: 13,
+                                color: 'var(--text)', cursor: 'pointer', outline: 'none',
+                              }}
+                            >
+                              <option value="Review">Review</option>
+                              <option value="Revise">Revise</option>
+                              <option value="Approved">Approved</option>
+                            </select>
+                          </td>
                           <td style={{ maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {proof.url
                               ? <a href={proof.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: 'var(--text2)', fontSize: 12 }}>{proof.url}</a>
