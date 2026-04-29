@@ -16,6 +16,10 @@ const thStyle = {
   background: '#d5b6dd', borderTop: 'none', borderBottom: 'none',
 }
 
+function versionLabel(itemNumber, version) {
+  return `${itemNumber}${String.fromCharCode(64 + version)}`
+}
+
 function fmtCommentDate(ts) {
   if (!ts) return ''
   const d    = new Date(ts)
@@ -111,6 +115,7 @@ export default function ProofsPage() {
         project_items(
           id,
           name,
+          item_number,
           projects(
             id,
             name,
@@ -287,7 +292,7 @@ export default function ProofsPage() {
                       <th style={{ ...thStyle, width: 32, padding: '6px 4px 6px 12px' }} />
                       <th style={thStyle}>Project</th>
                       <th style={thStyle}>Item</th>
-                      <th style={{ ...thStyle, width: 80 }}>Proof</th>
+                      <th style={{ ...thStyle, width: 80 }}>Version</th>
                       <th style={{ ...thStyle, width: 110 }}>Status</th>
                       <th style={thStyle}>URL</th>
                       <th style={{ ...thStyle, width: 108 }} />
@@ -310,7 +315,9 @@ export default function ProofsPage() {
                           <td>{proof.project_items?.projects?.name || '—'}</td>
                           <td>{proof.project_items?.name || '—'}</td>
                           <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, fontWeight: 600 }}>
-                            {proof.version ?? '—'}
+                            {proof.project_items?.item_number && proof.version
+                              ? versionLabel(proof.project_items.item_number, proof.version)
+                              : proof.version ?? '—'}
                           </td>
                           <td onClick={e => e.stopPropagation()}>
                             <select
