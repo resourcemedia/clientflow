@@ -179,6 +179,23 @@ export default function ProofsPage() {
     setProofComments(prev => ({ ...prev, [proofId]: [data, ...(prev[proofId] || [])] }))
   }
 
+  async function deleteProof(proofId) {
+    if (!window.confirm('Delete this proof? This cannot be undone.')) return
+    await supabase.from('proofs').delete().eq('id', proofId)
+    setProofs(ps => ps.filter(p => p.id !== proofId))
+    if (expandedProofId === proofId) setExpandedProofId(null)
+  }
+
+  async function addProofVersion(proof) {
+    const itemId = proof.project_items?.id
+    if (!itemId) return
+    const maxVersion = proofs
+      .filter(p => p.project_items?.id === itemId)
+      .reduce((max, p) => Math.max(max, p.version || 0), 0)
+    await supabase.from('proofs').insert({ item_id: itemId, version: maxVersion + 1, status: 'Review', url: null })
+    await load()
+  }
+
   // ── FILTER + GROUP ────────────────────────────────────────────────────────
   function toggleFilter(val) {
     setStatusFilter(f => f === val ? null : val)
@@ -385,6 +402,7 @@ export default function ProofsPage() {
                                 className="btn btn-ghost btn-icon btn-sm"
                                 title="Delete proof"
                                 style={{ color: 'var(--text3)', border: '1px solid #333' }}
+                                onClick={() => deleteProof(proof.id)}
                               >
                                 <TrashIcon />
                               </button>
@@ -392,6 +410,7 @@ export default function ProofsPage() {
                                 className="btn btn-ghost btn-icon btn-sm"
                                 title="Add new version"
                                 style={{ color: 'var(--text3)', border: '1px solid #333' }}
+                                onClick={() => addProofVersion(proof)}
                               >
                                 <PlusIcon />
                               </button>
