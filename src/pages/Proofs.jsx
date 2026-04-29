@@ -112,7 +112,8 @@ export default function ProofsPage() {
           projects(
             id,
             name,
-            client_id
+            client_id,
+            clients(company)
           )
         )
       `)
@@ -121,7 +122,7 @@ export default function ProofsPage() {
     const clientMap = new Map()
     proofsData?.forEach(p => {
       const proj = p.project_items?.projects
-      if (proj?.client_id) clientMap.set(proj.client_id, proj.client_id)
+      if (proj?.client_id) clientMap.set(proj.client_id, proj.clients?.company || proj.client_id)
     })
     setClientMap(clientMap)
     setProofs(proofsData || [])
