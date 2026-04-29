@@ -87,6 +87,8 @@ export default function ProofsPage() {
   const [submitLabel,     setSubmitLabel]     = useState('Submit')
   const [proofComments,   setProofComments]   = useState({})
   const [clientMap,       setClientMap]       = useState(new Map())
+  const [editingUrlId,    setEditingUrlId]    = useState(null)
+  const [urlDraft,        setUrlDraft]        = useState('')
 
   useEffect(() => {
     setLoading(true)
@@ -312,11 +314,62 @@ export default function ProofsPage() {
                               <option value="Approved">Approved</option>
                             </select>
                           </td>
-                          <td style={{ maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {proof.url
-                              ? <a href={proof.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: 'var(--text2)', fontSize: 12 }}>{proof.url}</a>
-                              : <span style={{ color: 'var(--text3)' }}>—</span>
-                            }
+                          <td style={{ maxWidth: 260 }} onClick={e => e.stopPropagation()}>
+                            {editingUrlId === proof.id ? (
+                              <input
+                                autoFocus
+                                type="text"
+                                value={urlDraft}
+                                onChange={e => setUrlDraft(e.target.value)}
+                                onKeyDown={async e => {
+                                  if (e.key === 'Enter') {
+                                    const newUrl = urlDraft.trim()
+                                    await supabase.from('proofs').update({ url: newUrl || null }).eq('id', proof.id)
+                                    setProofs(ps => ps.map(p => p.id === proof.id ? { ...p, url: newUrl || null } : p))
+                                    setEditingUrlId(null)
+                                  } else if (e.key === 'Escape') {
+                                    setEditingUrlId(null)
+                                  }
+                                }}
+                                onBlur={async () => {
+                                  const newUrl = urlDraft.trim()
+                                  await supabase.from('proofs').update({ url: newUrl || null }).eq('id', proof.id)
+                                  setProofs(ps => ps.map(p => p.id === proof.id ? { ...p, url: newUrl || null } : p))
+                                  setEditingUrlId(null)
+                                }}
+                                style={{
+                                  width: '100%', background: 'var(--bg3)',
+                                  border: '1px solid var(--accent)', borderRadius: 6,
+                                  padding: '3px 7px', fontSize: 12, color: 'var(--text)', outline: 'none',
+                                }}
+                              />
+                            ) : proof.url ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 5, overflow: 'hidden' }}>
+                                <a
+                                  href={proof.url} target="_blank" rel="noopener noreferrer"
+                                  style={{ color: 'var(--text2)', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}
+                                >
+                                  {proof.url}
+                                </a>
+                                <button
+                                  onClick={() => { setEditingUrlId(proof.id); setUrlDraft(proof.url || '') }}
+                                  style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 2, lineHeight: 1 }}
+                                  title="Edit URL"
+                                >
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                  </svg>
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => { setEditingUrlId(proof.id); setUrlDraft('') }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 12, padding: 0 }}
+                              >
+                                + Add URL
+                              </button>
+                            )}
                           </td>
                           <td style={{ padding: '8px 12px 8px 4px' }} onClick={e => e.stopPropagation()}>
                             <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
