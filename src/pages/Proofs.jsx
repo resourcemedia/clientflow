@@ -182,7 +182,12 @@ export default function ProofsPage() {
     setStatusFilter(f => f === val ? null : val)
   }
 
-  const filtered = statusFilter ? proofs.filter(p => p.status === statusFilter) : proofs
+  const validProofs = proofs.filter(p =>
+    p.project_items?.name &&
+    p.project_items?.projects?.name &&
+    p.project_items?.projects?.clients?.company
+  )
+  const filtered = statusFilter ? validProofs.filter(p => p.status === statusFilter) : validProofs
 
   const groupMap = filtered.reduce((acc, proof) => {
     const clientId   = proof.project_items?.projects?.client_id || '__none__'
