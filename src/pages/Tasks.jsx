@@ -181,21 +181,19 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
       {/* task note */}
       <td className="td-main" style={{ minWidth: 160 }}>
         {editField === 'note' ? (
-          <input
+          <textarea
             autoFocus
+            ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
             value={noteVal}
-            onChange={e => setNoteVal(e.target.value)}
+            onChange={e => { setNoteVal(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
             onBlur={commitNote}
-            onKeyDown={e => {
-              if (e.key === 'Enter') commitNote()
-              if (e.key === 'Escape') { setNoteVal(task.note || ''); setEditField(null) }
-            }}
-            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '4px 8px', color: 'var(--text)', fontSize: 13 }}
+            onKeyDown={e => { if (e.key === 'Escape') { setNoteVal(task.note || ''); setEditField(null) } }}
+            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '4px 8px', color: 'var(--text)', fontSize: 13, resize: 'none', lineHeight: '1.4', boxSizing: 'border-box', overflow: 'hidden', minHeight: 28 }}
           />
         ) : (
           <span
             onClick={() => { setNoteVal(task.note || ''); setEditField('note') }}
-            style={{ cursor: 'text', display: 'block', minHeight: 22 }}
+            style={{ cursor: 'text', display: 'block', minHeight: 22, whiteSpace: 'pre-wrap' }}
           >
             {task.note || <span style={{ color: 'var(--text3)' }}>Click to add…</span>}
           </span>
