@@ -215,6 +215,19 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
         )}
       </td>
 
+      {/* priority / status */}
+      <td style={{ padding: '7px 12px', borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }}>
+        <select
+          value={task.status || 'Normal'}
+          onChange={e => onSave(task.id, { status: e.target.value })}
+          style={{ fontSize: 12, padding: '2px 4px', borderRadius: 4, border: '1px solid #9dc691', background: '#f7fff5', color: '#333', cursor: 'pointer' }}
+        >
+          <option value="Normal">Normal</option>
+          <option value="High">High</option>
+          <option value="Hot">Hot</option>
+        </select>
+      </td>
+
       {/* assigned */}
       <td style={{ position: 'relative', padding: '7px 12px', fontSize: 12, color: 'var(--text3)', borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }} ref={assignRef}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -938,6 +951,7 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
             <th style={{ width: 65, background: '#9dc691', borderTop: 'none', borderBottom: 'none' }} />
             <th style={{ width: 200, padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Task</th>
             <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Note</th>
+            <th style={{ width: 90, padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Status</th>
             <th style={{ width: 75, padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Assigned</th>
             <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Updated</th>
             <th style={{ width: 225, background: '#9dc691', borderTop: 'none', borderBottom: 'none' }} />
@@ -991,6 +1005,7 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
                   style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13, resize: 'none', lineHeight: '1.4', boxSizing: 'border-box', overflow: 'hidden', minHeight: '28px' }}
                 />
               </td>
+              <td />
               <td style={{ position: 'relative' }} ref={addAssignRef}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                   {addAssignee
@@ -1023,6 +1038,7 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
                   </div>
                 )}
               </td>
+              <td />
               <td style={{ padding: '7px 10px 7px 4px', whiteSpace: 'nowrap' }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                   <button className="btn btn-primary btn-sm" onClick={commitAdd}>Save</button>
