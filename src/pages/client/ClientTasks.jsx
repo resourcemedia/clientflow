@@ -5,7 +5,6 @@ import { PillNav, Breadcrumb } from '../../components/ui'
 
 const STATUS_TABS = [
   { id: 'Normal', label: 'Normal' },
-  { id: 'High',   label: 'High'   },
   { id: 'Hot',    label: 'Hot'    },
 ]
 

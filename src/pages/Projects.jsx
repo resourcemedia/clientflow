@@ -223,7 +223,6 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
           style={{ fontSize: 12, padding: '2px 4px', borderRadius: 4, border: '1px solid #9dc691', background: '#f7fff5', color: '#333', cursor: 'pointer' }}
         >
           <option value="Normal">Normal</option>
-          <option value="High">High</option>
           <option value="Hot">Hot</option>
         </select>
       </td>

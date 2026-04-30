@@ -294,7 +294,7 @@ create table if not exists tasks (
   note        text,
   assigned_to uuid references profiles(id) on delete set null,
   status_note text,
-  status      text not null default 'Open',  -- Open | Done
+  status      text not null default 'Normal', -- Normal | Hot
   sort_order  integer not null default 0,
   created_by  uuid references profiles(id) on delete set null,
   updated_by  uuid references profiles(id) on delete set null,
@@ -305,6 +305,27 @@ create table if not exists tasks (
 alter table tasks enable row level security;
 create policy "Authenticated full access" on tasks
   for all to authenticated using (true) with check (true);
+
+-- ── TASK STATUS MIGRATION ────────────────────────────────────────────────────
+-- Status is now binary: Normal | Hot. Convert any legacy High tasks to Normal.
+update tasks set status = 'Normal' where status = 'High';
+
+-- ── UNASSIGNED CLIENT + PROJECT ──────────────────────────────────────────────
+-- Provides a home for tasks not yet assigned to a real project.
+do $$
+declare
+  unassigned_client_id uuid;
+begin
+  insert into clients (company, alias, status)
+  values ('Unassigned', 'Unassigned', 'active')
+  on conflict do nothing;
+
+  select id into unassigned_client_id from clients where company = 'Unassigned' limit 1;
+
+  insert into projects (project_number, name, client_id)
+  values ('0000', 'Unassigned', unassigned_client_id)
+  on conflict (project_number) do nothing;
+end $$;
 
 -- ── PRODUCTS — replace catalog ───────────────────────────────────────────────
 -- Delete existing seed data (safe: projects.product_id is ON DELETE SET NULL)
