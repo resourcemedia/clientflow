@@ -163,7 +163,7 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
 
       {/* project dropdown */}
       <td>
-        <div style={{ position: 'relative', display: 'inline-block', maxWidth: 170 }}>
+        <div style={{ position: 'relative', display: 'inline-block', maxWidth: 200, minWidth: 200 }}>
           <select
             value={task.project_id || ''}
             onChange={e => onSave(task.id, { project_id: e.target.value || null })}
