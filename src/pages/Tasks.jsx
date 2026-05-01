@@ -157,12 +157,12 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
       </td>
 
       {/* alias */}
-      <td style={{ fontSize: 13, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
+      <td style={{ fontSize: 13, color: 'var(--text2)', whiteSpace: 'nowrap', paddingRight: 4 }}>
         {task.project?.client?.alias || task.project?.client?.company || '—'}
       </td>
 
       {/* project dropdown */}
-      <td>
+      <td style={{ paddingLeft: 4 }}>
         <div style={{ position: 'relative', display: 'inline-block', maxWidth: 200, minWidth: 200 }}>
           <select
             value={task.project_id || ''}
