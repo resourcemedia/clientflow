@@ -1707,17 +1707,76 @@ function WorkView({
 
   if (loading) return <div className="card"><div className="empty-state text-dim">Loading…</div></div>
 
-  if (projects.length === 0 && addingRow === null) {
+  if (projects.length === 0) {
+    const emptyClientName = clientFilter
+      ? (clients.find(c => c.id === clientFilter)?.company || 'this client')
+      : null
+
     return (
       <div className="card">
-        <EmptyState
-          icon="📁"
-          title={showArchived ? 'No archived projects' : 'No projects found'}
-          sub={showArchived ? '' : 'Add a project to get started'}
-        />
-        {!showArchived && (
-          <div style={{ textAlign: 'center', paddingBottom: 24 }}>
-            <button className="btn btn-ghost btn-sm" onClick={onStartAdd}>+ Add first project</button>
+        {addingRow === null ? (
+          <>
+            <EmptyState
+              icon="📁"
+              title={showArchived ? 'No archived projects' : emptyClientName ? `No projects yet for ${emptyClientName}` : 'No projects found'}
+              sub={showArchived ? '' : 'Add a project to get started'}
+            />
+            {!showArchived && (
+              <div style={{ textAlign: 'center', paddingBottom: 24 }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => onStartAdd(clientFilter || '')}>+ Add project</button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <tbody>
+                <tr style={{ background: 'var(--accent-glow)' }}>
+                  <td style={{ width: 25 }} />
+                  <td style={{ width: 65 }} />
+                  <td style={{ padding: '7px 12px' }}>
+                    <input
+                      ref={addInputRef}
+                      value={addingRow.name}
+                      onChange={e => setAddingRow(r => ({ ...r, name: e.target.value }))}
+                      placeholder="Project name…"
+                      onKeyDown={onAddKeyDown}
+                      style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
+                    />
+                  </td>
+                  <td style={{ padding: '7px 8px' }}>
+                    <input
+                      value={addingRow.project_number}
+                      onChange={e => setAddingRow(r => ({ ...r, project_number: e.target.value }))}
+                      placeholder="Auto"
+                      onKeyDown={onAddKeyDown}
+                      style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13, textAlign: 'center' }}
+                    />
+                  </td>
+                  <td style={{ padding: '7px 8px' }}>
+                    <select
+                      value={addingRow.product_id}
+                      onChange={e => {
+                        const sel = products.find(pr => pr.id === e.target.value)
+                        setAddingRow(r => ({ ...r, product_id: e.target.value, product_type: sel?.type || '' }))
+                      }}
+                      style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
+                    >
+                      <option value="">— Product —</option>
+                      {products.map(pr => (
+                        <option key={pr.id} value={pr.id}>{pr.type}{pr.name ? ` | ${pr.name}` : ''}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td style={{ padding: '7px 10px', whiteSpace: 'nowrap' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
+                      <button className="btn btn-primary btn-sm" onClick={onAddSave}>Save</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => setAddingRow(null)}>Cancel</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         )}
       </div>
