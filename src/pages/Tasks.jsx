@@ -345,42 +345,46 @@ export default function TasksPage() {
   const [dragIdx, setDragIdx] = useState(null)
   const dragOver = useRef(null)
 
-  useEffect(() => { load() }, [location.pathname])
-
-  async function load() {
-    setLoading(true)
-    const [{ data: taskRows }, { data: projectRows }, { data: profileRows }] = await Promise.all([
-      supabase
-        .from('tasks')
-        .select(`
-          *,
-          project:projects(id, name, product_type,
-            client:clients(company, alias)
-          ),
-          updater:profiles!tasks_updated_by_fkey(name)
-        `)
-        .order('sort_order')
-        .order('created_at'),
-      supabase
-        .from('projects')
-        .select('id, name, product_type, client:clients(company, alias)')
-        .neq('archived', true)
-        .order('name'),
-      supabase
-        .from('profiles')
-        .select('id, name, role')
-        .order('name'),
-    ])
-    setTasks(taskRows || [])
-    setProjects((projectRows || []).sort((a, b) => {
-      const ca = a.client?.company || a.client?.alias || ''
-      const cb = b.client?.company || b.client?.alias || ''
-      if (ca !== cb) return ca.localeCompare(cb)
-      return (a.name || '').localeCompare(b.name || '')
-    }))
-    setProfiles(profileRows || [])
-    setLoading(false)
-  }
+  useEffect(() => {
+    let isMounted = true
+    async function load() {
+      setLoading(true)
+      const [{ data: taskRows }, { data: projectRows }, { data: profileRows }] = await Promise.all([
+        supabase
+          .from('tasks')
+          .select(`
+            *,
+            project:projects(id, name, product_type,
+              client:clients(company, alias)
+            ),
+            updater:profiles!tasks_updated_by_fkey(name)
+          `)
+          .order('sort_order')
+          .order('created_at'),
+        supabase
+          .from('projects')
+          .select('id, name, product_type, client:clients(company, alias)')
+          .neq('archived', true)
+          .order('name'),
+        supabase
+          .from('profiles')
+          .select('id, name, role')
+          .order('name'),
+      ])
+      if (!isMounted) return
+      setTasks(taskRows || [])
+      setProjects((projectRows || []).sort((a, b) => {
+        const ca = a.client?.company || a.client?.alias || ''
+        const cb = b.client?.company || b.client?.alias || ''
+        if (ca !== cb) return ca.localeCompare(cb)
+        return (a.name || '').localeCompare(b.name || '')
+      }))
+      setProfiles(profileRows || [])
+      setLoading(false)
+    }
+    load()
+    return () => { isMounted = false }
+  }, [location.pathname])
 
   // ── FILTERING ──────────────────────────────────────────────────────────────
   const filtered = tasks.filter(t => {

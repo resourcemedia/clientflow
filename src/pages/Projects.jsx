@@ -1100,7 +1100,33 @@ export default function ProjectsPage() {
   const navigate = useNavigate()
   const isAdding = addingRow !== null
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    let isMounted = true
+    async function fetchData() {
+      setLoading(true)
+      if (isDemo) {
+        if (isMounted) { setProjects(DEMO_PROJECTS); setClients(DEMO_CLIENTS) }
+      } else {
+        const [{ data: p }, { data: c }, { data: prods }, { data: profs }] = await Promise.all([
+          supabase.from('projects').select('*, client:clients(company,alias), product:products(id,type,name)').order('sort_order', { ascending: true, nullsFirst: false }).order('project_number', { ascending: false }),
+          supabase.from('clients').select('id, company, alias').eq('status','active').order('company'),
+          supabase.from('products').select('id, type, name').order('order_num', { nullsFirst: false }),
+          supabase.from('profiles').select('id, name').order('name'),
+        ])
+        if (!isMounted) return
+        setProjects(p || [])
+        setClients(c || [])
+        setProfiles(profs || [])
+        const map = {}
+        ;(prods || []).forEach(prod => { if (prod.type) map[prod.type] = prod.name })
+        setProductMap(map)
+        setProducts(prods || [])
+      }
+      if (isMounted) setLoading(false)
+    }
+    fetchData()
+    return () => { isMounted = false }
+  }, [])
 
   useEffect(() => {
     if (isAdding) addInputRef.current?.focus()
