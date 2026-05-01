@@ -111,7 +111,9 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
   const [noteVal,    setNoteVal]    = useState(task.note || '')
   const [snoteVal,   setSnoteVal]   = useState(task.status_note || '')
   const [assignOpen, setAssignOpen] = useState(false)
-  const assignRef = useRef(null)
+  const assignRef   = useRef(null)
+  const noteValRef  = useRef(task.note || '')
+  const snoteValRef = useRef(task.status_note || '')
 
   useEffect(() => {
     if (!assignOpen) return
@@ -124,12 +126,12 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
 
   function commitNote() {
     setEditField(null)
-    if (noteVal.trim() !== (task.note || '').trim()) onSave(task.id, { note: noteVal.trim() })
+    if (noteValRef.current.trim() !== (task.note || '').trim()) onSave(task.id, { note: noteValRef.current.trim() })
   }
 
   function commitStatusNote() {
     setEditField(null)
-    if (snoteVal.trim() !== (task.status_note || '').trim()) onSave(task.id, { status_note: snoteVal.trim() })
+    if (snoteValRef.current.trim() !== (task.status_note || '').trim()) onSave(task.id, { status_note: snoteValRef.current.trim() })
   }
 
   const assignee = profiles.find(p => p.id === task.assigned_to)
@@ -185,14 +187,14 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
             autoFocus
             ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
             value={noteVal}
-            onChange={e => { setNoteVal(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
+            onChange={e => { setNoteVal(e.target.value); noteValRef.current = e.target.value; e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
             onBlur={commitNote}
-            onKeyDown={e => { if (e.key === 'Escape') { setNoteVal(task.note || ''); setEditField(null) } }}
+            onKeyDown={e => { if (e.key === 'Escape') { setNoteVal(task.note || ''); noteValRef.current = task.note || ''; setEditField(null) } }}
             style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '4px 8px', color: 'var(--text)', fontSize: 13, resize: 'none', lineHeight: '1.4', boxSizing: 'border-box', overflow: 'hidden', minHeight: 28 }}
           />
         ) : (
           <span
-            onClick={() => { setNoteVal(task.note || ''); setEditField('note') }}
+            onClick={() => { setNoteVal(task.note || ''); noteValRef.current = task.note || ''; setEditField('note') }}
             style={{ cursor: 'text', display: 'block', minHeight: 22, whiteSpace: 'pre-wrap' }}
           >
             {task.note || <span style={{ color: 'var(--text3)' }}>Click to add…</span>}
@@ -206,17 +208,17 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
           <input
             autoFocus
             value={snoteVal}
-            onChange={e => setSnoteVal(e.target.value)}
+            onChange={e => { setSnoteVal(e.target.value); snoteValRef.current = e.target.value }}
             onBlur={commitStatusNote}
             onKeyDown={e => {
               if (e.key === 'Enter') commitStatusNote()
-              if (e.key === 'Escape') { setSnoteVal(task.status_note || ''); setEditField(null) }
+              if (e.key === 'Escape') { setSnoteVal(task.status_note || ''); snoteValRef.current = task.status_note || ''; setEditField(null) }
             }}
             style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '4px 8px', color: 'var(--text)', fontSize: 13 }}
           />
         ) : (
           <span
-            onClick={() => { setSnoteVal(task.status_note || ''); setEditField('status_note') }}
+            onClick={() => { setSnoteVal(task.status_note || ''); snoteValRef.current = task.status_note || ''; setEditField('status_note') }}
             style={{ cursor: 'text', display: 'block', minHeight: 22, color: task.status_note ? 'var(--text2)' : 'var(--text3)' }}
           >
             {task.status_note || 'Add note…'}
