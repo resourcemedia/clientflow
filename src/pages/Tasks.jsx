@@ -163,21 +163,32 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
 
       {/* project dropdown */}
       <td>
-        <select
-          value={task.project_id || ''}
-          onChange={e => onSave(task.id, { project_id: e.target.value || null })}
-          style={{
-            fontSize: 12, padding: '3px 6px', borderRadius: 6,
-            border: '1px solid var(--border)', background: 'var(--bg2)',
-            color: 'var(--text)', cursor: 'pointer', maxWidth: 170,
-          }}
-        >
-          {!task.project_id && <option value="">— None —</option>}
-          {projects.map(p => {
-            const alias = p.client?.alias || p.client?.company || '?'
-            return <option key={p.id} value={p.id}>{alias} | {p.name}</option>
-          })}
-        </select>
+        <div style={{ position: 'relative', display: 'inline-block', maxWidth: 170 }}>
+          <select
+            value={task.project_id || ''}
+            onChange={e => onSave(task.id, { project_id: e.target.value || null })}
+            style={{
+              fontSize: 12, padding: '3px 6px', borderRadius: 6,
+              border: '1px solid var(--border)', background: 'var(--bg2)',
+              color: 'transparent', cursor: 'pointer', width: '100%',
+            }}
+          >
+            {!task.project_id && <option value="">— None —</option>}
+            {projects.map(p => {
+              const alias = p.client?.alias || p.client?.company || '?'
+              return <option key={p.id} value={p.id}>{alias} | {p.name}</option>
+            })}
+          </select>
+          <span style={{
+            position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)',
+            fontSize: 12, color: 'var(--text)', pointerEvents: 'none',
+            whiteSpace: 'nowrap', overflow: 'hidden', maxWidth: 'calc(100% - 22px)',
+          }}>
+            {task.project_id
+              ? (projects.find(p => p.id === task.project_id)?.name || '—')
+              : '— None —'}
+          </span>
+        </div>
       </td>
 
       {/* task note */}
