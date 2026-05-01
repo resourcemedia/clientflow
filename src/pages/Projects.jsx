@@ -124,7 +124,9 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
   const [noteVal,   setNoteVal]   = useState(task.note || '')
   const [snoteVal,  setSnoteVal]  = useState(task.status_note || '')
   const [assignOpen, setAssignOpen] = useState(false)
-  const assignRef = useRef(null)
+  const assignRef    = useRef(null)
+  const noteValRef   = useRef(task.note || '')
+  const snoteValRef  = useRef(task.status_note || '')
 
   useEffect(() => {
     if (!assignOpen) return
@@ -137,12 +139,12 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
 
   function commitNote() {
     setEditField(null)
-    if (noteVal.trim() !== (task.note || '').trim()) onSave(task.id, { note: noteVal.trim() })
+    if (noteValRef.current.trim() !== (task.note || '').trim()) onSave(task.id, { note: noteValRef.current.trim() })
   }
 
   function commitStatusNote() {
     setEditField(null)
-    if (snoteVal.trim() !== (task.status_note || '').trim()) onSave(task.id, { status_note: snoteVal.trim() })
+    if (snoteValRef.current.trim() !== (task.status_note || '').trim()) onSave(task.id, { status_note: snoteValRef.current.trim() })
   }
 
   const assignee = profiles.find(p => p.id === task.assigned_to)
@@ -176,6 +178,7 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
             value={noteVal}
             onChange={e => {
               setNoteVal(e.target.value)
+              noteValRef.current = e.target.value
               e.target.style.height = 'auto'
               e.target.style.height = e.target.scrollHeight + 'px'
             }}
@@ -200,7 +203,7 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
             autoFocus
             ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
             value={snoteVal}
-            onChange={e => { setSnoteVal(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
+            onChange={e => { setSnoteVal(e.target.value); snoteValRef.current = e.target.value; e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
             onBlur={commitStatusNote}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitStatusNote() } if (e.key === 'Escape') { setSnoteVal(task.status_note || ''); setEditField(null) } }}
             style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13, resize: 'none', lineHeight: '1.4', boxSizing: 'border-box', overflow: 'hidden', minHeight: '28px' }}
@@ -324,7 +327,9 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
   const [proofComments,     setProofComments]     = useState({}) // { [proofId]: Comment[] }
   const [editingCommentId,  setEditingCommentId]  = useState(null)
   const [editingCommentVal, setEditingCommentVal] = useState('')
-  const addInputRef = useRef(null)
+  const addInputRef     = useRef(null)
+  const editValRef      = useRef('')
+  const proofEditValRef = useRef('')
 
   async function deleteComment(proofId, commentId) {
     const { error } = await supabase.from('proof_comments').delete().eq('id', commentId)
@@ -396,18 +401,21 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
   function startProofEdit(proofId, itemId, field, val) {
     setProofEditField({ proofId, itemId, field })
     setProofEditVal(val || '')
+    proofEditValRef.current = val || ''
   }
 
   function commitProofEdit() {
     if (!proofEditField) return
     const { proofId, itemId, field } = proofEditField
     setProofEditField(null)
-    onUpdateProof(itemId, proofId, { [field]: proofEditVal.trim() || null })
+    onUpdateProof(itemId, proofId, { [field]: proofEditValRef.current.trim() || null })
   }
 
   function startEdit(item, field) {
+    const val = field === 'scheduled_date' ? (item.scheduled_date || '') : item.name
     setEditField({ itemId: item.id, field })
-    setEditVal(field === 'scheduled_date' ? (item.scheduled_date || '') : item.name)
+    setEditVal(val)
+    editValRef.current = val
   }
 
   async function commitEdit(item) {
@@ -415,8 +423,9 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
     const { field } = editField
     const original = field === 'scheduled_date' ? (item.scheduled_date || '') : item.name
     setEditField(null)
-    if (editVal === original) return
-    const updates = { [field]: field === 'scheduled_date' ? (editVal || null) : editVal }
+    const val = editValRef.current
+    if (val === original) return
+    const updates = { [field]: field === 'scheduled_date' ? (val || null) : val }
     await onUpdateItem(projectId, item.id, updates)
   }
 
@@ -522,7 +531,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                       <input
                         autoFocus
                         value={editVal}
-                        onChange={e => setEditVal(e.target.value)}
+                        onChange={e => { setEditVal(e.target.value); editValRef.current = e.target.value }}
                         onBlur={() => commitEdit(item)}
                         onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') { setEditField(null) } }}
                         style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13, fontWeight: 600 }}
@@ -538,7 +547,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                         autoFocus
                         type="date"
                         value={editVal}
-                        onChange={e => setEditVal(e.target.value)}
+                        onChange={e => { setEditVal(e.target.value); editValRef.current = e.target.value }}
                         onBlur={() => commitEdit(item)}
                         onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') { setEditField(null) } }}
                         style={{ background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 12 }}
@@ -613,7 +622,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                                     <select
                                       autoFocus
                                       value={proofEditVal}
-                                      onChange={e => setProofEditVal(e.target.value)}
+                                      onChange={e => { setProofEditVal(e.target.value); proofEditValRef.current = e.target.value }}
                                       onBlur={commitProofEdit}
                                       onKeyDown={e => { if (e.key === 'Escape') setProofEditField(null) }}
                                       style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 6px', color: 'var(--text)', fontSize: 13 }}
@@ -632,7 +641,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                                     <input
                                       autoFocus
                                       value={proofEditVal}
-                                      onChange={e => setProofEditVal(e.target.value)}
+                                      onChange={e => { setProofEditVal(e.target.value); proofEditValRef.current = e.target.value }}
                                       onBlur={commitProofEdit}
                                       onKeyDown={e => { if (e.key === 'Enter') commitProofEdit(); if (e.key === 'Escape') setProofEditField(null) }}
                                       style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
@@ -649,7 +658,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                                     <input
                                       autoFocus
                                       value={proofEditVal}
-                                      onChange={e => setProofEditVal(e.target.value)}
+                                      onChange={e => { setProofEditVal(e.target.value); proofEditValRef.current = e.target.value }}
                                       onBlur={commitProofEdit}
                                       onKeyDown={e => { if (e.key === 'Enter') commitProofEdit(); if (e.key === 'Escape') setProofEditField(null) }}
                                       placeholder="https://…"
@@ -1479,13 +1488,14 @@ function ProjectRow({
 }) {
   const [editField, setEditField] = useState(null)
   const [editVal,   setEditVal]   = useState('')
+  const editValRef = useRef('')
 
-  function startEdit(field, val) { setEditField(field); setEditVal(val || '') }
+  function startEdit(field, val) { setEditField(field); setEditVal(val || ''); editValRef.current = val || '' }
 
   function commit() {
     const original = editField === 'name' ? p.name : p.project_number
     setEditField(null)
-    const trimmed = editVal.trim()
+    const trimmed = editValRef.current.trim()
     const saveVal = editField === 'project_number' ? (trimmed || null) : trimmed
     if (trimmed !== (original || '').trim()) onSaveProject(p.id, { [editField]: saveVal })
   }
@@ -1535,7 +1545,7 @@ function ProjectRow({
         {/* project name — inline editable */}
         <td className="td-main" style={{ borderRight: '1px solid var(--border)', width: 200, padding: '8px 12px' }}>
           {editField === 'name' ? (
-            <input autoFocus value={editVal} onChange={e => setEditVal(e.target.value)} onBlur={commit}
+            <input autoFocus value={editVal} onChange={e => { setEditVal(e.target.value); editValRef.current = e.target.value }} onBlur={commit}
               onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') setEditField(null) }}
               style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }} />
           ) : (
@@ -1546,7 +1556,7 @@ function ProjectRow({
         {/* project number — inline editable */}
         <td style={{ borderRight: '1px solid var(--border)', width: 75, color: 'var(--text2)', fontSize: 12, padding: '8px 12px', textAlign: 'center' }}>
           {editField === 'project_number' ? (
-            <input autoFocus value={editVal} onChange={e => setEditVal(e.target.value)} onBlur={commit}
+            <input autoFocus value={editVal} onChange={e => { setEditVal(e.target.value); editValRef.current = e.target.value }} onBlur={commit}
               onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') setEditField(null) }}
               style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text2)', fontSize: 12, textAlign: 'center' }} />
           ) : (

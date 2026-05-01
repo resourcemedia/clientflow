@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
@@ -93,6 +93,7 @@ export default function ProofsPage() {
   const [clientMap,       setClientMap]       = useState(new Map())
   const [editingUrlId,    setEditingUrlId]    = useState(null)
   const [urlDraft,        setUrlDraft]        = useState('')
+  const urlDraftRef = useRef('')
   const [clientFilter,    setClientFilter]    = useState('')
   const [searchQuery,     setSearchQuery]     = useState('')
 
@@ -406,10 +407,10 @@ export default function ProofsPage() {
                                 autoFocus
                                 type="text"
                                 value={urlDraft}
-                                onChange={e => setUrlDraft(e.target.value)}
+                                onChange={e => { setUrlDraft(e.target.value); urlDraftRef.current = e.target.value }}
                                 onKeyDown={async e => {
                                   if (e.key === 'Enter') {
-                                    const newUrl = urlDraft.trim()
+                                    const newUrl = urlDraftRef.current.trim()
                                     await supabase.from('proofs').update({ url: newUrl || null }).eq('id', proof.id)
                                     setProofs(ps => ps.map(p => p.id === proof.id ? { ...p, url: newUrl || null } : p))
                                     setEditingUrlId(null)
@@ -418,7 +419,7 @@ export default function ProofsPage() {
                                   }
                                 }}
                                 onBlur={async () => {
-                                  const newUrl = urlDraft.trim()
+                                  const newUrl = urlDraftRef.current.trim()
                                   await supabase.from('proofs').update({ url: newUrl || null }).eq('id', proof.id)
                                   setProofs(ps => ps.map(p => p.id === proof.id ? { ...p, url: newUrl || null } : p))
                                   setEditingUrlId(null)
@@ -438,7 +439,7 @@ export default function ProofsPage() {
                                   {proof.url}
                                 </a>
                                 <button
-                                  onClick={() => { setEditingUrlId(proof.id); setUrlDraft(proof.url || '') }}
+                                  onClick={() => { setEditingUrlId(proof.id); setUrlDraft(proof.url || ''); urlDraftRef.current = proof.url || '' }}
                                   style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 2, lineHeight: 1 }}
                                   title="Edit URL"
                                 >
@@ -450,7 +451,7 @@ export default function ProofsPage() {
                               </div>
                             ) : (
                               <button
-                                onClick={() => { setEditingUrlId(proof.id); setUrlDraft('') }}
+                                onClick={() => { setEditingUrlId(proof.id); setUrlDraft(''); urlDraftRef.current = '' }}
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 12, padding: 0 }}
                               >
                                 + Add URL
