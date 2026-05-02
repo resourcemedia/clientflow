@@ -333,7 +333,7 @@ export default function TasksPage() {
   const [projects,     setProjects]     = useState([])
   const [profiles,     setProfiles]     = useState([])
   const [loading,      setLoading]      = useState(true)
-  const [currentCycle, setCurrentCycle] = useState('')
+  const [currentCycle, setCurrentCycle] = useState('A')
 
   // text filters
   const [clientFilter,  setClientFilter]  = useState('')
@@ -386,11 +386,11 @@ export default function TasksPage() {
           .from('app_config')
           .select('current_cycle')
           .eq('id', 1)
-          .single(),
+          .maybeSingle(),
       ])
       if (!isMounted) return
       setTasks(taskRows || [])
-      if (settingsRow?.current_cycle) setCurrentCycle(settingsRow.current_cycle)
+      setCurrentCycle(settingsRow?.current_cycle || 'A')
       setProjects((projectRows || []).sort((a, b) => {
         const ca = a.client?.company || a.client?.alias || ''
         const cb = b.client?.company || b.client?.alias || ''
