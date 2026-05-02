@@ -77,6 +77,7 @@ function QuickAddRow({ onCommit, onDiscard }) {
   return (
     <tr style={{ background: 'var(--accent-glow)' }}>
       <td style={{ width: 28 }} />
+      <td style={{ width: 36 }} />
       <td colSpan={7}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '3px 0' }}>
           <input
@@ -106,7 +107,7 @@ function QuickAddRow({ onCommit, onDiscard }) {
 }
 
 // ── TASK ROW ─────────────────────────────────────────────────────────────────
-function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDragStart, onDragOver, onDrop, isDragging, isDragTarget, highlighted }) {
+function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDragStart, onDragOver, onDrop, isDragging, isDragTarget, highlighted, currentCycle, onStamp }) {
   const [editField,  setEditField]  = useState(null)
   const [noteVal,    setNoteVal]    = useState(task.note || '')
   const [snoteVal,   setSnoteVal]   = useState(task.status_note || '')
@@ -154,6 +155,32 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
       {/* drag handle */}
       <td style={{ padding: '8px 4px', width: 28, cursor: 'grab' }}>
         <DragHandle />
+      </td>
+
+      {/* cycle stamp button */}
+      <td style={{ width: 36, textAlign: 'center', padding: '0 4px' }}>
+        {task.project_id && (
+          <button
+            onClick={() => onStamp(task.project_id)}
+            title={`Stamp with ${currentCycle}`}
+            style={{
+              width: 26, height: 26, borderRadius: '50%', cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 11, fontWeight: 700, fontFamily: 'DM Mono, monospace',
+              border: task.project?.cycle_tag === currentCycle
+                ? '1.5px solid var(--green)'
+                : '1.5px solid var(--border2)',
+              background: task.project?.cycle_tag === currentCycle
+                ? 'var(--green)'
+                : 'transparent',
+              color: task.project?.cycle_tag === currentCycle
+                ? '#fff'
+                : 'var(--text3)',
+            }}
+          >
+            {task.project?.cycle_tag || '·'}
+          </button>
+        )}
       </td>
 
       {/* alias */}
@@ -480,6 +507,16 @@ export default function TasksPage() {
     return data
   }
 
+  // ── STAMP PROJECT CYCLE ────────────────────────────────────────────────────
+  async function stampProject(projectId) {
+    setTasks(ts => ts.map(t =>
+      t.project_id === projectId
+        ? { ...t, project: { ...t.project, cycle_tag: currentCycle } }
+        : t
+    ))
+    await supabase.from('projects').update({ cycle_tag: currentCycle }).eq('id', projectId)
+  }
+
   // ── DELETE ─────────────────────────────────────────────────────────────────
   async function deleteTask(taskId) {
     await supabase.from('tasks').delete().eq('id', taskId)
@@ -723,6 +760,7 @@ export default function TasksPage() {
               <thead>
                 <tr>
                   <th style={{ width: 28, padding: '10px 6px 10px 4px', background: '#9dc691', color: '#fff' }} />
+                  <th style={{ width: 36, background: '#9dc691', color: '#fff', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase' }}>Cycle</th>
                   <th style={{ background: '#9dc691', color: '#fff' }}>Alias</th>
                   <th style={{ background: '#9dc691', color: '#fff' }}>Project</th>
                   <th style={{ background: '#9dc691', color: '#fff' }}>Task</th>
@@ -736,13 +774,13 @@ export default function TasksPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={9} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text3)' }}>
+                    <td colSpan={10} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text3)' }}>
                       Loading…
                     </td>
                   </tr>
                 ) : filtered.length === 0 && newRows.length === 0 ? (
                   <tr>
-                    <td colSpan={9} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text3)' }}>
+                    <td colSpan={10} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text3)' }}>
                       No tasks
                     </td>
                   </tr>
@@ -770,6 +808,8 @@ export default function TasksPage() {
                         onDragOver={e => handleDragOver(e, idx)}
                         onDrop={handleDrop}
                         highlighted={activeBtn === 'RandomHot' && task.id === hotHighlightId}
+                        currentCycle={currentCycle}
+                        onStamp={stampProject}
                       />
                     ))}
                   </>
