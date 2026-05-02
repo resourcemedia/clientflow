@@ -1620,6 +1620,31 @@ function ProjectRow({
           )}
         </td>
 
+        {/* status circle — cycles active → complete → draft → active */}
+        <td onClick={e => e.stopPropagation()} style={{ width: 40, textAlign: 'center', borderRight: '1px solid var(--border)' }}>
+          <button
+            onClick={() => {
+              const cycle = { active: 'complete', complete: 'draft', draft: 'active' }
+              const next = cycle[p.status] || 'complete'
+              onSaveProject(p.id, { status: next })
+            }}
+            title={p.status || 'active'}
+            style={{
+              width: 32, height: 32, border: 'none', background: 'none',
+              cursor: 'pointer', padding: 0, margin: '0 auto',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+            onMouseEnter={e => e.currentTarget.firstChild.style.opacity = '0.8'}
+            onMouseLeave={e => e.currentTarget.firstChild.style.opacity = '1'}
+          >
+            <div style={{
+              width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
+              background: p.status === 'complete' ? 'var(--accent2)' : p.status === 'draft' ? 'var(--amber)' : 'var(--green)',
+              transition: 'opacity 0.15s',
+            }} />
+          </button>
+        </td>
+
         <td onClick={e => e.stopPropagation()} style={{ width: 225, whiteSpace: 'nowrap', padding: '8px 10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
             {!showArchived && (
@@ -1636,7 +1661,7 @@ function ProjectRow({
 
       {isExpanded && (
         <tr className="drawer-row">
-          <td colSpan={6} style={{ padding: 0 }}>
+          <td colSpan={7} style={{ padding: 0 }}>
             <TaskDrawer projectId={p.id} tasks={tasks} profiles={profiles} onSaveTask={onSaveTask} onAddTask={onAddTask} onDeleteTask={onDeleteTask} onReorder={onReorderTasks} />
           </td>
         </tr>
@@ -1644,7 +1669,7 @@ function ProjectRow({
 
       {expandedItemRows[p.id] && (
         <tr>
-          <td colSpan={6} style={{ padding: 0 }}>
+          <td colSpan={7} style={{ padding: 0 }}>
             <ItemDrawer projectId={p.id} items={projectItems[p.id] || []} onAddItem={onAddItem} onUpdateItem={onUpdateItem} onDeleteItem={onDeleteItem} onReorder={onReorderItems}
               expandedProofRows={expandedProofRows} itemProofs={itemProofs} onToggleProofExpand={onToggleProofExpand} onAddProof={onAddProof} onDeleteProof={onDeleteProof} onUpdateProof={onUpdateProof} />
           </td>
@@ -1768,6 +1793,7 @@ function WorkView({
                       ))}
                     </select>
                   </td>
+                  <td style={{ width: 40 }} />
                   <td style={{ padding: '7px 10px', whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
                       <button className="btn btn-primary btn-sm" onClick={onAddSave}>Save</button>
@@ -1793,14 +1819,14 @@ function WorkView({
               <tbody key={`group-${group.name}`}>
                 {/* Gap between client bars */}
                 {groupIdx > 0 && (
-                  <tr aria-hidden="true"><td colSpan={6} style={{ padding: 0, height: 8, background: 'transparent', border: 'none' }} /></tr>
+                  <tr aria-hidden="true"><td colSpan={7} style={{ padding: 0, height: 8, background: 'transparent', border: 'none' }} /></tr>
                 )}
                 {/* Client group header */}
                 <tr
                   style={{ cursor: 'pointer' }}
                   onClick={() => toggleClient(group.clientId)}
                 >
-                  <td colSpan={6} style={{ padding: 0, border: 'none' }}>
+                  <td colSpan={7} style={{ padding: 0, border: 'none' }}>
                     <div style={{
                       background: '#595958',
                       borderRadius: 8,
@@ -1868,7 +1894,7 @@ function WorkView({
                 {/* Add project button — only visible when this client is expanded and not already adding */}
                 {expandedClientId === group.clientId && addingRow === null && (
                   <tr>
-                    <td colSpan={6} style={{ padding: '8px 16px', border: 'none' }}>
+                    <td colSpan={7} style={{ padding: '8px 16px', border: 'none' }}>
                       <button className="btn btn-ghost btn-sm" onClick={() => onStartAdd(group.clientId)}>+ Add project</button>
                     </td>
                   </tr>
@@ -1913,6 +1939,7 @@ function WorkView({
                         ))}
                       </select>
                     </td>
+                    <td style={{ width: 40 }} />
                     <td style={{ padding: '7px 10px', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
                         <button className="btn btn-primary btn-sm" onClick={onAddSave}>Save</button>
@@ -1929,7 +1956,7 @@ function WorkView({
             {/* Empty state + add button when no groups */}
             {groups.length === 0 && addingRow === null && (
               <tr>
-                <td colSpan={6} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>
+                <td colSpan={7} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>
                   No projects found.{' '}
                   <button className="btn btn-ghost btn-sm" onClick={onStartAdd}>+ Add first project</button>
                 </td>
