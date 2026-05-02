@@ -119,7 +119,7 @@ function fmtUpdated(updatedAt, updaterName) {
 }
 
 // ── DRAWER TASK ROW ──────────────────────────────────────────────────────
-function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, onDragOver, onDrop, isDragging, isDragTarget }) {
+function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, onDragOver, onDrop, isDragging, isDragTarget, currentCycle, projectCycleTag, onStamp }) {
   const [editField, setEditField] = useState(null)
   const [noteVal,   setNoteVal]   = useState(task.note || '')
   const [snoteVal,  setSnoteVal]  = useState(task.status_note || '')
@@ -168,6 +168,23 @@ function DrawerTaskRow({ task, profiles, onSave, onAdd, onDelete, onDragStart, o
       </td>
 
       <td style={{ width: 65, borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }} />
+
+      {/* cycle stamp */}
+      <td style={{ width: 36, textAlign: 'center', borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }}>
+        <button
+          onClick={() => onStamp()}
+          title={projectCycleTag === currentCycle ? `Stamped ${currentCycle}` : `Stamp cycle ${currentCycle}`}
+          style={{
+            width: 26, height: 26, borderRadius: '50%', border: projectCycleTag === currentCycle ? 'none' : '1.5px solid var(--border2)',
+            background: projectCycleTag === currentCycle ? 'var(--green)' : 'transparent',
+            color: projectCycleTag === currentCycle ? '#fff' : 'var(--text3)',
+            cursor: 'pointer', padding: 0, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: 'DM Mono, monospace', fontSize: 11, fontWeight: 700,
+          }}
+        >
+          {projectCycleTag || '·'}
+        </button>
+      </td>
 
       {/* task text */}
       <td className="td-main" style={{ borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }}>
@@ -894,7 +911,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
   )
 }
 
-function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDeleteTask, onReorder }) {
+function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDeleteTask, onReorder, currentCycle, projectCycleTag, onStampProject }) {
   const [dragIdx,    setDragIdx]    = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
   const [addingRow,  setAddingRow]  = useState(null) // null | { note, status_note, assigned_to }
@@ -966,6 +983,7 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
           <tr>
             <th style={{ width: 25, padding: '6px 4px 6px 12px', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }} />
             <th style={{ width: 65, background: '#9dc691', borderTop: 'none', borderBottom: 'none' }} />
+            <th style={{ width: 36, background: '#9dc691', color: '#fff', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', textAlign: 'center', borderTop: 'none', borderBottom: 'none' }}>Cycle</th>
             <th style={{ width: 200, padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Task</th>
             <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Note</th>
             <th style={{ width: 90, padding: '6px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: '#9dc691', borderTop: 'none', borderBottom: 'none' }}>Status</th>
@@ -977,7 +995,7 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
         <tbody>
           {tasks.length === 0 && addingRow === null && (
             <tr>
-              <td colSpan={8} style={{ padding: '12px 16px', color: 'var(--text3)', fontSize: 13 }}>
+              <td colSpan={9} style={{ padding: '12px 16px', color: 'var(--text3)', fontSize: 13 }}>
                 No tasks yet.
               </td>
             </tr>
@@ -995,6 +1013,9 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
               onDragStart={e => handleDragStart(e, idx)}
               onDragOver={e => handleDragOver(e, idx)}
               onDrop={() => handleDrop(idx)}
+              currentCycle={currentCycle}
+              projectCycleTag={projectCycleTag}
+              onStamp={() => onStampProject(projectId)}
             />
           ))}
 
@@ -1003,6 +1024,7 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
             <tr style={{ background: 'var(--accent-glow)' }}>
               <td style={{ padding: '7px 4px 7px 12px', width: 25 }} />
               <td style={{ width: 65 }} />
+              <td style={{ width: 36 }} />
               <td className="td-main">
                 <textarea
                   ref={addInputRef}
@@ -1067,7 +1089,7 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
 
           {/* add task button */}
           <tr style={{ background: '#f7fff5' }}>
-            <td colSpan={8} style={{ padding: '8px 12px 8px 40px', borderTop: '1px solid var(--border)' }}>
+            <td colSpan={9} style={{ padding: '8px 12px 8px 40px', borderTop: '1px solid var(--border)' }}>
               <button
                 className="btn btn-sm"
                 onClick={startAdd}
@@ -1105,6 +1127,7 @@ export default function ProjectsPage() {
   const [expandedProofRows, setExpandedProofRows]   = useState({}) // { [itemId]: true }
   const [itemProofs, setItemProofs]                 = useState({}) // { [itemId]: Proof[] }
   const [loadedProofItems, setLoadedProofItems]     = useState(new Set())
+  const [currentCycle, setCurrentCycle]             = useState('A')
   const addInputRef = useRef(null)
   const navigate = useNavigate()
   const isAdding = addingRow !== null
@@ -1116,16 +1139,18 @@ export default function ProjectsPage() {
       if (isDemo) {
         if (isMounted) { setProjects(DEMO_PROJECTS); setClients(DEMO_CLIENTS) }
       } else {
-        const [{ data: p }, { data: c }, { data: prods }, { data: profs }] = await Promise.all([
+        const [{ data: p }, { data: c }, { data: prods }, { data: profs }, { data: settingsRow }] = await Promise.all([
           supabase.from('projects').select('*, client:clients(company,alias), product:products(id,type,name)').order('sort_order', { ascending: true, nullsFirst: false }).order('project_number', { ascending: false }),
           supabase.from('clients').select('id, company, alias').eq('status','active').order('company'),
           supabase.from('products').select('id, type, name').order('order_num', { nullsFirst: false }),
           supabase.from('profiles').select('id, name').order('name'),
+          supabase.from('app_config').select('current_cycle').eq('id', 1).maybeSingle(),
         ])
         if (!isMounted) return
         setProjects(p || [])
         setClients(c || [])
         setProfiles(profs || [])
+        setCurrentCycle(settingsRow?.current_cycle || 'A')
         const map = {}
         ;(prods || []).forEach(prod => { if (prod.type) map[prod.type] = prod.name })
         setProductMap(map)
@@ -1162,6 +1187,11 @@ export default function ProjectsPage() {
       setProducts(prods || [])
     }
     setLoading(false)
+  }
+
+  async function stampProject(projectId) {
+    setProjects(ps => ps.map(proj => proj.id === projectId ? { ...proj, cycle_tag: currentCycle } : proj))
+    await supabase.from('projects').update({ cycle_tag: currentCycle }).eq('id', projectId)
   }
 
   async function toggleExpand(projectId) {
@@ -1480,6 +1510,8 @@ export default function ProjectsPage() {
             onAddSave={handleAddSave}
             onAddKeyDown={handleAddKeyDown}
             onSaveProject={saveProject}
+            currentCycle={currentCycle}
+            onStampProject={stampProject}
           />
         ) : (
           <FinancialView
@@ -1520,6 +1552,7 @@ function ProjectRow({
   onSaveTask, onAddTask, onDeleteTask, onReorderTasks,
   onAddItem, onUpdateItem, onDeleteItem, onReorderItems,
   onToggleProofExpand, onAddProof, onDeleteProof, onUpdateProof,
+  currentCycle, onStampProject,
 }) {
   const [editField, setEditField] = useState(null)
   const [editVal,   setEditVal]   = useState('')
@@ -1646,7 +1679,7 @@ function ProjectRow({
       {isExpanded && (
         <tr className="drawer-row">
           <td colSpan={6} style={{ padding: 0 }}>
-            <TaskDrawer projectId={p.id} tasks={tasks} profiles={profiles} onSaveTask={onSaveTask} onAddTask={onAddTask} onDeleteTask={onDeleteTask} onReorder={onReorderTasks} />
+            <TaskDrawer projectId={p.id} tasks={tasks} profiles={profiles} onSaveTask={onSaveTask} onAddTask={onAddTask} onDeleteTask={onDeleteTask} onReorder={onReorderTasks} currentCycle={currentCycle} projectCycleTag={p.cycle_tag} onStampProject={onStampProject} />
           </td>
         </tr>
       )}
@@ -1683,6 +1716,7 @@ function WorkView({
   expandedProofRows, itemProofs, onToggleProofExpand, onAddProof, onDeleteProof, onUpdateProof,
   onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm,
   onView, onReorder, onStartAdd, onAddSave, onAddKeyDown, onSaveProject,
+  currentCycle, onStampProject,
 }) {
   const [dragIdx, setDragIdx]               = useState(null)
   const [dragOverIdx, setDragOverIdx]       = useState(null)
@@ -1870,6 +1904,8 @@ function WorkView({
                       onAddProof={onAddProof}
                       onDeleteProof={onDeleteProof}
                       onUpdateProof={onUpdateProof}
+                      currentCycle={currentCycle}
+                      onStampProject={onStampProject}
                     />
                   )
                 })}
