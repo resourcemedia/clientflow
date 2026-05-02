@@ -329,10 +329,11 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
 export default function TasksPage() {
   const location = useLocation()
 
-  const [tasks,    setTasks]    = useState([])
-  const [projects, setProjects] = useState([])
-  const [profiles, setProfiles] = useState([])
-  const [loading,  setLoading]  = useState(true)
+  const [tasks,        setTasks]        = useState([])
+  const [projects,     setProjects]     = useState([])
+  const [profiles,     setProfiles]     = useState([])
+  const [loading,      setLoading]      = useState(true)
+  const [currentCycle, setCurrentCycle] = useState('')
 
   // text filters
   const [clientFilter,  setClientFilter]  = useState('')
@@ -360,12 +361,12 @@ export default function TasksPage() {
     let isMounted = true
     async function load() {
       setLoading(true)
-      const [{ data: taskRows }, { data: projectRows }, { data: profileRows }] = await Promise.all([
+      const [{ data: taskRows }, { data: projectRows }, { data: profileRows }, { data: settingsRow }] = await Promise.all([
         supabase
           .from('tasks')
           .select(`
             *,
-            project:projects(id, name, product_type,
+            project:projects(id, name, product_type, cycle_tag,
               client:clients(company, alias)
             ),
             updater:profiles!tasks_updated_by_fkey(name)
@@ -381,9 +382,15 @@ export default function TasksPage() {
           .from('profiles')
           .select('id, name, role')
           .order('name'),
+        supabase
+          .from('settings')
+          .select('value')
+          .eq('key', 'current_cycle')
+          .maybeSingle(),
       ])
       if (!isMounted) return
       setTasks(taskRows || [])
+      if (settingsRow?.value) setCurrentCycle(settingsRow.value)
       setProjects((projectRows || []).sort((a, b) => {
         const ca = a.client?.company || a.client?.alias || ''
         const cb = b.client?.company || b.client?.alias || ''
@@ -413,6 +420,14 @@ export default function TasksPage() {
     return true
   })
 
+  // ── CYCLE COUNTS ───────────────────────────────────────────────────────────
+  const cycleProjectIds = [...new Set(filtered.filter(t => t.project_id).map(t => t.project_id))]
+  const cycleTotal      = cycleProjectIds.length
+  const cycleRemaining  = cycleProjectIds.filter(pid => {
+    const t = filtered.find(f => f.project_id === pid)
+    return !t?.project?.cycle_tag || t.project.cycle_tag !== currentCycle
+  }).length
+
   // ── SAVE ───────────────────────────────────────────────────────────────────
   async function saveTask(taskId, updates) {
     const { data } = await supabase
@@ -421,7 +436,7 @@ export default function TasksPage() {
       .eq('id', taskId)
       .select(`
         *,
-        project:projects(id, name, product_type,
+        project:projects(id, name, product_type, cycle_tag,
           client:clients(company, alias)
         ),
         updater:profiles!tasks_updated_by_fkey(name)
@@ -437,7 +452,7 @@ export default function TasksPage() {
       .insert(payload)
       .select(`
         *,
-        project:projects(id, name, product_type,
+        project:projects(id, name, product_type, cycle_tag,
           client:clients(company, alias)
         ),
         updater:profiles!tasks_updated_by_fkey(name)
@@ -609,6 +624,17 @@ export default function TasksPage() {
             }}
           />
         </div>
+
+        {currentCycle && (
+          <div style={{
+            padding: '4px 10px', borderRadius: 6,
+            border: '1px solid var(--border)', background: 'var(--bg2)',
+            fontSize: 12, fontWeight: 600, color: 'var(--text2)',
+            whiteSpace: 'nowrap', fontFamily: 'DM Mono, monospace',
+          }}>
+            {currentCycle} | {cycleRemaining} of {cycleTotal}
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <button style={execBtnStyle('All')}           onClick={handleAll}>All</button>
