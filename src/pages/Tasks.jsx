@@ -588,7 +588,7 @@ export default function TasksPage() {
   }
 
   async function handleRandomProject() {
-    // Base task set: text-filtered only (not execution-button filtered)
+    // Text-filtered base set — respects client/project inputs, ignores execution button
     const baseTasks = tasks.filter(t => {
       if (!t.project_id) return false
       if (clientFilter) {
@@ -602,31 +602,29 @@ export default function TasksPage() {
       return true
     })
 
-    // Unique project_ids not yet stamped with currentCycle
-    const seen = new Set()
+    // Unique project_ids where cycle_tag !== currentCycle (or null)
+    const seenIds = new Set()
     let pool = []
     for (const t of baseTasks) {
-      if (!seen.has(t.project_id)) {
-        seen.add(t.project_id)
+      if (!seenIds.has(t.project_id)) {
+        seenIds.add(t.project_id)
         if (!t.project?.cycle_tag || t.project.cycle_tag !== currentCycle) {
           pool.push(t.project_id)
         }
       }
     }
 
-    let cycle = currentCycle
-    let freshDeck = false
-
-    // Pool exhausted — advance to next cycle letter and refill
+    // Auto-advance cycle when pool is exhausted
+    let activeCycle = currentCycle
+    let cycleAdvanced = false
     if (pool.length === 0) {
-      const next = cycle
-        ? String.fromCharCode(((cycle.charCodeAt(0) - 65 + 1) % 26) + 65)
+      activeCycle = activeCycle
+        ? String.fromCharCode(((activeCycle.charCodeAt(0) - 65 + 1) % 26) + 65)
         : 'A'
-      await supabase.from('app_config').update({ current_cycle: next }).eq('id', 1)
-      setCurrentCycle(next)
-      cycle = next
+      await supabase.from('app_config').update({ current_cycle: activeCycle }).eq('id', 1)
+      setCurrentCycle(activeCycle)
 
-      // Refill with all visible projects
+      // Refill from all visible projects for the new cycle
       const seen2 = new Set()
       pool = []
       for (const t of baseTasks) {
@@ -635,16 +633,15 @@ export default function TasksPage() {
           pool.push(t.project_id)
         }
       }
-      freshDeck = true
+      cycleAdvanced = true
     }
 
     if (pool.length === 0) return
 
-    // Maintain shuffle deck within the pool
-    const poolSet   = new Set(pool)
-    const validDeck = freshDeck ? [] : projectDeck.filter(id => poolSet.has(id))
-    let   deck      = validDeck
-    let   pos       = freshDeck ? 0 : projectDeckPos
+    // Shuffle deck — ensures each project is shown once before repeating
+    const poolSet = new Set(pool)
+    let deck = cycleAdvanced ? [] : projectDeck.filter(id => poolSet.has(id))
+    let pos  = cycleAdvanced ? 0  : projectDeckPos
 
     if (deck.length === 0 || pos >= deck.length) {
       deck = shuffle(pool)
