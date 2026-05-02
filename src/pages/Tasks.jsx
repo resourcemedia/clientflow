@@ -383,14 +383,14 @@ export default function TasksPage() {
           .select('id, name, role')
           .order('name'),
         supabase
-          .from('settings')
-          .select('value')
-          .eq('key', 'current_cycle')
-          .maybeSingle(),
+          .from('app_config')
+          .select('current_cycle')
+          .eq('id', 1)
+          .single(),
       ])
       if (!isMounted) return
       setTasks(taskRows || [])
-      if (settingsRow?.value) setCurrentCycle(settingsRow.value)
+      if (settingsRow?.current_cycle) setCurrentCycle(settingsRow.current_cycle)
       setProjects((projectRows || []).sort((a, b) => {
         const ca = a.client?.company || a.client?.alias || ''
         const cb = b.client?.company || b.client?.alias || ''
@@ -420,13 +420,31 @@ export default function TasksPage() {
     return true
   })
 
-  // ── CYCLE COUNTS ───────────────────────────────────────────────────────────
-  const cycleProjectIds = [...new Set(filtered.filter(t => t.project_id).map(t => t.project_id))]
-  const cycleTotal      = cycleProjectIds.length
-  const cycleRemaining  = cycleProjectIds.filter(pid => {
-    const t = filtered.find(f => f.project_id === pid)
-    return !t?.project?.cycle_tag || t.project.cycle_tag !== currentCycle
-  }).length
+  // ── CYCLE COUNTS (text-filtered only, independent of execution button) ──────
+  const textFiltered = tasks.filter(t => {
+    if (!t.project_id) return false
+    if (clientFilter) {
+      const alias = (t.project?.client?.alias || t.project?.client?.company || '').toLowerCase()
+      if (!alias.includes(clientFilter.toLowerCase())) return false
+    }
+    if (projectFilter) {
+      const pname = (t.project?.name || '').toLowerCase()
+      if (!pname.includes(projectFilter.toLowerCase())) return false
+    }
+    return true
+  })
+  const cycleSeenIds  = new Set()
+  const cycleProjects = []
+  for (const t of textFiltered) {
+    if (!cycleSeenIds.has(t.project_id)) {
+      cycleSeenIds.add(t.project_id)
+      cycleProjects.push(t)
+    }
+  }
+  const cycleTotal     = cycleProjects.length
+  const cycleRemaining = cycleProjects.filter(
+    t => !t.project?.cycle_tag || t.project.cycle_tag !== currentCycle
+  ).length
 
   // ── SAVE ───────────────────────────────────────────────────────────────────
   async function saveTask(taskId, updates) {
@@ -532,17 +550,67 @@ export default function TasksPage() {
     setHotHighlightId(null)
   }
 
-  function handleRandomProject() {
-    const projectIds = [...new Set(tasks.filter(t => t.project_id).map(t => t.project_id))]
-    if (projectIds.length === 0) return
+  async function handleRandomProject() {
+    // Base task set: text-filtered only (not execution-button filtered)
+    const baseTasks = tasks.filter(t => {
+      if (!t.project_id) return false
+      if (clientFilter) {
+        const alias = (t.project?.client?.alias || t.project?.client?.company || '').toLowerCase()
+        if (!alias.includes(clientFilter.toLowerCase())) return false
+      }
+      if (projectFilter) {
+        const pname = (t.project?.name || '').toLowerCase()
+        if (!pname.includes(projectFilter.toLowerCase())) return false
+      }
+      return true
+    })
 
-    const poolSet   = new Set(projectIds)
-    const validDeck = projectDeck.filter(id => poolSet.has(id))
+    // Unique project_ids not yet stamped with currentCycle
+    const seen = new Set()
+    let pool = []
+    for (const t of baseTasks) {
+      if (!seen.has(t.project_id)) {
+        seen.add(t.project_id)
+        if (!t.project?.cycle_tag || t.project.cycle_tag !== currentCycle) {
+          pool.push(t.project_id)
+        }
+      }
+    }
+
+    let cycle = currentCycle
+    let freshDeck = false
+
+    // Pool exhausted — advance to next cycle letter and refill
+    if (pool.length === 0) {
+      const next = cycle
+        ? String.fromCharCode(((cycle.charCodeAt(0) - 65 + 1) % 26) + 65)
+        : 'A'
+      await supabase.from('app_config').update({ current_cycle: next }).eq('id', 1)
+      setCurrentCycle(next)
+      cycle = next
+
+      // Refill with all visible projects
+      const seen2 = new Set()
+      pool = []
+      for (const t of baseTasks) {
+        if (!seen2.has(t.project_id)) {
+          seen2.add(t.project_id)
+          pool.push(t.project_id)
+        }
+      }
+      freshDeck = true
+    }
+
+    if (pool.length === 0) return
+
+    // Maintain shuffle deck within the pool
+    const poolSet   = new Set(pool)
+    const validDeck = freshDeck ? [] : projectDeck.filter(id => poolSet.has(id))
     let   deck      = validDeck
-    let   pos       = projectDeckPos
+    let   pos       = freshDeck ? 0 : projectDeckPos
 
     if (deck.length === 0 || pos >= deck.length) {
-      deck = shuffle(projectIds)
+      deck = shuffle(pool)
       pos  = 0
       setProjectDeck(deck)
     }
