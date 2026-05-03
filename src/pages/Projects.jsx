@@ -1250,10 +1250,16 @@ export default function ProjectsPage() {
 
   async function deleteProjectItem(projectId, itemId) {
     await supabase.from('project_items').delete().eq('id', itemId)
-    setProjectItems(prev => ({
-      ...prev,
-      [projectId]: (prev[projectId] || []).filter(i => i.id !== itemId),
+    const remaining = (projectItems[projectId] || []).filter(i => i.id !== itemId)
+    const renumbered = remaining.map((item, i) => ({
+      ...item,
+      sort_order: i,
+      item_number: String(i + 1).padStart(2, '0'),
     }))
+    setProjectItems(prev => ({ ...prev, [projectId]: renumbered }))
+    renumbered.forEach(item => {
+      supabase.from('project_items').update({ sort_order: item.sort_order, item_number: item.item_number }).eq('id', item.id).then(() => {})
+    })
   }
 
   async function saveProjectTask(projectId, taskId, updates) {
@@ -1301,9 +1307,14 @@ export default function ProjectsPage() {
   }
 
   function reorderProjectItems(projectId, reordered) {
-    setProjectItems(prev => ({ ...prev, [projectId]: reordered }))
-    reordered.forEach((item, i) => {
-      supabase.from('project_items').update({ sort_order: i }).eq('id', item.id).then(() => {})
+    const renumbered = reordered.map((item, i) => ({
+      ...item,
+      sort_order: i,
+      item_number: String(i + 1).padStart(2, '0'),
+    }))
+    setProjectItems(prev => ({ ...prev, [projectId]: renumbered }))
+    renumbered.forEach(item => {
+      supabase.from('project_items').update({ sort_order: item.sort_order, item_number: item.item_number }).eq('id', item.id).then(() => {})
     })
   }
 
