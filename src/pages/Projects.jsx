@@ -642,7 +642,25 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                                   </div>
                                 </td>
                                 <td style={{ padding: '5px 12px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>{item.name}</td>
-                                <td style={{ padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: 12, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd', textAlign: 'center' }}>{item.item_number}{String.fromCharCode(64 + proof.version)}</td>
+                                <td style={{ width: 75, padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: 12, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd', textAlign: 'center' }}>
+                                  {proofEditField?.proofId === proof.id && proofEditField.field === 'proof_version' ? (
+                                    <input
+                                      autoFocus
+                                      value={proofEditVal}
+                                      onChange={e => { setProofEditVal(e.target.value); proofEditValRef.current = e.target.value }}
+                                      onBlur={commitProofEdit}
+                                      onKeyDown={e => { if (e.key === 'Enter') commitProofEdit(); if (e.key === 'Escape') setProofEditField(null) }}
+                                      style={{ width: 44, background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 4, padding: '2px 4px', color: 'var(--text)', fontSize: 12, fontFamily: 'DM Mono, monospace', textAlign: 'center' }}
+                                    />
+                                  ) : (
+                                    <span
+                                      onClick={() => startProofEdit(proof.id, item.id, 'proof_version', proof.proof_version || String.fromCharCode(64 + proof.version))}
+                                      style={{ cursor: 'text', display: 'block', minHeight: 20 }}
+                                    >
+                                      {proof.proof_version || String.fromCharCode(64 + proof.version)}
+                                    </span>
+                                  )}
+                                </td>
                                 <td style={{ padding: '3px 8px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
                                   {proofEditField?.proofId === proof.id && proofEditField.field === 'status' ? (
                                     <select
@@ -1335,9 +1353,10 @@ export default function ProjectsPage() {
   async function addProof(itemId, itemNumber) {
     const proofs = itemProofs[itemId] || []
     const version = proofs.length + 1
+    const proof_version = String.fromCharCode(64 + version)
     const { data } = await supabase
       .from('proofs')
-      .insert({ item_id: itemId, version })
+      .insert({ item_id: itemId, version, proof_version })
       .select('*')
       .single()
     if (data) setItemProofs(prev => ({ ...prev, [itemId]: [...(prev[itemId] || []), data] }))
