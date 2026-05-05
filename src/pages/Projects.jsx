@@ -663,7 +663,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                                       onKeyDown={e => { if (e.key === 'Escape') setProofEditField(null) }}
                                       style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 6px', color: 'var(--text)', fontSize: 13 }}
                                     >
-                                      {PROOF_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                                      {['Review', 'Revise', 'Approved'].map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
                                   ) : (
                                     <span
