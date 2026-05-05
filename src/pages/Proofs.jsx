@@ -378,9 +378,7 @@ export default function ProofsPage() {
                           <td>{proof.project_items?.projects?.name || '—'}</td>
                           <td>{proof.project_items?.name || '—'}</td>
                           <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, fontWeight: 600 }}>
-                            {proof.project_items?.item_number && proof.version
-                              ? versionLabel(proof.project_items.item_number, proof.version)
-                              : proof.version ?? '—'}
+                            {proof.version ? String.fromCharCode(64 + proof.version) : '—'}
                           </td>
                           <td onClick={e => e.stopPropagation()}>
                             <select
@@ -391,9 +389,13 @@ export default function ProofsPage() {
                                 setProofs(ps => ps.map(p => p.id === proof.id ? { ...p, status: newStatus } : p))
                               }}
                               style={{
-                                background: 'transparent', border: '1px solid var(--border)',
-                                borderRadius: 6, padding: '3px 6px', fontSize: 13,
-                                color: 'var(--text)', cursor: 'pointer', outline: 'none',
+                                background: proof.status === 'Approved' ? '#22C55E'
+                                  : proof.status === 'Revise' ? '#EF4444'
+                                  : '#F59E0B',
+                                border: 'none', borderRadius: 12,
+                                padding: '3px 10px', fontSize: 12, fontWeight: 600,
+                                color: '#fff', cursor: 'pointer', outline: 'none',
+                                appearance: 'none', WebkitAppearance: 'none',
                               }}
                             >
                               <option value="Review">Review</option>
@@ -495,44 +497,6 @@ export default function ProofsPage() {
 
                               {/* Controls row */}
                               <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px' }}>
-
-                                {/* View button */}
-                                <button
-                                  onClick={() => proof.url && window.open(proof.url, '_blank', 'noopener,noreferrer')}
-                                  style={{
-                                    display: 'flex', alignItems: 'center', gap: 5,
-                                    opacity: proof.url ? 1 : 0.4,
-                                    cursor: proof.url ? 'pointer' : 'default',
-                                    border: '1px solid var(--border)', borderRadius: 6,
-                                    padding: '4px 10px', background: 'none',
-                                    fontSize: 13, color: 'var(--text)',
-                                  }}
-                                >
-                                  <ViewIcon /> View
-                                </button>
-
-                                {/* Status toggles */}
-                                <div style={{ display: 'flex', border: '1px solid #c9a6d4', borderRadius: 6, overflow: 'hidden' }}>
-                                  {['Review', 'Revise', 'Approved'].map((s, i) => {
-                                    const active = drawerStatus === s
-                                    return (
-                                      <button
-                                        key={s}
-                                        onClick={() => updateProofStatus(proof.id, s)}
-                                        style={{
-                                          padding: '4px 14px', fontSize: 13,
-                                          border: 'none',
-                                          borderRight: i < 2 ? '1px solid #c9a6d4' : 'none',
-                                          background: active ? '#d5b6dd' : 'transparent',
-                                          color: active ? '#fff' : 'var(--text)',
-                                          cursor: 'pointer', fontWeight: active ? 600 : 400,
-                                        }}
-                                      >
-                                        {s}
-                                      </button>
-                                    )
-                                  })}
-                                </div>
 
                                 {/* Comment input */}
                                 <input
