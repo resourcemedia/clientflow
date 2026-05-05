@@ -613,7 +613,6 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                             <th style={{ ...proofThStyle, width: 200 }}>Item</th>
                             <th style={{ ...proofThStyle, width: 75 }}>Proof</th>
                             <th style={{ ...proofThStyle }}>Status</th>
-                            <th style={{ ...proofThStyle }}>Comments / Changes</th>
                             <th style={{ ...proofThStyle }}>URL</th>
                             <th style={{ width: 225, background: '#d5b6dd', borderTop: 'none', borderBottom: 'none' }} />
                           </tr>
@@ -669,25 +668,15 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                                   ) : (
                                     <span
                                       onClick={() => startProofEdit(proof.id, item.id, 'status', proof.status)}
-                                      style={{ cursor: 'text', display: 'block', minHeight: 20 }}
-                                    >{proof.status || <span style={{ color: 'var(--text3)' }}>—</span>}</span>
-                                  )}
-                                </td>
-                                <td style={{ padding: '3px 8px', fontSize: 13, borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
-                                  {proofEditField?.proofId === proof.id && proofEditField.field === 'comments' ? (
-                                    <input
-                                      autoFocus
-                                      value={proofEditVal}
-                                      onChange={e => { setProofEditVal(e.target.value); proofEditValRef.current = e.target.value }}
-                                      onBlur={commitProofEdit}
-                                      onKeyDown={e => { if (e.key === 'Enter') commitProofEdit(); if (e.key === 'Escape') setProofEditField(null) }}
-                                      style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
-                                    />
-                                  ) : (
-                                    <span
-                                      onClick={() => startProofEdit(proof.id, item.id, 'comments', proof.comments)}
-                                      style={{ cursor: 'text', display: 'block', minHeight: 20 }}
-                                    >{proof.comments || <span style={{ color: 'var(--text3)' }}>—</span>}</span>
+                                      style={{
+                                        cursor: 'pointer', display: 'inline-block',
+                                        padding: '2px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600, color: '#fff',
+                                        background: proof.status === 'Approved' ? '#22C55E'
+                                          : proof.status === 'Revise'   ? '#EF4444'
+                                          : proof.status === 'Review'   ? '#F59E0B'
+                                          : '#9CA3AF',
+                                      }}
+                                    >{proof.status || 'Open'}</span>
                                   )}
                                 </td>
                                 <td style={{ padding: '3px 8px', fontSize: 12, fontFamily: 'DM Mono, monospace', borderBottom: '1px solid #d5b6dd', borderRight: '1px solid #d5b6dd' }}>
@@ -742,7 +731,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                                           rel="noopener noreferrer"
                                           style={{
                                             fontSize: 12, fontWeight: 600,
-                                            color: proof.url ? 'var(--accent2)' : 'var(--text3)',
+                                            color: '#000',
                                             textDecoration: 'none',
                                             cursor: proof.url ? 'pointer' : 'default',
                                           }}
