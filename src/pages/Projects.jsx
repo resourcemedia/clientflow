@@ -374,7 +374,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
   async function loadProofComments(proofId) {
     const { data } = await supabase
       .from('proof_comments')
-      .select('id, body, created_at, profile_id, is_internal, profile:profiles(full_name)')
+      .select('id, body, created_at, profile_id, is_internal, profile:profiles(name)')
       .eq('proof_id', proofId)
       .order('created_at', { ascending: true })
     setProofComments(prev => ({ ...prev, [proofId]: data || [] }))
@@ -405,7 +405,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
         body:        commentVal.trim(),
         is_internal: false,
       })
-      .select('id, body, created_at, profile_id, is_internal, profile:profiles(full_name)')
+      .select('id, body, created_at, profile_id, is_internal, profile:profiles(name)')
       .single()
     if (error) { console.error('proof_comments insert failed:', error.message); return }
     setCommentVal('')
@@ -809,7 +809,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
 
                                         {/* comment thread */}
                                         {(proofComments[proof.id] || []).map(c => {
-                                          const authorName = c.profile?.full_name || 'Team'
+                                          const authorName = c.profile?.name || 'Team'
                                           return (
                                             <div
                                               key={c.id}
