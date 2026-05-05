@@ -243,21 +243,22 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
       {/* status note */}
       <td style={{ minWidth: 120 }}>
         {editField === 'status_note' ? (
-          <input
+          <textarea
             autoFocus
+            ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
             value={snoteVal}
-            onChange={e => { setSnoteVal(e.target.value); snoteValRef.current = e.target.value }}
+            onChange={e => { setSnoteVal(e.target.value); snoteValRef.current = e.target.value; e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
             onBlur={commitStatusNote}
             onKeyDown={e => {
-              if (e.key === 'Enter') commitStatusNote()
+              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitStatusNote() }
               if (e.key === 'Escape') { setSnoteVal(task.status_note || ''); snoteValRef.current = task.status_note || ''; setEditField(null) }
             }}
-            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '4px 8px', color: 'var(--text)', fontSize: 13 }}
+            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '4px 8px', color: 'var(--text)', fontSize: 13, resize: 'none', lineHeight: '1.4', boxSizing: 'border-box', overflow: 'hidden', minHeight: 28 }}
           />
         ) : (
           <span
             onClick={() => { setSnoteVal(task.status_note || ''); snoteValRef.current = task.status_note || ''; setEditField('status_note') }}
-            style={{ cursor: 'text', display: 'block', minHeight: 22, color: task.status_note ? 'var(--text2)' : 'var(--text3)' }}
+            style={{ cursor: 'text', display: 'block', minHeight: 22, color: task.status_note ? 'var(--text2)' : 'var(--text3)', whiteSpace: 'pre-wrap' }}
           >
             {task.status_note || 'Add note…'}
           </span>
