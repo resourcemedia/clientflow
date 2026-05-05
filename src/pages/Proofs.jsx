@@ -153,9 +153,9 @@ export default function ProofsPage() {
   async function loadComments(proofId) {
     const { data } = await supabase
       .from('proof_comments')
-      .select('id, body, created_at, profile:profiles(name, role)')
+      .select('*, profiles(name)')
       .eq('proof_id', proofId)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: true })
     setProofComments(prev => ({ ...prev, [proofId]: data || [] }))
   }
 
@@ -174,13 +174,13 @@ export default function ProofsPage() {
         profile_id: profile?.id,
         body:       commentVal.trim(),
       })
-      .select('id, body, created_at, profile:profiles(name, role)')
+      .select('*, profiles(name)')
       .single()
     if (!data) return
     setCommentVal('')
     setSubmitLabel('Saved!')
     setTimeout(() => setSubmitLabel('Submit'), 1500)
-    setProofComments(prev => ({ ...prev, [proofId]: [data, ...(prev[proofId] || [])] }))
+    setProofComments(prev => ({ ...prev, [proofId]: [...(prev[proofId] || []), data] }))
   }
 
   async function deleteProof(proofId) {
@@ -547,7 +547,7 @@ export default function ProofsPage() {
 
                                   {/* Comment thread */}
                                   {(proofComments[proof.id] || []).map(c => {
-                                    const authorName = c.profile?.name || 'Team'
+                                    const authorName = c.profiles?.name || 'Team'
                                     return (
                                       <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', borderBottom: '1px solid #e8d8ef' }}>
                                         <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#d5b6dd', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: '#fff', flexShrink: 0, userSelect: 'none' }}>
