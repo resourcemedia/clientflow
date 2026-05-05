@@ -738,68 +738,33 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                               {openCommentDrawer === proof.id && (
                                 <tr style={{ background: '#faf5fb' }}>
                                   <td colSpan={8} style={{ padding: 0, borderBottom: '1px solid #d5b6dd' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px 8px 90px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 0 }}>
 
-                                      {/* View button */}
-                                      <button
-                                        onClick={() => { if (proof.url) window.open(proof.url, '_blank', 'noopener,noreferrer') }}
-                                        style={{
-                                          display: 'flex', alignItems: 'center', gap: 5,
-                                          opacity: proof.url ? 1 : 0.4,
-                                          cursor: proof.url ? 'pointer' : 'default',
-                                          border: '1px solid var(--border)', borderRadius: 6,
-                                          padding: '4px 10px', background: 'none',
-                                          fontSize: 13, color: 'var(--text)',
-                                        }}
-                                      >
-                                        <ViewOpenIcon /> View
-                                      </button>
-
-                                      {/* Status toggle buttons */}
-                                      <div style={{ display: 'flex', border: '1px solid #c9a6d4', borderRadius: 6, overflow: 'hidden' }}>
-                                        {['Review', 'Revise', 'Approved'].map((s, i) => {
-                                          const active = drawerStatus === s
-                                          return (
-                                            <button
-                                              key={s}
-                                              onClick={() => {
-                                                setDrawerStatus(s)
-                                                onUpdateProof(item.id, proof.id, { status: s })
-                                              }}
-                                              style={{
-                                                padding: '4px 14px', fontSize: 13,
-                                                border: 'none',
-                                                borderRight: i < 2 ? '1px solid #c9a6d4' : 'none',
-                                                background: active ? '#d5b6dd' : 'transparent',
-                                                color: active ? '#fff' : 'var(--text)',
-                                                cursor: 'pointer', fontWeight: active ? 600 : 400,
-                                              }}
-                                            >{s}</button>
-                                          )
-                                        })}
+                                      {/* ── left column: image area ── */}
+                                      <div style={{ width: 280, flexShrink: 0, padding: '16px', borderRight: '1px solid #e8d8ef' }}>
+                                        {/* placeholder — image upload coming in next step */}
                                       </div>
 
-                                      {/* Comments input */}
-                                      <input
-                                        value={commentVal}
-                                        onChange={e => setCommentVal(e.target.value)}
-                                        onKeyDown={e => { if (e.key === 'Enter') handleCommentSubmit(proof.id) }}
-                                        placeholder="Comments"
-                                        style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', fontSize: 13, color: 'var(--text)' }}
-                                      />
+                                      {/* ── right column: comments ── */}
+                                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
 
-                                      {/* Submit */}
-                                      <button
-                                        className="btn btn-primary btn-sm"
-                                        onClick={() => handleCommentSubmit(proof.id)}
-                                        style={{ fontSize: 13, minWidth: 68 }}
-                                      >{submitLabel}</button>
+                                        {/* comment input row */}
+                                        <div style={{ display: 'flex', gap: 8, padding: '10px 16px', borderBottom: '1px solid #e8d8ef' }}>
+                                          <input
+                                            value={commentVal}
+                                            onChange={e => setCommentVal(e.target.value)}
+                                            onKeyDown={e => { if (e.key === 'Enter') handleCommentSubmit(proof.id) }}
+                                            placeholder="Comments"
+                                            style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', fontSize: 13, color: 'var(--text)' }}
+                                          />
+                                          <button
+                                            className="btn btn-primary btn-sm"
+                                            onClick={() => handleCommentSubmit(proof.id)}
+                                            style={{ fontSize: 13, minWidth: 68 }}
+                                          >{submitLabel}</button>
+                                        </div>
 
-                                    </div>
-
-                                    {/* ── comment thread ── */}
-                                    {(proofComments[proof.id] || []).length > 0 && (
-                                      <div style={{ borderTop: '1px solid #e8d8ef', paddingLeft: 90, paddingRight: 16 }}>
+                                        {/* comment thread */}
                                         {(proofComments[proof.id] || []).map((c, i) => {
                                           const authorName = c.profile?.name || 'Team'
                                           const isEditing = editingCommentId === c.id
@@ -807,56 +772,57 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                                             <div
                                               key={c.id}
                                               style={{
-                                                padding: '10px 0',
-                                                borderBottom: i < (proofComments[proof.id].length - 1) ? '1px solid #e8d8ef' : 'none',
+                                                display: 'flex', alignItems: 'flex-start', gap: 10,
+                                                padding: '10px 16px',
+                                                borderBottom: '1px solid #e8d8ef',
                                               }}
                                             >
-                                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                                                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>
-                                                  {authorName}
-                                                  <span style={{ fontWeight: 400, color: 'var(--text3)', marginLeft: 6 }}>
+                                              <Avatar name={authorName} size={28} />
+                                              <div style={{ flex: 1 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                                                  <span style={{ fontSize: 12, color: 'var(--text3)' }}>
                                                     {fmtCommentDate(c.created_at)}
                                                   </span>
+                                                  <button
+                                                    className="btn btn-ghost btn-icon btn-sm"
+                                                    onClick={() => deleteComment(proof.id, c.id)}
+                                                    title="Delete comment"
+                                                    style={{ color: 'var(--text3)', border: '1px solid #333', flexShrink: 0 }}
+                                                  ><TrashIcon /></button>
                                                 </div>
-                                                <button
-                                                  className="btn btn-ghost btn-icon btn-sm"
-                                                  onClick={() => deleteComment(proof.id, c.id)}
-                                                  title="Delete comment"
-                                                  style={{ color: 'var(--text3)', border: '1px solid #333', flexShrink: 0 }}
-                                                ><TrashIcon /></button>
-                                              </div>
-                                              {isEditing ? (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                                  <textarea
-                                                    autoFocus
-                                                    value={editingCommentVal}
-                                                    onChange={e => setEditingCommentVal(e.target.value)}
-                                                    onKeyDown={e => {
-                                                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveComment(proof.id, c.id, editingCommentVal) }
-                                                      if (e.key === 'Escape') setEditingCommentId(null)
-                                                    }}
-                                                    rows={2}
-                                                    style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '5px 8px', fontSize: 13, color: 'var(--text)', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 }}
-                                                  />
-                                                  <div style={{ display: 'flex', gap: 6 }}>
-                                                    <button className="btn btn-primary btn-sm" style={{ fontSize: 12 }} onClick={() => saveComment(proof.id, c.id, editingCommentVal)}>Save</button>
-                                                    <button className="btn btn-ghost btn-sm" style={{ fontSize: 12 }} onClick={() => setEditingCommentId(null)}>Cancel</button>
+                                                {isEditing ? (
+                                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                                    <textarea
+                                                      autoFocus
+                                                      value={editingCommentVal}
+                                                      onChange={e => setEditingCommentVal(e.target.value)}
+                                                      onKeyDown={e => {
+                                                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveComment(proof.id, c.id, editingCommentVal) }
+                                                        if (e.key === 'Escape') setEditingCommentId(null)
+                                                      }}
+                                                      rows={2}
+                                                      style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '5px 8px', fontSize: 13, color: 'var(--text)', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 }}
+                                                    />
+                                                    <div style={{ display: 'flex', gap: 6 }}>
+                                                      <button className="btn btn-primary btn-sm" style={{ fontSize: 12 }} onClick={() => saveComment(proof.id, c.id, editingCommentVal)}>Save</button>
+                                                      <button className="btn btn-ghost btn-sm" style={{ fontSize: 12 }} onClick={() => setEditingCommentId(null)}>Cancel</button>
+                                                    </div>
                                                   </div>
-                                                </div>
-                                              ) : (
-                                                <div
-                                                  onClick={() => { setEditingCommentId(c.id); setEditingCommentVal(c.body) }}
-                                                  style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, whiteSpace: 'pre-wrap', cursor: 'text', borderRadius: 4, padding: '2px 4px', marginLeft: -4 }}
-                                                >
-                                                  {c.body}
-                                                </div>
-                                              )}
+                                                ) : (
+                                                  <div
+                                                    onClick={() => { setEditingCommentId(c.id); setEditingCommentVal(c.body) }}
+                                                    style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, whiteSpace: 'pre-wrap', cursor: 'text' }}
+                                                  >
+                                                    {c.body}
+                                                  </div>
+                                                )}
+                                              </div>
                                             </div>
                                           )
                                         })}
-                                      </div>
-                                    )}
 
+                                      </div>
+                                    </div>
                                   </td>
                                 </tr>
                               )}
