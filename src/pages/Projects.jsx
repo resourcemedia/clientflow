@@ -12,11 +12,11 @@ const isDemo = !import.meta.env.VITE_SUPABASE_URL
 const PRODUCT_TYPES = ['ST', 'CO', 'DS', 'OH']
 
 // ── SHARED HELPERS ───────────────────────────────────────────────────────
-function Avatar({ name, size = 26 }) {
+function Avatar({ name, size = 26, bg }) {
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%',
-      background: 'var(--accent)',
+      background: bg || 'var(--accent)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: size * 0.42, fontWeight: 600, color: '#fff',
       flexShrink: 0, userSelect: 'none',
@@ -89,14 +89,7 @@ function CommentIcon({ hasUrl }) {
 function fmtCommentDate(ts) {
   if (!ts) return ''
   const d = new Date(ts)
-  const mo = d.getMonth() + 1
-  const dy = d.getDate()
-  const yr = String(d.getFullYear()).slice(2)
-  let h = d.getHours()
-  const ampm = h >= 12 ? 'pm' : 'am'
-  h = h % 12 || 12
-  const min = String(d.getMinutes()).padStart(2, '0')
-  return `${mo}/${dy}/${yr}  |  ${h}:${min} ${ampm}`
+  return `${d.getMonth() + 1}/${d.getDate()}/${String(d.getFullYear()).slice(2)}`
 }
 
 function ViewOpenIcon() {
@@ -381,9 +374,9 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
   async function loadProofComments(proofId) {
     const { data } = await supabase
       .from('proof_comments')
-      .select('id, body, created_at, profile_id, is_internal, profile:profiles(name)')
+      .select('id, body, created_at, profile_id, is_internal, profile:profiles(full_name)')
       .eq('proof_id', proofId)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: true })
     setProofComments(prev => ({ ...prev, [proofId]: data || [] }))
   }
 
@@ -412,7 +405,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
         body:        commentVal.trim(),
         is_internal: false,
       })
-      .select('id, body, created_at, profile_id, is_internal, profile:profiles(name)')
+      .select('id, body, created_at, profile_id, is_internal, profile:profiles(full_name)')
       .single()
     if (error) { console.error('proof_comments insert failed:', error.message); return }
     setCommentVal('')
@@ -420,7 +413,7 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
     setTimeout(() => setSubmitLabel('Submit'), 1500)
     setProofComments(prev => ({
       ...prev,
-      [proofId]: [data, ...(prev[proofId] || [])],
+      [proofId]: [...(prev[proofId] || []), data],
     }))
   }
 
@@ -815,58 +808,30 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                                         </div>
 
                                         {/* comment thread */}
-                                        {(proofComments[proof.id] || []).map((c, i) => {
-                                          const authorName = c.profile?.name || 'Team'
-                                          const isEditing = editingCommentId === c.id
+                                        {(proofComments[proof.id] || []).map(c => {
+                                          const authorName = c.profile?.full_name || 'Team'
                                           return (
                                             <div
                                               key={c.id}
                                               style={{
-                                                display: 'flex', alignItems: 'flex-start', gap: 10,
-                                                padding: '10px 16px',
+                                                display: 'flex', alignItems: 'center', gap: 10,
+                                                padding: '8px 16px',
                                                 borderBottom: '1px solid #e8d8ef',
                                               }}
                                             >
-                                              <Avatar name={authorName} size={28} />
-                                              <div style={{ flex: 1 }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                                                  <span style={{ fontSize: 12, color: 'var(--text3)' }}>
-                                                    {fmtCommentDate(c.created_at)}
-                                                  </span>
-                                                  <button
-                                                    className="btn btn-ghost btn-icon btn-sm"
-                                                    onClick={() => deleteComment(proof.id, c.id)}
-                                                    title="Delete comment"
-                                                    style={{ color: 'var(--text3)', border: '1px solid #333', flexShrink: 0 }}
-                                                  ><TrashIcon /></button>
-                                                </div>
-                                                {isEditing ? (
-                                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                                    <textarea
-                                                      autoFocus
-                                                      value={editingCommentVal}
-                                                      onChange={e => setEditingCommentVal(e.target.value)}
-                                                      onKeyDown={e => {
-                                                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveComment(proof.id, c.id, editingCommentVal) }
-                                                        if (e.key === 'Escape') setEditingCommentId(null)
-                                                      }}
-                                                      rows={2}
-                                                      style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '5px 8px', fontSize: 13, color: 'var(--text)', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 }}
-                                                    />
-                                                    <div style={{ display: 'flex', gap: 6 }}>
-                                                      <button className="btn btn-primary btn-sm" style={{ fontSize: 12 }} onClick={() => saveComment(proof.id, c.id, editingCommentVal)}>Save</button>
-                                                      <button className="btn btn-ghost btn-sm" style={{ fontSize: 12 }} onClick={() => setEditingCommentId(null)}>Cancel</button>
-                                                    </div>
-                                                  </div>
-                                                ) : (
-                                                  <div
-                                                    onClick={() => { setEditingCommentId(c.id); setEditingCommentVal(c.body) }}
-                                                    style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, whiteSpace: 'pre-wrap', cursor: 'text' }}
-                                                  >
-                                                    {c.body}
-                                                  </div>
-                                                )}
-                                              </div>
+                                              <Avatar name={authorName} size={28} bg="#d5b6dd" />
+                                              <span style={{ fontSize: 12, color: 'var(--text3)', flexShrink: 0 }}>
+                                                {fmtCommentDate(c.created_at)}
+                                              </span>
+                                              <span style={{ fontSize: 13, color: 'var(--text)', flex: 1 }}>
+                                                {c.body}
+                                              </span>
+                                              <button
+                                                className="btn btn-ghost btn-icon btn-sm"
+                                                onClick={() => deleteComment(proof.id, c.id)}
+                                                title="Delete comment"
+                                                style={{ color: 'var(--text3)', border: '1px solid #333', flexShrink: 0 }}
+                                              ><TrashIcon /></button>
                                             </div>
                                           )
                                         })}
