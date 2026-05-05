@@ -22,15 +22,8 @@ function versionLabel(itemNumber, version) {
 
 function fmtCommentDate(ts) {
   if (!ts) return ''
-  const d    = new Date(ts)
-  const mo   = d.getMonth() + 1
-  const dy   = d.getDate()
-  const yr   = String(d.getFullYear()).slice(2)
-  let h      = d.getHours()
-  const ampm = h >= 12 ? 'pm' : 'am'
-  h = h % 12 || 12
-  const min  = String(d.getMinutes()).padStart(2, '0')
-  return `${mo}/${dy}/${yr}  |  ${h}:${min} ${ampm}`
+  const d = new Date(ts)
+  return `${d.getMonth() + 1}/${d.getDate()}/${String(d.getFullYear()).slice(2)}`
 }
 
 // ── STATUS ICON ───────────────────────────────────────────────────────────────
@@ -117,6 +110,7 @@ export default function ProofsPage() {
         version,
         status,
         url,
+        image_url,
         project_items(
           id,
           name,
@@ -494,76 +488,80 @@ export default function ProofsPage() {
                         {expandedProofId === proof.id && (
                           <tr style={{ background: '#faf5fb' }}>
                             <td colSpan={7} style={{ padding: 0, borderBottom: '1px solid #d5b6dd' }}>
+                              <div style={{ display: 'flex', alignItems: 'flex-start' }}>
 
-                              {/* Controls row */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px' }}>
+                                {/* ── left column: image area ── */}
+                                <div style={{ width: 280, flexShrink: 0, padding: 16, borderRight: '1px solid #e8d8ef', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
 
-                                {/* Comment input */}
-                                <input
-                                  value={commentVal}
-                                  onChange={e => setCommentVal(e.target.value)}
-                                  onKeyDown={e => { if (e.key === 'Enter') submitComment(proof.id) }}
-                                  placeholder="Comments"
-                                  style={{
-                                    flex: 1, background: 'var(--bg3)',
-                                    border: '1px solid var(--border)', borderRadius: 6,
-                                    padding: '5px 10px', fontSize: 13, color: 'var(--text)',
-                                  }}
-                                />
+                                  {/* Click to View Proof */}
+                                  <a
+                                    href={proof.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ fontSize: 12, fontWeight: 600, color: '#000', textDecoration: 'none', cursor: proof.url ? 'pointer' : 'default' }}
+                                  >Click to View Proof</a>
 
-                                {/* Submit */}
-                                <button
-                                  className="btn btn-primary btn-sm"
-                                  onClick={() => submitComment(proof.id)}
-                                  style={{ fontSize: 13, minWidth: 68 }}
-                                >
-                                  {submitLabel}
-                                </button>
+                                  {/* Thumbnail */}
+                                  {proof.image_url && (
+                                    <a href={proof.url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', cursor: proof.url ? 'pointer' : 'default' }}>
+                                      <img src={proof.image_url} alt="Proof thumbnail" style={{ width: 248, borderRadius: 6, display: 'block', border: '1px solid #e8d8ef' }} />
+                                    </a>
+                                  )}
 
-                              </div>
+                                  {/* Upload button */}
+                                  <label style={{ cursor: 'pointer' }}>
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      style={{ display: 'none' }}
+                                      onChange={async e => {
+                                        const file = e.target.files?.[0]
+                                        if (!file) return
+                                        const path = `proofs/${proof.id}/${file.name}`
+                                        const { error: upErr } = await supabase.storage.from('proof-images').upload(path, file, { upsert: true })
+                                        if (upErr) { console.error('Upload failed:', upErr.message); return }
+                                        const { data: { publicUrl } } = supabase.storage.from('proof-images').getPublicUrl(path)
+                                        await supabase.from('proofs').update({ image_url: publicUrl }).eq('id', proof.id)
+                                        setProofs(ps => ps.map(p => p.id === proof.id ? { ...p, image_url: publicUrl } : p))
+                                      }}
+                                    />
+                                    <span style={{ display: 'inline-block', padding: '4px 12px', fontSize: 12, fontWeight: 600, border: '1px solid #c9a6d4', borderRadius: 6, color: '#c9a6d4', background: 'none', cursor: 'pointer' }}>+ Add Image</span>
+                                  </label>
 
-                              {/* Comment thread */}
-                              {(proofComments[proof.id] || []).length > 0 && (
-                                <div style={{ borderTop: '1px solid #e8d8ef', padding: '0 16px' }}>
-                                  {(proofComments[proof.id] || []).map((c, i) => {
-                                    const roleLabel = c.profile?.role === 'client' ? 'Client' : 'Manager'
-                                    const isLast    = i === (proofComments[proof.id].length - 1)
+                                </div>
+
+                                {/* ── right column: comments ── */}
+                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+
+                                  {/* Comment input row */}
+                                  <div style={{ display: 'flex', gap: 8, padding: '10px 16px', borderBottom: '1px solid #e8d8ef' }}>
+                                    <input
+                                      value={commentVal}
+                                      onChange={e => setCommentVal(e.target.value)}
+                                      onKeyDown={e => { if (e.key === 'Enter') submitComment(proof.id) }}
+                                      placeholder="Comments"
+                                      style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', fontSize: 13, color: 'var(--text)' }}
+                                    />
+                                    <button className="btn btn-primary btn-sm" onClick={() => submitComment(proof.id)} style={{ fontSize: 13, minWidth: 68 }}>{submitLabel}</button>
+                                  </div>
+
+                                  {/* Comment thread */}
+                                  {(proofComments[proof.id] || []).map(c => {
+                                    const authorName = c.profile?.name || 'Team'
                                     return (
-                                      <div
-                                        key={c.id}
-                                        onMouseEnter={e => { const btn = e.currentTarget.querySelector('.comment-delete-btn'); if (btn) btn.style.opacity = '1' }}
-                                        onMouseLeave={e => { const btn = e.currentTarget.querySelector('.comment-delete-btn'); if (btn) btn.style.opacity = '0' }}
-                                        style={{
-                                          padding: '10px 0',
-                                          borderBottom: isLast ? 'none' : '1px solid #e8d8ef',
-                                          display: 'flex', alignItems: 'flex-start', gap: 8,
-                                        }}
-                                      >
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 4 }}>
-                                            {roleLabel}
-                                            <span style={{ fontWeight: 400, color: 'var(--text3)', marginLeft: 6 }}>
-                                              {fmtCommentDate(c.created_at)}
-                                            </span>
-                                          </div>
-                                          <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-                                            {c.body}
-                                          </div>
+                                      <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', borderBottom: '1px solid #e8d8ef' }}>
+                                        <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#d5b6dd', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: '#fff', flexShrink: 0, userSelect: 'none' }}>
+                                          {authorName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
                                         </div>
-                                        <button
-                                          className="btn btn-ghost btn-icon btn-sm comment-delete-btn"
-                                          title="Delete comment"
-                                          onClick={() => deleteComment(proof.id, c.id)}
-                                          style={{ color: 'var(--text3)', flexShrink: 0, opacity: 0, transition: 'opacity 0.15s' }}
-                                        >
-                                          <TrashIcon />
-                                        </button>
+                                        <span style={{ fontSize: 12, color: 'var(--text3)', flexShrink: 0 }}>{fmtCommentDate(c.created_at)}</span>
+                                        <span style={{ fontSize: 13, color: 'var(--text)', flex: 1 }}>{c.body}</span>
+                                        <button className="btn btn-ghost btn-icon btn-sm" title="Delete comment" onClick={() => deleteComment(proof.id, c.id)} style={{ color: 'var(--text3)', border: '1px solid #333', flexShrink: 0 }}><TrashIcon /></button>
                                       </div>
                                     )
                                   })}
-                                </div>
-                              )}
 
+                                </div>
+                              </div>
                             </td>
                           </tr>
                         )}
