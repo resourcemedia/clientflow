@@ -737,23 +737,23 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                                       <div style={{ width: 280, flexShrink: 0, padding: '16px', borderRight: '1px solid #e8d8ef', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
                                         {/* Click to View Proof link */}
                                         <a
-                                          href={proof.proof_link || undefined}
+                                          href={proof.proof_link}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          onClick={e => { if (!proof.proof_link) e.preventDefault() }}
                                           style={{
-                                            fontSize: 12, fontWeight: 600, color: proof.proof_link ? 'var(--accent2)' : 'var(--text3)',
-                                            textDecoration: 'none', cursor: proof.proof_link ? 'pointer' : 'default',
+                                            fontSize: 12, fontWeight: 600,
+                                            color: proof.proof_link ? 'var(--accent2)' : 'var(--text3)',
+                                            textDecoration: 'none',
+                                            cursor: proof.proof_link ? 'pointer' : 'default',
                                           }}
                                         >Click to View Proof</a>
 
                                         {/* thumbnail */}
                                         {proof.image_url && (
                                           <a
-                                            href={proof.proof_link || undefined}
+                                            href={proof.proof_link}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            onClick={e => { if (!proof.proof_link) e.preventDefault() }}
                                             style={{ display: 'block', cursor: proof.proof_link ? 'pointer' : 'default' }}
                                           >
                                             <img
