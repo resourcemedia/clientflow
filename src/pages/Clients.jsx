@@ -175,6 +175,13 @@ export default function ClientsPage() {
                         <button
                           className="btn btn-ghost btn-sm"
                           style={{ marginRight: 4 }}
+                          onClick={() => navigate(`/clients/${client.id}/account`)}
+                        >
+                          Account
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ marginRight: 4 }}
                           onClick={() => navigate(`/projects?client=${client.id}`)}
                         >
                           Projects

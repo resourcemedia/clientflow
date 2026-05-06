@@ -14,6 +14,7 @@ import ProofsPage from './pages/Proofs'
 import Items from './pages/Items'
 import ProductsPage from './pages/Products'
 import { CampaignsPage, TimeboardPage, BillingPage } from './pages/Placeholders'
+import ClientAccount from './pages/ClientAccount'
 import ProjectsSandbox from './sandbox/ProjectsSandbox'
 import ClientDashboard     from './pages/client/ClientDashboard'
 import ClientProjectDetail from './pages/client/ClientProjectDetail'
@@ -68,6 +69,7 @@ function AppShell() {
           } />
           <Route path="/clients"             element={<ClientsPage />} />
           <Route path="/clients/:id"         element={<ClientDetail />} />
+          <Route path="/clients/:id/account" element={<ClientAccount />} />
           <Route path="/projects"            element={<ProjectsPage />} />
           <Route path="/projects/:id"        element={<ProjectDetailPage />} />
           <Route path="/items"               element={<Items />} />
