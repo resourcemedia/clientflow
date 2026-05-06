@@ -87,8 +87,10 @@ export default function ProofsPage() {
   const [editingUrlId,    setEditingUrlId]    = useState(null)
   const [urlDraft,        setUrlDraft]        = useState('')
   const urlDraftRef = useRef('')
-  const [clientFilter,    setClientFilter]    = useState('')
-  const [searchQuery,     setSearchQuery]     = useState('')
+  const [clientFilter,       setClientFilter]       = useState('')
+  const [searchQuery,        setSearchQuery]        = useState('')
+  const [editingCommentId,   setEditingCommentId]   = useState(null)
+  const [editingCommentVal,  setEditingCommentVal]  = useState('')
 
   useEffect(() => {
     setLoading(true)
@@ -198,6 +200,18 @@ export default function ProofsPage() {
       .reduce((max, p) => Math.max(max, p.version || 0), 0)
     await supabase.from('proofs').insert({ item_id: itemId, version: maxVersion + 1, status: 'Review', url: null })
     await load()
+  }
+
+  async function saveComment(proofId, commentId, newBody) {
+    const trimmed = newBody.trim()
+    if (!trimmed) return
+    const { error } = await supabase.from('proof_comments').update({ body: trimmed }).eq('id', commentId)
+    if (error) { console.error('saveComment failed:', error.message); return }
+    setProofComments(prev => ({
+      ...prev,
+      [proofId]: (prev[proofId] || []).map(c => c.id === commentId ? { ...c, body: trimmed } : c),
+    }))
+    setEditingCommentId(null)
   }
 
   async function deleteComment(proofId, commentId) {
@@ -535,12 +549,13 @@ export default function ProofsPage() {
 
                                   {/* Comment input row */}
                                   <div style={{ display: 'flex', gap: 8, padding: '10px 16px', borderBottom: '1px solid #e8d8ef' }}>
-                                    <input
+                                    <textarea
                                       value={commentVal}
                                       onChange={e => setCommentVal(e.target.value)}
-                                      onKeyDown={e => { if (e.key === 'Enter') submitComment(proof.id) }}
+                                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitComment(proof.id) } }}
                                       placeholder="Comments"
-                                      style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', fontSize: 13, color: 'var(--text)' }}
+                                      rows={1}
+                                      style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', fontSize: 13, color: 'var(--text)', resize: 'none', lineHeight: '1.4', fontFamily: 'inherit' }}
                                     />
                                     <button className="btn btn-primary btn-sm" onClick={() => submitComment(proof.id)} style={{ fontSize: 13, minWidth: 68 }}>{submitLabel}</button>
                                   </div>
