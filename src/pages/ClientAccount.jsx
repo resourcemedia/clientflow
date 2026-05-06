@@ -57,10 +57,13 @@ export default function ClientAccount() {
   const [profileEdits, setProfileEdits] = useState({})
   const [passwords, setPasswords]       = useState({})
   const [updatingPw, setUpdatingPw]     = useState({})
+  const [pwUpdated, setPwUpdated]       = useState({})
+  const [pwError, setPwError]           = useState({})
 
   const [addingAdmin, setAddingAdmin] = useState(false)
   const [newAdmin, setNewAdmin]       = useState({ first: '', last: '', email: '', password: '' })
   const [savingNew, setSavingNew]     = useState(false)
+  const [newAdminError, setNewAdminError] = useState('')
 
   useEffect(() => {
     loadClient()
@@ -114,8 +117,9 @@ export default function ClientAccount() {
     const pw = passwords[profileId] || ''
     if (!pw) return
     setUpdatingPw(u => ({ ...u, [profileId]: true }))
+    setPwError(e => ({ ...e, [profileId]: '' }))
     const { data: { session } } = await supabase.auth.getSession()
-    await fetch(EDGE_URL, {
+    const res = await fetch(EDGE_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -123,13 +127,21 @@ export default function ClientAccount() {
       },
       body: JSON.stringify({ action: 'update_password', userId: profileId, password: pw }),
     })
-    setPasswords(p => ({ ...p, [profileId]: '' }))
+    const result = await res.json()
     setUpdatingPw(u => ({ ...u, [profileId]: false }))
+    if (result.success) {
+      setPasswords(p => ({ ...p, [profileId]: '' }))
+      setPwUpdated(u => ({ ...u, [profileId]: true }))
+      setTimeout(() => setPwUpdated(u => ({ ...u, [profileId]: false })), 2000)
+    } else {
+      setPwError(e => ({ ...e, [profileId]: result.error || 'Update failed' }))
+    }
   }
 
   async function addAdmin() {
     if (!newAdmin.email || !newAdmin.password) return
     setSavingNew(true)
+    setNewAdminError('')
     const { data: { session } } = await supabase.auth.getSession()
     const res = await fetch(EDGE_URL, {
       method: 'POST',
@@ -154,6 +166,8 @@ export default function ClientAccount() {
       setProfileEdits(e => ({ ...e, [result.id]: { first: newAdmin.first, last: newAdmin.last } }))
       setNewAdmin({ first: '', last: '', email: '', password: '' })
       setAddingAdmin(false)
+    } else {
+      setNewAdminError(result.error || 'Failed to create admin')
     }
     setSavingNew(false)
   }
@@ -250,7 +264,7 @@ export default function ClientAccount() {
                     {/* Password */}
                     <div>
                       <label style={labelStyle}>PASSWORD</label>
-                      <div style={{ display: 'flex', gap: 8 }}>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                         <input
                           style={{ ...inputStyle, flex: 1, width: 'auto' }}
                           type="password"
@@ -266,7 +280,13 @@ export default function ClientAccount() {
                         >
                           {updatingPw[profile.id] ? '…' : 'Update'}
                         </button>
+                        {pwUpdated[profile.id] && (
+                          <span style={{ fontSize: 13, color: '#22C55E', whiteSpace: 'nowrap' }}>Updated ✓</span>
+                        )}
                       </div>
+                      {pwError[profile.id] && (
+                        <div style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>{pwError[profile.id]}</div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -308,10 +328,13 @@ export default function ClientAccount() {
                     <button className="btn btn-primary btn-sm" onClick={addAdmin} disabled={savingNew}>
                       {savingNew ? 'Saving…' : 'Save Admin'}
                     </button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => { setAddingAdmin(false); setNewAdmin({ first: '', last: '', email: '', password: '' }) }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => { setAddingAdmin(false); setNewAdmin({ first: '', last: '', email: '', password: '' }); setNewAdminError('') }}>
                       Cancel
                     </button>
                   </div>
+                  {newAdminError && (
+                    <div style={{ fontSize: 12, color: '#EF4444', marginTop: 8 }}>{newAdminError}</div>
+                  )}
                 </div>
               </div>
             </div>
