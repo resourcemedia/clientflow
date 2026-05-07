@@ -76,7 +76,6 @@ function QuickAddRow({ onCommit, onDiscard }) {
   return (
     <tr style={{ background: 'var(--accent-glow)' }}>
       <td style={{ width: 28 }} />
-      <td style={{ width: 36 }} />
       <td colSpan={7}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '3px 0' }}>
           <input
@@ -152,35 +151,6 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
     >
       <td style={{ padding: '8px 4px', width: 28, cursor: 'grab' }}>
         <DragHandle />
-      </td>
-
-      <td style={{ width: 36, textAlign: 'center', padding: '0 4px' }}>
-        {task.project_id && (
-          <button
-            onClick={() => onStamp(task.project_id)}
-            title={`Stamp with ${currentCycle}`}
-            style={{
-              width: 26, height: 26, borderRadius: '50%', cursor: 'pointer',
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 11, fontWeight: 700, fontFamily: 'DM Mono, monospace',
-              border: task.project?.cycle_tag === currentCycle
-                ? '1.5px solid var(--green)'
-                : '1.5px solid var(--border2)',
-              background: task.project?.cycle_tag === currentCycle
-                ? 'var(--green)'
-                : 'transparent',
-              color: task.project?.cycle_tag === currentCycle
-                ? '#fff'
-                : 'var(--text3)',
-            }}
-          >
-            {task.project?.cycle_tag || '·'}
-          </button>
-        )}
-      </td>
-
-      <td style={{ fontSize: 13, color: 'var(--text2)', whiteSpace: 'nowrap', paddingRight: 4 }}>
-        {task.project?.client?.alias || task.project?.client?.company || '—'}
       </td>
 
       <td style={{ paddingLeft: 4 }}>
@@ -742,8 +712,6 @@ export default function ClientTasks() {
               <thead>
                 <tr>
                   <th style={{ width: 28, padding: '10px 6px 10px 4px', background: '#9dc691', color: '#fff' }} />
-                  <th style={{ width: 36, background: '#9dc691', color: '#fff', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase' }}>Cycle</th>
-                  <th style={{ background: '#9dc691', color: '#fff' }}>Alias</th>
                   <th style={{ background: '#9dc691', color: '#fff' }}>Project</th>
                   <th style={{ background: '#9dc691', color: '#fff' }}>Task</th>
                   <th style={{ background: '#9dc691', color: '#fff' }}>Note</th>
@@ -756,13 +724,13 @@ export default function ClientTasks() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={10} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text3)' }}>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text3)' }}>
                       Loading…
                     </td>
                   </tr>
                 ) : filtered.length === 0 && newRows.length === 0 ? (
                   <tr>
-                    <td colSpan={10} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text3)' }}>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text3)' }}>
                       No tasks
                     </td>
                   </tr>
