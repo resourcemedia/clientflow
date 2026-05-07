@@ -146,19 +146,19 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
       onDrop={onDrop}
       style={{
         opacity:    isDragging  ? 0.4 : 1,
-        background: highlighted ? '#fff8e1' : isDragTarget ? 'var(--accent-glow)' : 'transparent',
+        background: highlighted ? '#fff8e1' : isDragTarget ? 'var(--accent-glow)' : '#f7fff5',
         outline:    highlighted ? '2px solid #f59e0b' : 'none',
         outlineOffset: '-2px',
         transition: 'background 0.1s',
       }}
     >
       {/* drag handle */}
-      <td style={{ padding: '8px 4px', width: 28, cursor: 'grab' }}>
+      <td style={{ padding: '8px 4px', width: 28, cursor: 'grab', borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }}>
         <DragHandle />
       </td>
 
       {/* cycle stamp button */}
-      <td style={{ width: 36, textAlign: 'center', padding: '0 4px' }}>
+      <td style={{ width: 36, textAlign: 'center', padding: '0 4px', borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }}>
         {task.project_id && (
           <button
             onClick={() => onStamp(task.project_id)}
@@ -184,12 +184,12 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
       </td>
 
       {/* alias */}
-      <td style={{ fontSize: 13, color: 'var(--text2)', whiteSpace: 'nowrap', paddingRight: 4 }}>
+      <td style={{ fontSize: 13, color: 'var(--text2)', whiteSpace: 'nowrap', paddingRight: 4, borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }}>
         {task.project?.client?.alias || task.project?.client?.company || '—'}
       </td>
 
       {/* project dropdown */}
-      <td style={{ paddingLeft: 4 }}>
+      <td style={{ paddingLeft: 4, borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }}>
         <div style={{ position: 'relative', display: 'inline-block', maxWidth: 200, minWidth: 200 }}>
           <select
             value={task.project_id || ''}
@@ -219,7 +219,7 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
       </td>
 
       {/* task note */}
-      <td className="td-main" style={{ minWidth: 160 }}>
+      <td className="td-main" style={{ minWidth: 160, borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }}>
         {editField === 'note' ? (
           <textarea
             autoFocus
@@ -241,7 +241,7 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
       </td>
 
       {/* status note */}
-      <td style={{ minWidth: 120 }}>
+      <td style={{ minWidth: 120, borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }}>
         {editField === 'status_note' ? (
           <textarea
             autoFocus
@@ -266,7 +266,7 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
       </td>
 
       {/* status dot — click to toggle Normal ↔ Hot */}
-      <td style={{ width: 52, textAlign: 'center' }}>
+      <td style={{ width: 52, textAlign: 'center', borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }}>
         <button
           onClick={() => onSave(task.id, { status: isHot ? 'Normal' : 'Hot' })}
           title={isHot ? 'Hot — click for Normal' : 'Normal — click for Hot'}
@@ -285,7 +285,7 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
       </td>
 
       {/* assigned */}
-      <td style={{ position: 'relative' }} ref={assignRef}>
+      <td style={{ position: 'relative', borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }} ref={assignRef}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {assignee
             ? <Avatar name={assignee.name} />
@@ -328,12 +328,12 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
       </td>
 
       {/* updated */}
-      <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--text3)', whiteSpace: 'nowrap' }}>
+      <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--text3)', whiteSpace: 'nowrap', borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }}>
         {fmtUpdated(task.updated_at, task.updater?.name)}
       </td>
 
       {/* actions */}
-      <td style={{ padding: '8px 12px 8px 4px' }}>
+      <td style={{ padding: '8px 12px 8px 4px', borderBottom: '1px solid #9dc691' }}>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'flex-end' }}>
           <button
             className="btn btn-ghost btn-icon btn-sm"
