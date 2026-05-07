@@ -660,17 +660,6 @@ export default function ClientTasks() {
         <div style={{ display: 'flex', gap: 8 }}>
           <input
             type="text"
-            placeholder="Client"
-            value={clientFilter}
-            onChange={e => setClientFilter(e.target.value)}
-            style={{
-              background: 'var(--bg2)', border: '1px solid var(--border)',
-              borderRadius: 8, padding: '5px 10px', color: 'var(--text)',
-              fontSize: 13, width: 110, outline: 'none',
-            }}
-          />
-          <input
-            type="text"
             placeholder="Project"
             value={projectFilter}
             onChange={e => setProjectFilter(e.target.value)}
