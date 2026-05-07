@@ -682,21 +682,8 @@ export default function ClientTasks() {
           />
         </div>
 
-        {currentCycle && (
-          <div style={{
-            padding: '4px 10px', borderRadius: 6,
-            border: '1px solid var(--border)', background: 'var(--bg2)',
-            fontSize: 12, fontWeight: 600, color: 'var(--text2)',
-            whiteSpace: 'nowrap', fontFamily: 'DM Mono, monospace',
-          }}>
-            {currentCycle} | {cycleRemaining} of {cycleTotal}
-          </div>
-        )}
-
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <button style={execBtnStyle('All')}           onClick={handleAll}>All</button>
-          <button style={execBtnStyle('RandomProject')} onClick={handleRandomProject}>Random Project Tasks</button>
-          <button style={execBtnStyle('RandomHot')}     onClick={handleRandomHot}>Random Hot Task</button>
           <button style={execBtnStyle('Hot')}           onClick={handleHot}>Hot</button>
           <button
             className="btn btn-primary"
