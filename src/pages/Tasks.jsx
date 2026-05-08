@@ -540,6 +540,7 @@ export default function TasksPage() {
       note:        trimmed,
       status:      'Normal',
       sort_order:  maxOrder + 1,
+      link_url:    null,
     })
   }
 
