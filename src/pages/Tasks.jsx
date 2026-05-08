@@ -128,6 +128,7 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
   const [snoteVal,   setSnoteVal]   = useState(task.status_note || '')
   const [assignOpen, setAssignOpen] = useState(false)
   const [linkOpen,   setLinkOpen]   = useState(false)
+  const [linkDraft,  setLinkDraft]  = useState('')
   const assignRef   = useRef(null)
   const linkRef     = useRef(null)
   const noteValRef  = useRef(task.note || '')
@@ -141,6 +142,22 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [assignOpen])
+
+  useEffect(() => {
+    if (!linkOpen) return
+    setLinkDraft(task.link_url || '')
+    function handleClick(e) {
+      if (linkRef.current && !linkRef.current.contains(e.target)) setLinkOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [linkOpen])
+
+  async function saveLink() {
+    const trimmed = linkDraft.trim()
+    await onSave(task.id, { link_url: trimmed || null })
+    setLinkOpen(false)
+  }
 
   function commitNote() {
     setEditField(null)
@@ -353,32 +370,59 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
       <td style={{ padding: '8px 12px 8px 4px', borderBottom: '1px solid #9dc691', position: 'relative' }}>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'flex-end' }}>
 
-          {/* link button group */}
-          <div ref={linkRef} style={{ display: 'flex', border: '1px solid #333', borderRadius: 6, overflow: 'hidden' }}>
-            <button
-              title={task.link_url ? 'Edit link' : 'Add link'}
-              onClick={() => setLinkOpen(v => !v)}
-              style={{
-                width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: task.link_url ? 'var(--green)' : 'transparent',
-                border: 'none', borderRight: '1px solid #333',
-                cursor: 'pointer',
-                color: task.link_url ? '#fff' : 'var(--text3)',
-              }}
-            ><ChainIcon /></button>
-            <button
-              title="Open link"
-              onClick={() => task.link_url && window.open(task.link_url, '_blank')}
-              disabled={!task.link_url}
-              style={{
-                width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: task.link_url ? 'var(--green)' : 'transparent',
-                border: 'none',
-                cursor: task.link_url ? 'pointer' : 'default',
-                color: task.link_url ? '#fff' : 'var(--text3)',
-                opacity: task.link_url ? 1 : 0.4,
-              }}
-            ><ExternalLinkIcon /></button>
+          {/* link button group + popover */}
+          <div ref={linkRef} style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', border: '1px solid #333', borderRadius: 6, overflow: 'hidden' }}>
+              <button
+                title={task.link_url ? 'Edit link' : 'Add link'}
+                onClick={() => setLinkOpen(v => !v)}
+                style={{
+                  width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: task.link_url ? 'var(--green)' : 'transparent',
+                  border: 'none', borderRight: '1px solid #333',
+                  cursor: 'pointer',
+                  color: task.link_url ? '#fff' : 'var(--text3)',
+                }}
+              ><ChainIcon /></button>
+              <button
+                title="Open link"
+                onClick={() => task.link_url && window.open(task.link_url, '_blank')}
+                disabled={!task.link_url}
+                style={{
+                  width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: task.link_url ? 'var(--green)' : 'transparent',
+                  border: 'none',
+                  cursor: task.link_url ? 'pointer' : 'default',
+                  color: task.link_url ? '#fff' : 'var(--text3)',
+                  opacity: task.link_url ? 1 : 0.4,
+                }}
+              ><ExternalLinkIcon /></button>
+            </div>
+
+            {linkOpen && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 300,
+                background: 'var(--bg2)', border: '1px solid var(--border)',
+                borderRadius: 8, boxShadow: 'var(--shadow-lg)',
+                padding: '8px 10px', display: 'flex', gap: 8, alignItems: 'center',
+                minWidth: 260,
+              }}>
+                <input
+                  autoFocus
+                  type="text"
+                  value={linkDraft}
+                  onChange={e => setLinkDraft(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') saveLink(); if (e.key === 'Escape') setLinkOpen(false) }}
+                  placeholder="https://…"
+                  style={{
+                    flex: 1, background: 'var(--bg3)', border: '1px solid var(--border)',
+                    borderRadius: 6, padding: '5px 8px', fontSize: 12,
+                    color: 'var(--text)', outline: 'none',
+                  }}
+                />
+                <button className="btn btn-primary btn-sm" onClick={saveLink}>Save</button>
+              </div>
+            )}
           </div>
 
           <button
