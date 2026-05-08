@@ -67,6 +67,21 @@ function TrashIcon() {
   </svg>
 }
 
+function ChainIcon() {
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+  </svg>
+}
+
+function ExternalLinkIcon() {
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+    <polyline points="15 3 21 3 21 9"/>
+    <line x1="10" y1="14" x2="21" y2="3"/>
+  </svg>
+}
+
 // ── QUICK ADD ROW ─────────────────────────────────────────────────────────────
 function QuickAddRow({ onCommit, onDiscard }) {
   const [note, setNote] = useState('')
@@ -112,7 +127,9 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
   const [noteVal,    setNoteVal]    = useState(task.note || '')
   const [snoteVal,   setSnoteVal]   = useState(task.status_note || '')
   const [assignOpen, setAssignOpen] = useState(false)
+  const [linkOpen,   setLinkOpen]   = useState(false)
   const assignRef   = useRef(null)
+  const linkRef     = useRef(null)
   const noteValRef  = useRef(task.note || '')
   const snoteValRef = useRef(task.status_note || '')
 
@@ -333,8 +350,37 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
       </td>
 
       {/* actions */}
-      <td style={{ padding: '8px 12px 8px 4px', borderBottom: '1px solid #9dc691' }}>
+      <td style={{ padding: '8px 12px 8px 4px', borderBottom: '1px solid #9dc691', position: 'relative' }}>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'flex-end' }}>
+
+          {/* link button group */}
+          <div ref={linkRef} style={{ display: 'flex', border: '1px solid #333', borderRadius: 6, overflow: 'hidden' }}>
+            <button
+              title={task.link_url ? 'Edit link' : 'Add link'}
+              onClick={() => setLinkOpen(v => !v)}
+              style={{
+                width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: task.link_url ? 'var(--green)' : 'transparent',
+                border: 'none', borderRight: '1px solid #333',
+                cursor: 'pointer',
+                color: task.link_url ? '#fff' : 'var(--text3)',
+              }}
+            ><ChainIcon /></button>
+            <button
+              title="Open link"
+              onClick={() => task.link_url && window.open(task.link_url, '_blank')}
+              disabled={!task.link_url}
+              style={{
+                width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: task.link_url ? 'var(--green)' : 'transparent',
+                border: 'none',
+                cursor: task.link_url ? 'pointer' : 'default',
+                color: task.link_url ? '#fff' : 'var(--text3)',
+                opacity: task.link_url ? 1 : 0.4,
+              }}
+            ><ExternalLinkIcon /></button>
+          </div>
+
           <button
             className="btn btn-ghost btn-icon btn-sm"
             onClick={onAddBelow}
