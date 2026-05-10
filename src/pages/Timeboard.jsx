@@ -1,36 +1,714 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import { DEMO_TIME_ENTRIES, DEMO_PROJECTS } from '../lib/demo-data'
-import { StatCard, Modal, EmptyState, FormGroup } from '../components/ui'
-import { format, startOfWeek, endOfWeek, addDays, addWeeks, subWeeks, parseISO } from 'date-fns'
+import { useAuth } from '../lib/auth'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 
-const TEAM = [
-  { id: 'u1', name: 'Jim OConnell', role: 'Manager'   },
-  { id: 'u2', name: 'Sarah M.',     role: 'Design'     },
-  { id: 'u3', name: 'Mike T.',      role: 'Dev'        },
-]
+const CATEGORY_COLORS = {
+  primary:    '#ffb8b8',
+  secondary:  '#4fd1b8',
+  accounting: '#63ca7a',
+  overhead:   '#b9dd67',
+  charity:    '#c6c7fe',
+  personal:   '#ebb8e5',
+}
+
+// 288 five-minute time slots 00:00–23:55
+const TIME_SLOTS = Array.from({ length: 288 }, (_, i) => {
+  const h = Math.floor(i / 12)
+  const m = (i % 12) * 5
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+})
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function todayISO() { return new Date().toISOString().slice(0, 10) }
+
+function calcHoursFromTimes(start, end) {
+  if (!start || !end) return 0
+  const toMins = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+  return Math.max(0, (toMins(end) - toMins(start)) / 60)
+}
+
+// Format for expanded view: no zero-pad on minutes ("9:5 am")
+function fmtSlotTime(slot) {
+  const [h, m] = slot.split(':').map(Number)
+  const ampm = h < 12 ? 'am' : 'pm'
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h
+  return `${h12}:${m} ${ampm}`
+}
+
+// Format for collapsed view: zero-pad minutes ("9:00 am")
+function fmtTime(timeStr) {
+  if (!timeStr) return '—'
+  const [h, m] = timeStr.split(':').map(Number)
+  const ampm = h < 12 ? 'am' : 'pm'
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`
+}
+
+function fmtDate(isoDate) {
+  if (!isoDate) return ''
+  const [, mm, dd] = isoDate.split('-')
+  return `${parseInt(mm, 10)}/${parseInt(dd, 10)}`
+}
+
+function darken(hex) {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgb(${Math.round(r * 0.42)},${Math.round(g * 0.42)},${Math.round(b * 0.42)})`
+}
+
+function projectLabel(entry) {
+  const alias = (entry.project?.client?.alias || '').slice(0, 4).toLowerCase()
+  const jn = entry.project?.project_number || ''
+  return alias ? `${alias} | ${jn}` : jn
+}
+
+function fmt$(n) {
+  return '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function fmtHours(n) {
+  return Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+// Enrich entries with computed outTime, hours, billableAmt, invoiceAmt
+// outTime = start_time of next entry for same date (null if last)
+function enrichEntries(entries) {
+  const byDate = {}
+  entries.forEach(e => { if (!byDate[e.date]) byDate[e.date] = []; byDate[e.date].push(e) })
+  const result = []
+  Object.values(byDate).forEach(day => {
+    const sorted = [...day].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''))
+    sorted.forEach((entry, i) => {
+      const outTime = sorted[i + 1]?.start_time || null
+      const hours = calcHoursFromTimes(entry.start_time, outTime)
+      const isPrimary = entry.project?.category === 'primary'
+      const billableAmt = isPrimary ? hours * (entry.hourly_rate || 0) : 0
+      const invoiceAmt  = (billableAmt > 0 && entry.invoice_number) ? billableAmt : 0
+      result.push({ ...entry, outTime, hours, billableAmt, invoiceAmt })
+    })
+  })
+  return result
+}
+
+// ── Summary Tiles ──────────────────────────────────────────────────────────────
+
+function PrimaryTile({ entries }) {
+  const hours = entries.reduce((s, e) => s + (e.hours || 0), 0)
+  const billable = entries.filter(e => e.is_billable === true)
+    .reduce((s, e) => s + (e.hours || 0) * (e.hourly_rate || 0), 0)
+  const toInvoice = entries.filter(e => e.is_billable === true && !e.invoice_number)
+    .reduce((s, e) => s + (e.hours || 0) * (e.hourly_rate || 0), 0)
+  const text = darken(CATEGORY_COLORS.primary)
+  return (
+    <div style={{ background: CATEGORY_COLORS.primary, borderRadius: 8, padding: '8px 14px', minWidth: 130, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: text }}>Primary</div>
+      <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.1, color: text, fontFamily: 'DM Mono, monospace' }}>{fmtHours(hours)}</div>
+      <div style={{ fontSize: 11, color: text, fontFamily: 'DM Mono, monospace' }}>Billable {fmt$(billable)}</div>
+      <div style={{ fontSize: 11, color: text, fontFamily: 'DM Mono, monospace' }}>To Invoice {fmt$(toInvoice)}</div>
+    </div>
+  )
+}
+
+function CategoryTile({ label, entries, color }) {
+  const hours = entries.reduce((s, e) => s + (e.hours || 0), 0)
+  const text = darken(color)
+  return (
+    <div style={{ background: color, borderRadius: 8, padding: '8px 14px', minWidth: 90, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: text }}>{label}</div>
+      <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.1, color: text, fontFamily: 'DM Mono, monospace' }}>{fmtHours(hours)}</div>
+    </div>
+  )
+}
+
+function SummaryTiles({ entries }) {
+  const by = cat => entries.filter(e => e.project?.category === cat)
+  return (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+      <PrimaryTile entries={by('primary')} />
+      <CategoryTile label="Secondary"  entries={by('secondary')}  color={CATEGORY_COLORS.secondary}  />
+      <CategoryTile label="Accounting" entries={by('accounting')} color={CATEGORY_COLORS.accounting} />
+      <CategoryTile label="Overhead"   entries={by('overhead')}   color={CATEGORY_COLORS.overhead}   />
+      <CategoryTile label="Charity"    entries={by('charity')}    color={CATEGORY_COLORS.charity}    />
+      <CategoryTile label="Personal"   entries={by('personal')}   color={CATEGORY_COLORS.personal}   />
+    </div>
+  )
+}
+
+// ── Shared Input Components ────────────────────────────────────────────────────
+
+// Project search autocomplete
+function ProjectInput({ existingEntry, projects, onSelect, onCancel, onClear }) {
+  const [text, setText] = useState(existingEntry ? projectLabel(existingEntry) : '')
+  const [matches, setMatches] = useState([])
+  const [dropdownPos, setDropdownPos] = useState(null)
+  const inputRef = useRef(null)
+
+  useEffect(() => { inputRef.current?.focus() }, [])
+
+  function filterProjects(q) {
+    if (!q) return projects.slice(0, 20)
+    return projects.filter(p =>
+      (p.client?.alias    || '').toLowerCase().includes(q) ||
+      (p.project_number   || '').toLowerCase().includes(q) ||
+      (p.name             || '').toLowerCase().includes(q)
+    ).slice(0, 12)
+  }
+
+  function measure() {
+    const rect = inputRef.current?.getBoundingClientRect()
+    if (rect && (rect.width > 0 || rect.height > 0)) {
+      setDropdownPos({ top: rect.bottom + 2, left: rect.left })
+    }
+  }
+
+  function handleChange(e) {
+    const v = e.target.value
+    setText(v)
+    measure()
+    setMatches(filterProjects(v.toLowerCase()))
+  }
+
+  function handleFocus() {
+    measure()
+    setMatches(filterProjects(''))
+  }
+
+  const showDropdown = (existingEntry || matches.length > 0) && dropdownPos
+
+  return (
+    <>
+      <input ref={inputRef} value={text} onChange={handleChange}
+        onFocus={handleFocus}
+        onKeyDown={e => { if (e.key === 'Escape') onCancel() }}
+        onBlur={() => { if (text.trim() === '' && existingEntry) onClear?.(); else onCancel() }}
+        style={{ width: 130, fontSize: 12, fontFamily: 'DM Mono, monospace', background: 'rgba(255,255,255,0.88)', border: '1px solid var(--accent)', borderRadius: 5, padding: '2px 6px', outline: 'none' }}
+      />
+      {showDropdown && (
+        <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 9999, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 4px 18px rgba(0,0,0,0.18)', minWidth: 280, maxHeight: 240, overflowY: 'auto' }}>
+          {existingEntry && (
+            <div
+              onMouseDown={e => e.preventDefault()}
+              onClick={onClear}
+              style={{ padding: '6px 10px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)', fontStyle: 'italic', color: 'var(--text3)' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              None
+            </div>
+          )}
+          {matches.map(p => {
+            const alias = (p.client?.alias || '').slice(0, 4).toLowerCase()
+            const label = [alias, p.project_number, p.name].filter(Boolean).join(' | ')
+            return (
+              <div key={p.id}
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => onSelect(p)}
+                style={{ padding: '6px 10px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: CATEGORY_COLORS[p.category] || '#ccc', flexShrink: 0 }} />
+                <span style={{ fontFamily: 'DM Mono, monospace', color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </>
+  )
+}
+
+// Description field that saves on blur / Enter
+function DescInput({ entry, onSave }) {
+  const [val, setVal] = useState(entry.description || '')
+  useEffect(() => { setVal(entry.description || '') }, [entry.id])
+  return (
+    <input value={val} onChange={e => setVal(e.target.value)}
+      onBlur={() => { if (val.trim() !== (entry.description || '').trim()) onSave(val.trim()) }}
+      onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
+      placeholder="Description…"
+      style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: 13, color: 'var(--text)', padding: '2px 4px' }}
+    />
+  )
+}
+
+// Generic inline editable field
+function InlineInput({ value, onSave, placeholder, width, align }) {
+  const [val, setVal] = useState(value || '')
+  useEffect(() => { setVal(value || '') }, [value])
+  return (
+    <input value={val} onChange={e => setVal(e.target.value)}
+      onBlur={() => { if (val.trim() !== (value || '')) onSave(val.trim()) }}
+      onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
+      placeholder={placeholder || '—'}
+      style={{ width: width || 70, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 5px', fontSize: 12, textAlign: align || 'left', outline: 'none' }}
+    />
+  )
+}
+
+// Two-dot billable toggle
+function BillableToggle({ value, onChange }) {
+  return (
+    <div style={{ display: 'flex', gap: 4, alignItems: 'center', justifyContent: 'center' }}>
+      <button onClick={() => onChange(value === false ? null : false)} title="Not Billable"
+        style={{ width: 13, height: 13, borderRadius: '50%', border: 'none', padding: 0, cursor: 'pointer', background: value === false ? '#f87171' : '#cccccc' }}
+      />
+      <button onClick={() => onChange(value === true ? null : true)} title="Billable"
+        style={{ width: 13, height: 13, borderRadius: '50%', border: 'none', padding: 0, cursor: 'pointer', background: value === true ? '#4ade80' : '#cccccc' }}
+      />
+    </div>
+  )
+}
+
+// ── Expanded View ──────────────────────────────────────────────────────────────
+
+const EXP_ROW = { borderBottom: '1px solid rgba(0,0,0,0.07)', verticalAlign: 'middle' }
+const EXP_PAD = { padding: '1px 8px' }
+
+function ExpandedView({ entries, projects, expandedDate, onEntryChange, onEntryDelete, user }) {
+  const [editingSlot, setEditingSlot] = useState(null)
+  const scrollRef = useRef(null)
+
+  const dayEntries = useMemo(() => entries.filter(e => e.date === expandedDate), [entries, expandedDate])
+
+  const entryMap = useMemo(() => {
+    const m = new Map()
+    dayEntries.forEach(e => { if (e.start_time) m.set(e.start_time.slice(0, 5), e) })
+    return m
+  }, [dayEntries])
+
+  // Filter out any entries with missing start_time before sorting —
+  // a null start_time produces "" which compares <= every slot time and
+  // would incorrectly paint the entire day with that entry's color.
+  const sortedEntries = useMemo(
+    () => [...dayEntries]
+      .filter(e => e.start_time)
+      .sort((a, b) => a.start_time.localeCompare(b.start_time)),
+    [dayEntries]
+  )
+
+  const activePerSlot = useMemo(() => {
+    const result = new Array(288).fill(null)
+    if (sortedEntries.length === 0) return result
+    let ei = 0
+    for (let i = 0; i < 288; i++) {
+      // Advance past all entries whose start_time is at or before this slot.
+      // Slots before the first entry keep ei=0 and return null (no fill).
+      while (
+        ei < sortedEntries.length &&
+        (sortedEntries[ei].start_time || '').slice(0, 5) <= TIME_SLOTS[i]
+      ) ei++
+      result[i] = ei > 0 ? sortedEntries[ei - 1] : null
+    }
+    return result
+  }, [sortedEntries])
+
+  const firstEmptySlot = useMemo(() => {
+    if (sortedEntries.length === 0) {
+      if (expandedDate === todayISO()) {
+        const now = new Date()
+        const h = now.getHours(), m = Math.floor(now.getMinutes() / 5) * 5
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+      }
+      return '09:00'
+    }
+    const lastTime = sortedEntries[sortedEntries.length - 1].start_time
+    const lastSlot = (lastTime || '').slice(0, 5)
+    const idx = TIME_SLOTS.indexOf(lastSlot)
+    return idx >= 0 && idx < 287 ? TIME_SLOTS[idx + 1] : null
+  }, [sortedEntries, expandedDate])
+
+  useEffect(() => {
+    if (!scrollRef.current) return
+    let target
+    if (expandedDate === todayISO()) {
+      const now = new Date()
+      target = `${String(now.getHours()).padStart(2, '0')}:${String(Math.floor(now.getMinutes() / 5) * 5).padStart(2, '0')}`
+    } else {
+      target = sortedEntries[0]?.start_time.slice(0, 5) || '09:00'
+    }
+    scrollRef.current.querySelector(`[data-slot="${target}"]`)?.scrollIntoView({ block: 'center', behavior: 'instant' })
+  }, [expandedDate]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function selectProject(project) {
+    if (!editingSlot) return
+    const slot = editingSlot
+    const existing = entryMap.get(slot)
+    const sel = '*, project:projects(id, name, project_number, category, client:clients(id, company, alias))'
+    let saved
+    if (existing) {
+      const { data } = await supabase.from('time_entries')
+        .update({ project_id: project.id, hourly_rate: project.client?.hourly_rate || 0 })
+        .eq('id', existing.id).select(sel).single()
+      saved = data
+    } else {
+      const { data } = await supabase.from('time_entries')
+        .insert({ date: expandedDate, start_time: slot + ':00', project_id: project.id, hourly_rate: project.client?.hourly_rate || 0, user_id: user?.id })
+        .select(sel).single()
+      saved = data
+    }
+    if (saved) onEntryChange(saved)
+    setEditingSlot(null)
+  }
+
+  async function deleteEntry(slot) {
+    const existing = entryMap.get(slot)
+    if (!existing) { setEditingSlot(null); return }
+    await supabase.from('time_entries').delete().eq('id', existing.id)
+    onEntryDelete(existing.id)
+    setEditingSlot(null)
+  }
+
+  async function saveDescription(slotTime, desc) {
+    const existing = entryMap.get(slotTime)
+    if (!existing) return
+    await supabase.from('time_entries').update({ description: desc }).eq('id', existing.id)
+    onEntryChange({ ...existing, description: desc })
+  }
+
+  const dateLabel = fmtDate(expandedDate)
+
+  return (
+    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div ref={scrollRef} style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 300px)' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+          <colgroup>
+            <col style={{ width: 48 }} /><col style={{ width: 78 }} />
+            <col style={{ width: 150 }} /><col />
+          </colgroup>
+          <tbody>
+            {TIME_SLOTS.map((slot, i) => {
+              const active    = activePerSlot[i]
+              const thisEntry = entryMap.get(slot)
+              const bg        = active ? (CATEGORY_COLORS[active.project?.category] || undefined) : undefined
+              const isEditing = editingSlot === slot
+              const isFirst   = slot === firstEmptySlot
+              return (
+                <tr key={slot} data-slot={slot} style={{ ...EXP_ROW, background: bg }}>
+                  <td style={{ ...EXP_PAD, color: 'var(--text3)', fontSize: 11, whiteSpace: 'nowrap' }}>{dateLabel}</td>
+                  <td style={{ ...EXP_PAD, color: 'var(--text2)', fontSize: 12, fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>{fmtSlotTime(slot)}</td>
+                  <td style={{ padding: '2px 6px' }}>
+                    {isEditing ? (
+                      <ProjectInput existingEntry={thisEntry} projects={projects} onSelect={selectProject} onCancel={() => setEditingSlot(null)} onClear={() => deleteEntry(slot)} />
+                    ) : thisEntry ? (
+                      <span onClick={() => setEditingSlot(slot)} title="Click to change project"
+                        style={{ display: 'inline-block', padding: '1px 7px', border: '1px solid rgba(0,0,0,0.18)', borderRadius: 5, fontSize: 12, fontFamily: 'DM Mono, monospace', background: 'rgba(255,255,255,0.52)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        {projectLabel(thisEntry)}
+                      </span>
+                    ) : isFirst ? (
+                      <input readOnly onFocus={() => setEditingSlot(slot)} placeholder="project #…"
+                        style={{ width: 100, fontSize: 12, background: 'transparent', border: '1px dashed var(--border2)', borderRadius: 5, padding: '1px 6px', color: 'var(--text3)', cursor: 'text' }}
+                      />
+                    ) : (
+                      <div style={{ minHeight: 22, cursor: 'text' }} onClick={() => setEditingSlot(slot)} />
+                    )}
+                  </td>
+                  <td style={{ ...EXP_PAD }}>
+                    {thisEntry && <DescInput key={thisEntry.id} entry={thisEntry} onSave={desc => saveDescription(slot, desc)} />}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// ── Invoice Breakdown print window ─────────────────────────────────────────────
+
+function openInvoiceBreakdown(rows, invoiceFilter) {
+  const target = invoiceFilter
+    ? rows.filter(r => r.invoice_number === invoiceFilter)
+    : rows.filter(r => r.invoice_number)
+
+  const w = window.open('', '_blank', 'width=960,height=700')
+  if (!w) return
+  const totalHours = target.reduce((s, r) => s + r.hours, 0)
+  const totalAmt   = target.reduce((s, r) => s + r.billableAmt, 0)
+  const title = invoiceFilter ? `Invoice Breakdown — Invoice #${invoiceFilter}` : 'Invoice Breakdown'
+
+  const dates = target.map(r => r.date).filter(Boolean).sort()
+  const dateRange = dates.length === 0 ? ''
+    : dates[0] === dates[dates.length - 1]
+      ? fmtDate(dates[0])
+      : `${fmtDate(dates[0])} – ${fmtDate(dates[dates.length - 1])}`
+
+  w.document.write(`<!DOCTYPE html><html><head><title>${title}</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:13px;padding:32px;color:#222}
+  h1{font-size:18px;margin-bottom:4px}p{color:#666;margin:4px 0 12px}
+  button{margin-bottom:16px;padding:6px 14px;cursor:pointer}
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;border-bottom:2px solid #333;padding:6px 8px;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+  td{border-bottom:1px solid #eee;padding:6px 8px}
+  .mono{font-family:monospace}.right{text-align:right}
+  tfoot td{font-weight:700;border-top:2px solid #333;border-bottom:none}
+  @media print{button{display:none}}
+</style></head><body>
+<h1>${title}</h1>${dateRange ? `<p>${dateRange}</p>` : ''}
+<button onclick="window.print()">Print / Save PDF</button>
+<table>
+  <thead><tr>
+    <th>Date</th><th>Project</th><th>Description</th>
+    <th class="right">Hours</th><th class="right">Rate</th><th class="right">Amount</th>
+  </tr></thead>
+  <tbody>
+    ${target.map(r => `<tr>
+      <td>${fmtDate(r.date)}</td>
+      <td class="mono">${projectLabel(r)}</td>
+      <td>${r.description || ''}</td>
+      <td class="mono right">${r.hours.toFixed(2)}</td>
+      <td class="mono right">${fmt$(r.hourly_rate || 0)}</td>
+      <td class="mono right">${fmt$(r.billableAmt)}</td>
+    </tr>`).join('')}
+  </tbody>
+  <tfoot><tr>
+    <td colspan="3">Total</td>
+    <td class="mono right">${totalHours.toFixed(2)}</td>
+    <td></td>
+    <td class="mono right">${fmt$(totalAmt)}</td>
+  </tr></tfoot>
+</table></body></html>`)
+  w.document.close()
+}
+
+// ── Collapsed View ─────────────────────────────────────────────────────────────
+
+const TH = { padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--text3)', letterSpacing: '0.06em', textTransform: 'uppercase', borderBottom: '2px solid var(--border2)', whiteSpace: 'nowrap', textAlign: 'left' }
+const TD = { padding: '7px 10px', fontSize: 13, verticalAlign: 'middle', borderBottom: '1px solid var(--border)' }
+
+function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onOpenBreakdown }) {
+  const [addRow, setAddRow]       = useState({ date: todayISO(), inTime: '', description: '' })
+  const [addProject, setAddProject]         = useState(null)
+  const [editAddProject, setEditAddProject] = useState(false)
+  const [saving, setSaving]       = useState(false)
+
+  async function toggleBillable(entry, val) {
+    await supabase.from('time_entries').update({ is_billable: val }).eq('id', entry.id)
+    onEntryChange({ ...entry, is_billable: val })
+  }
+
+  async function saveInvoiceNumber(entry, invoiceNo) {
+    const val = invoiceNo || null
+    await supabase.from('time_entries').update({ invoice_number: val }).eq('id', entry.id)
+    onEntryChange({ ...entry, invoice_number: val })
+  }
+
+  async function saveDescription(entry, desc) {
+    await supabase.from('time_entries').update({ description: desc || null }).eq('id', entry.id)
+    onEntryChange({ ...entry, description: desc || null })
+  }
+
+  async function handleAddSave() {
+    if (!addRow.date || !addRow.inTime || !addProject) return
+    setSaving(true)
+    const { data } = await supabase.from('time_entries')
+      .insert({
+        date:        addRow.date,
+        start_time:  addRow.inTime + ':00',
+        project_id:  addProject.id,
+        hourly_rate: addProject.client?.hourly_rate || 0,
+        description: addRow.description || null,
+        user_id:     user?.id,
+      })
+      .select('*, project:projects(id, name, project_number, category, client:clients(id, company, alias))')
+      .single()
+    if (data) onEntryChange(data)
+    setAddRow({ date: todayISO(), inTime: '', description: '' })
+    setAddProject(null)
+    setSaving(false)
+  }
+
+  const totalHours   = rows.reduce((s, r) => s + r.hours, 0)
+  const totalBillable = rows.reduce((s, r) => s + r.billableAmt, 0)
+  const totalInvoice  = rows.reduce((s, r) => s + r.invoiceAmt, 0)
+
+  const timePillStyle = {
+    display: 'inline-block', padding: '2px 7px',
+    border: '1px solid var(--border)', borderRadius: 4,
+    fontSize: 12, fontFamily: 'DM Mono, monospace',
+    background: 'var(--bg3)', whiteSpace: 'nowrap',
+  }
+
+  return (
+    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
+          <thead>
+            <tr>
+              <th style={{ ...TH, width: 48 }}>Date</th>
+              <th style={{ ...TH, width: 90 }}>In</th>
+              <th style={{ ...TH, width: 90 }}>Out</th>
+              <th style={{ ...TH, width: 130 }}>Project</th>
+              <th style={TH}>Description</th>
+              <th style={{ ...TH, textAlign: 'right', width: 65 }}>Hours</th>
+              <th style={{ ...TH, width: 50, textAlign: 'center' }}></th>
+              <th style={{ ...TH, textAlign: 'right', width: 80 }}>Billable</th>
+              <th style={{ ...TH, textAlign: 'right', width: 80 }}>Invoice</th>
+              <th style={{ ...TH, width: 90 }}>Invoice No.</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(row => {
+              const hasInvoice = !!row.invoice_number
+              const rowStyle = {
+                ...TD,
+                borderLeft: hasInvoice ? '3px solid var(--accent2)' : '3px solid transparent',
+              }
+              const cat = row.project?.category
+              const catColor = CATEGORY_COLORS[cat] || '#eee'
+              return (
+                <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td style={rowStyle}><span style={{ fontSize: 12, color: 'var(--text3)' }}>{fmtDate(row.date)}</span></td>
+                  <td style={rowStyle}><span style={timePillStyle}>{fmtTime(row.start_time)}</span></td>
+                  <td style={rowStyle}>{row.outTime ? <span style={timePillStyle}>{fmtTime(row.outTime)}</span> : <span style={{ color: 'var(--text3)', fontSize: 12 }}>—</span>}</td>
+                  <td style={rowStyle}>
+                    <span style={{ display: 'inline-block', padding: '2px 8px', background: catColor, borderRadius: 4, fontSize: 12, fontFamily: 'DM Mono, monospace', color: darken(catColor), whiteSpace: 'nowrap' }}>
+                      {projectLabel(row)}
+                    </span>
+                  </td>
+                  <td style={rowStyle}>
+                    <InlineInput
+                      value={row.description || ''}
+                      onSave={v => saveDescription(row, v)}
+                      placeholder="Description…"
+                      width="100%"
+                    />
+                  </td>
+                  <td style={{ ...rowStyle, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
+                    {row.hours > 0 ? fmtHours(row.hours) : '—'}
+                  </td>
+                  <td style={{ ...rowStyle, textAlign: 'center' }}>
+                    <BillableToggle value={row.is_billable} onChange={val => toggleBillable(row, val)} />
+                  </td>
+                  <td style={{ ...rowStyle, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
+                    {row.billableAmt > 0 ? fmt$(row.billableAmt) : '—'}
+                  </td>
+                  <td style={{ ...rowStyle, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
+                    {row.invoiceAmt > 0 ? fmt$(row.invoiceAmt) : '—'}
+                  </td>
+                  <td style={rowStyle}>
+                    <InlineInput
+                      value={row.invoice_number || ''}
+                      onSave={v => saveInvoiceNumber(row, v)}
+                      placeholder="—"
+                      width={72}
+                      align="center"
+                    />
+                  </td>
+                </tr>
+              )
+            })}
+
+            {/* Add row */}
+            <tr style={{ background: 'var(--accent-glow)', borderBottom: '1px solid var(--border)' }}>
+              <td style={TD}>
+                <input type="date" value={addRow.date}
+                  onChange={e => setAddRow(r => ({ ...r, date: e.target.value }))}
+                  style={{ width: 120, fontSize: 12 }}
+                />
+              </td>
+              <td style={TD}>
+                <input type="time" value={addRow.inTime}
+                  onChange={e => setAddRow(r => ({ ...r, inTime: e.target.value }))}
+                  style={{ width: 100, fontSize: 12, fontFamily: 'DM Mono, monospace' }}
+                />
+              </td>
+              <td style={{ ...TD, color: 'var(--text3)', fontSize: 12 }}>auto</td>
+              <td style={TD}>
+                {editAddProject ? (
+                  <ProjectInput
+                    existingEntry={null}
+                    projects={projects}
+                    onSelect={p => { setAddProject(p); setEditAddProject(false) }}
+                    onCancel={() => setEditAddProject(false)}
+                  />
+                ) : addProject ? (
+                  <span
+                    onClick={() => setEditAddProject(true)}
+                    style={{ display: 'inline-block', padding: '2px 8px', background: CATEGORY_COLORS[addProject.category] || '#eee', borderRadius: 4, fontSize: 12, fontFamily: 'DM Mono, monospace', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  >
+                    {addProject.project_number}
+                  </span>
+                ) : (
+                  <button className="btn btn-ghost btn-sm"
+                    onClick={() => setEditAddProject(true)}
+                    style={{ fontSize: 12, border: '1px dashed var(--border2)', color: 'var(--text3)' }}
+                  >
+                    — project —
+                  </button>
+                )}
+              </td>
+              <td style={TD}>
+                <input value={addRow.description}
+                  onChange={e => setAddRow(r => ({ ...r, description: e.target.value }))}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddSave() }}
+                  placeholder="Description…"
+                  style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: 13 }}
+                />
+              </td>
+              <td colSpan={4} style={TD} />
+              <td style={TD}>
+                <button className="btn btn-primary btn-sm" onClick={handleAddSave} disabled={saving || !addRow.date || !addRow.inTime || !addProject}>
+                  {saving ? '…' : 'Save'}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+
+          {/* Totals footer */}
+          <tfoot>
+            <tr style={{ background: 'var(--bg3)', borderTop: '2px solid var(--border2)' }}>
+              <td colSpan={5} style={{ ...TD, fontWeight: 700, fontSize: 13, color: 'var(--text2)' }}>Total</td>
+              <td style={{ ...TD, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontWeight: 700, fontSize: 13 }}>{fmtHours(totalHours)}</td>
+              <td style={TD} />
+              <td style={{ ...TD, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontWeight: 700, fontSize: 13 }}>{fmt$(totalBillable)}</td>
+              <td style={{ ...TD, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontWeight: 700, fontSize: 13 }}>{fmt$(totalInvoice)}</td>
+              <td style={TD} />
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function TimeboardPage() {
-  const [entries, setEntries]   = useState([])
+  const { user } = useAuth()
+  const [view, setView]       = useState('expanded')
+  const [entries, setEntries] = useState([])
   const [projects, setProjects] = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [weekStart, setWeekStart] = useState(new Date(2026, 2, 9)) // Mon Mar 9
-  const [showModal, setShowModal] = useState(false)
-  const [prefill, setPrefill]   = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  // Filters
+  const [dateMode, setDateMode]               = useState('today')
+  const [dateStart, setDateStart]             = useState('')
+  const [dateEnd, setDateEnd]                 = useState('')
+  const [filterClient, setFilterClient]       = useState('')
+  const [filterProject, setFilterProject]     = useState('')
+  const [filterCategory, setFilterCategory]   = useState('')
+  const [filterInvoice, setFilterInvoice]     = useState('')
 
   useEffect(() => { load() }, [])
 
   async function load() {
     setLoading(true)
-    if (isDemo) {
-      setEntries(DEMO_TIME_ENTRIES)
-      setProjects(DEMO_PROJECTS)
-    } else {
+    if (!isDemo) {
       const [{ data: e }, { data: p }] = await Promise.all([
-        supabase.from('time_entries').select('*, project:projects(name), user_id').order('entry_date'),
-        supabase.from('projects').select('id,name').order('name'),
+        supabase.from('time_entries')
+          .select('*, project:projects(id, name, project_number, category, client:clients(id, company, alias))')
+          .order('date').order('start_time'),
+        supabase.from('projects')
+          .select('id, name, project_number, category, client:clients(id, company, alias, hourly_rate)')
+          .order('project_number'),
       ])
       setEntries(e || [])
       setProjects(p || [])
@@ -38,226 +716,145 @@ export default function TimeboardPage() {
     setLoading(false)
   }
 
-  // 7 days starting from weekStart
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
-  const weekEnd = days[6]
-
-  // Entries for this week only
-  const weekEntries = entries.filter(e => {
-    const d = parseISO(e.entry_date)
-    return d >= weekStart && d <= weekEnd
-  })
-
-  // Hours by user + day
-  function hoursFor(userId, day) {
-    const iso = format(day, 'yyyy-MM-dd')
-    return weekEntries
-      .filter(e => e.user_id === userId && e.entry_date === iso)
-      .reduce((s, e) => s + (e.hours || 0), 0)
+  function handleEntryChange(updated) {
+    setEntries(prev => {
+      const idx = prev.findIndex(e => e.id === updated.id)
+      return idx >= 0 ? prev.map(e => e.id === updated.id ? updated : e) : [...prev, updated]
+    })
   }
 
-  function totalFor(userId) {
-    return weekEntries.filter(e => e.user_id === userId).reduce((s, e) => s + (e.hours || 0), 0)
+  function handleEntryDelete(id) {
+    setEntries(prev => prev.filter(e => e.id !== id))
   }
 
-  const grandTotal   = weekEntries.reduce((s, e) => s + (e.hours || 0), 0)
-  const today = new Date(2026, 2, 13)
+  // All entries with computed outTime, hours, billableAmt, invoiceAmt
+  const enrichedEntries = useMemo(() => enrichEntries(entries), [entries])
 
-  // Entries by project for breakdown
-  const byProject = {}
-  weekEntries.forEach(e => {
-    const name = e.project?.name || 'Unknown'
-    byProject[name] = (byProject[name] || 0) + (e.hours || 0)
-  })
+  // Unique clients derived from projects (for the Client filter dropdown)
+  const uniqueClients = useMemo(() => {
+    const seen = new Set()
+    const list = []
+    projects.forEach(p => {
+      if (p.client?.id && !seen.has(p.client.id)) {
+        seen.add(p.client.id)
+        list.push(p.client)
+      }
+    })
+    return list.sort((a, b) => (a.company || a.alias || '').localeCompare(b.company || b.alias || ''))
+  }, [projects])
+
+  // Filtered + sorted enriched entries (for tiles and collapsed view)
+  const displayRows = useMemo(() => {
+    const today = todayISO()
+    return enrichedEntries.filter(e => {
+      if (dateMode === 'today')       { if (e.date !== today) return false }
+      else if (dateMode === 'range')  {
+        if (dateStart && e.date < dateStart) return false
+        if (dateEnd   && e.date > dateEnd)   return false
+      }
+      if (filterClient   && e.project?.client?.id !== filterClient) return false
+      if (filterProject) {
+        const q = filterProject.toLowerCase()
+        if (!(e.project?.project_number || '').toLowerCase().includes(q) &&
+            !(e.project?.name       || '').toLowerCase().includes(q)) return false
+      }
+      if (filterCategory && e.project?.category !== filterCategory) return false
+      if (filterInvoice  && (e.invoice_number || '').toLowerCase() !== filterInvoice.toLowerCase()) return false
+      return true
+    }).sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : (a.start_time || '').localeCompare(b.start_time || ''))
+  }, [enrichedEntries, dateMode, dateStart, dateEnd, filterClient, filterProject, filterCategory, filterInvoice])
+
+  const expandedDate = dateMode === 'today' ? todayISO() : (dateStart || todayISO())
 
   return (
     <div className="fade-in">
+      {/* ── topbar ── */}
       <div className="topbar">
-        <div className="topbar-title">Time board</div>
-
-        {/* Week nav */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button className="btn btn-ghost btn-sm" onClick={() => setWeekStart(w => subWeeks(w, 1))}>← Week</button>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', minWidth: 160, textAlign: 'center' }}>
-            {format(weekStart, 'MMM d')} – {format(weekEnd, 'MMM d, yyyy')}
-          </span>
-          <button className="btn btn-ghost btn-sm" onClick={() => setWeekStart(w => addWeeks(w, 1))}>Week →</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>Timeboard</span>
+          <div style={{ display: 'flex', border: '1px solid var(--border2)', borderRadius: 6, overflow: 'hidden' }}>
+            <button onClick={() => setView('expanded')}
+              style={{ padding: '4px 12px', fontSize: 12, fontWeight: 600, border: 'none', borderRight: '1px solid var(--border2)', cursor: 'pointer', background: view === 'expanded' ? 'var(--bg3)' : 'transparent', color: view === 'expanded' ? 'var(--text)' : 'var(--text3)' }}>
+              Expand
+            </button>
+            <button onClick={() => setView('collapsed')}
+              style={{ padding: '4px 12px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', background: view === 'collapsed' ? 'var(--bg3)' : 'transparent', color: view === 'collapsed' ? 'var(--text)' : 'var(--text3)' }}>
+              Collapse
+            </button>
+          </div>
         </div>
-
-        <button className="btn btn-primary" onClick={() => { setPrefill(null); setShowModal(true) }}>
-          + Log time
-        </button>
       </div>
 
       <div className="page-content">
-        {/* Stats */}
-        <div className="stat-grid mb-24">
-          <StatCard label="Total this week"  value={`${grandTotal}h`}                         color="accent" />
-          <StatCard label="Billable hours"   value={`${(grandTotal * 0.86).toFixed(1)}h`}    color="green"  />
-          <StatCard label="Non-billable"     value={`${(grandTotal * 0.14).toFixed(1)}h`}    color="amber"  />
-          <StatCard label="Utilization"      value={`${Math.round(grandTotal/40*100)}%`}      color="blue"   />
-        </div>
-
-        {/* Weekly grid */}
-        <div className="card mb-24">
-          <div style={{ overflowX: 'auto' }}>
-            {/* Header row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '180px repeat(7,1fr) 80px', background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
-              <div style={{ padding: '10px 16px', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text3)' }}>Team member</div>
-              {days.map((day, i) => {
-                const isToday = format(day, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')
-                return (
-                  <div key={i} style={{ padding: '8px 10px', textAlign: 'center', fontSize: 11, fontWeight: 600, color: isToday ? 'var(--accent2)' : 'var(--text3)', borderLeft: '1px solid var(--border)' }}>
-                    {format(day, 'EEE')}<br />
-                    <span style={{ fontWeight: 400, fontSize: 10 }}>{format(day, 'MMM d')}</span>
-                  </div>
-                )
-              })}
-              <div style={{ padding: '10px', textAlign: 'center', fontSize: 11, fontWeight: 600, color: 'var(--text3)', borderLeft: '1px solid var(--border)' }}>Total</div>
-            </div>
-
-            {/* Team rows */}
-            {TEAM.map((member, mi) => (
-              <div key={member.id} style={{ display: 'grid', gridTemplateColumns: '180px repeat(7,1fr) 80px', borderBottom: mi < TEAM.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{
-                    width: 30, height: 30, borderRadius: '50%',
-                    background: 'var(--accent-glow)', border: '1px solid var(--accent)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 11, fontWeight: 700, color: 'var(--accent2)', flexShrink: 0,
-                  }}>
-                    {member.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{member.name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text3)' }}>{member.role}</div>
-                  </div>
-                </div>
-
-                {days.map((day, di) => {
-                  const h = hoursFor(member.id, day)
-                  const isToday = format(day, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')
-                  return (
-                    <div
-                      key={di}
-                      onClick={() => h > 0 ? null : (setPrefill({ user_id: member.id, entry_date: format(day, 'yyyy-MM-dd') }), setShowModal(true))}
-                      style={{
-                        padding: '12px 10px', textAlign: 'center',
-                        borderLeft: '1px solid var(--border)',
-                        fontFamily: 'DM Mono, monospace', fontSize: 13,
-                        color: h > 0 ? (isToday ? 'var(--accent2)' : 'var(--text)') : 'var(--text3)',
-                        background: isToday ? 'color-mix(in srgb, var(--accent) 5%, transparent)' : 'transparent',
-                        cursor: h === 0 ? 'pointer' : 'default',
-                      }}
-                    >
-                      {h > 0 ? h.toFixed(1) : '—'}
-                    </div>
-                  )
-                })}
-
-                <div style={{ padding: '12px 10px', textAlign: 'center', borderLeft: '1px solid var(--border)', fontFamily: 'DM Mono, monospace', fontSize: 13, fontWeight: 600, color: 'var(--accent2)', background: 'var(--bg3)' }}>
-                  {totalFor(member.id).toFixed(1)}h
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Hours by project breakdown */}
-        <div className="card">
-          <div className="card-header"><span className="card-title">Hours by project — this week</span></div>
-          <table>
-            <thead><tr><th>Project</th><th>Hours</th><th>Share</th></tr></thead>
-            <tbody>
-              {Object.entries(byProject).sort((a,b) => b[1]-a[1]).map(([name, hours]) => (
-                <tr key={name}>
-                  <td className="td-main">{name}</td>
-                  <td className="text-mono">{hours.toFixed(1)}h</td>
-                  <td style={{ width: 200 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--bg4)', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', borderRadius: 3, width: `${grandTotal > 0 ? (hours/grandTotal*100) : 0}%`, background: 'var(--accent)' }} />
-                      </div>
-                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--text3)', minWidth: 36 }}>
-                        {grandTotal > 0 ? Math.round(hours/grandTotal*100) : 0}%
-                      </span>
-                    </div>
-                  </td>
-                </tr>
+        {/* ── filter bar ── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+          <button
+            className={`btn btn-sm ${dateMode === 'today' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ fontWeight: 600 }}
+            onClick={() => { setDateMode('today'); setDateStart(''); setDateEnd('') }}
+          >Today</button>
+          <input type="date" value={dateStart}
+            onChange={e => { setDateStart(e.target.value); setDateMode('range') }}
+            style={{ width: 140, fontSize: 12 }}
+          />
+          <input type="date" value={dateEnd}
+            onChange={e => { setDateEnd(e.target.value); setDateMode('range') }}
+            style={{ width: 140, fontSize: 12 }}
+          />
+          {view === 'collapsed' && (<>
+            <select value={filterClient} onChange={e => setFilterClient(e.target.value)} style={{ fontSize: 12, width: 130 }}>
+              <option value="">Client</option>
+              {uniqueClients.map(c => <option key={c.id} value={c.id}>{c.company || c.alias}</option>)}
+            </select>
+            <input value={filterProject} onChange={e => setFilterProject(e.target.value)}
+              placeholder="Project…" style={{ width: 110, fontSize: 12 }}
+            />
+            <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} style={{ fontSize: 12, width: 120 }}>
+              <option value="">Category</option>
+              {Object.keys(CATEGORY_COLORS).map(c => (
+                <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
               ))}
-            </tbody>
-          </table>
+            </select>
+            <input value={filterInvoice} onChange={e => setFilterInvoice(e.target.value)}
+              placeholder="Invoice No." style={{ width: 110, fontSize: 12 }}
+            />
+            {filterInvoice && (
+              <button className="btn btn-ghost btn-sm"
+                onClick={() => openInvoiceBreakdown(displayRows, filterInvoice)}
+              >
+                Invoice Breakdown
+              </button>
+            )}
+          </>)}
         </div>
-      </div>
 
-      {showModal && (
-        <LogTimeModal
-          projects={projects}
-          prefill={prefill}
-          onClose={() => setShowModal(false)}
-          onSaved={() => { setShowModal(false); load() }}
-        />
-      )}
+        {/* ── summary tiles ── */}
+        {loading
+          ? <div style={{ color: 'var(--text3)', fontSize: 13, marginBottom: 16 }}>Loading…</div>
+          : <SummaryTiles entries={displayRows} />
+        }
+
+        {/* ── views ── */}
+        {!loading && view === 'expanded' && (
+          <ExpandedView
+            entries={entries}
+            projects={projects}
+            expandedDate={expandedDate}
+            onEntryChange={handleEntryChange}
+            onEntryDelete={handleEntryDelete}
+            user={user}
+          />
+        )}
+        {!loading && view === 'collapsed' && (
+          <CollapsedView
+            rows={displayRows}
+            projects={projects}
+            onEntryChange={handleEntryChange}
+            user={user}
+            filterInvoice={filterInvoice}
+          />
+        )}
+      </div>
     </div>
-  )
-}
-
-// ── LOG TIME MODAL ────────────────────────────────────────────────────────────
-function LogTimeModal({ projects, prefill, onClose, onSaved }) {
-  const [form, setForm] = useState({
-    project_id: projects[0]?.id || '',
-    user_id: prefill?.user_id || 'u1',
-    entry_date: prefill?.entry_date || format(new Date(2026, 2, 13), 'yyyy-MM-dd'),
-    hours: '',
-    description: '',
-    category: 'Content',
-  })
-  const [saving, setSaving] = useState(false)
-  function set(f) { return e => setForm(p => ({ ...p, [f]: e.target.value })) }
-
-  async function save() {
-    if (!form.hours || isNaN(+form.hours)) return
-    setSaving(true)
-    if (!isDemo) await supabase.from('time_entries').insert({ ...form, hours: +form.hours })
-    setTimeout(() => { setSaving(false); onSaved() }, isDemo ? 400 : 0)
-  }
-
-  return (
-    <Modal title="Log time" onClose={onClose} footer={
-      <>
-        <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-        <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Log time'}</button>
-      </>
-    }>
-      <div className="form-grid">
-        <FormGroup label="Project" full>
-          <select value={form.project_id} onChange={set('project_id')}>
-            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        </FormGroup>
-        <FormGroup label="Team member">
-          <select value={form.user_id} onChange={set('user_id')}>
-            <option value="u1">Jim OConnell</option>
-            <option value="u2">Sarah M.</option>
-            <option value="u3">Mike T.</option>
-          </select>
-        </FormGroup>
-        <FormGroup label="Category">
-          <select value={form.category} onChange={set('category')}>
-            {['Content','Design','Development','Account Mgmt','Admin'].map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </FormGroup>
-        <FormGroup label="Date">
-          <input type="date" value={form.entry_date} onChange={set('entry_date')} />
-        </FormGroup>
-        <FormGroup label="Hours" full>
-          <input type="number" step="0.5" min="0.5" max="24" value={form.hours} onChange={set('hours')} placeholder="e.g. 2.5" />
-        </FormGroup>
-        <FormGroup label="Description" full>
-          <textarea value={form.description} onChange={set('description')} rows={2}
-            placeholder="e.g. Proof writing + revisions for FB Posts 52" />
-        </FormGroup>
-      </div>
-    </Modal>
   )
 }

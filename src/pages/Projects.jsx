@@ -11,6 +11,23 @@ import iconProofs from '../assets/icon_proofs.svg'
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 const PRODUCT_TYPES = ['ST', 'CO', 'DS', 'OH']
 
+const CATEGORY_COLORS = {
+  primary:    '#ffb8b8',
+  secondary:  '#4fd1b8',
+  accounting: '#63ca7a',
+  overhead:   '#b9dd67',
+  charity:    '#c6c7fe',
+  personal:   '#ebb8e5',
+}
+const CATEGORY_OPTIONS = [
+  { value: 'primary',    label: 'Primary' },
+  { value: 'secondary',  label: 'Secondary' },
+  { value: 'accounting', label: 'Accounting' },
+  { value: 'overhead',   label: 'Overhead' },
+  { value: 'charity',    label: 'Charity' },
+  { value: 'personal',   label: 'Personal' },
+]
+
 // ── SHARED HELPERS ───────────────────────────────────────────────────────
 function Avatar({ name, size = 26, bg }) {
   return (
@@ -1387,6 +1404,7 @@ export default function ProjectsPage() {
       project_number: '',
       product_id:     '',
       product_type:   '',
+      category:       'primary',
     })
   }
 
@@ -1407,6 +1425,7 @@ export default function ProjectsPage() {
         product_id:     addingRow.product_id || null,
         product_type:   addingRow.product_type || null,
         project_number: nextNumber,
+        category:       addingRow.category || 'primary',
         priority:       'Normal',
         proof_status:   'Open',
         inv_status:     'Open',
@@ -1617,7 +1636,10 @@ function ProjectRow({
               onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') setEditField(null) }}
               style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }} />
           ) : (
-            <span style={{ cursor: 'text', display: 'block' }} onClick={() => startEdit('name', p.name)}>{p.name}</span>
+            <span style={{ cursor: 'text', display: 'flex', alignItems: 'center', gap: 7 }} onClick={() => startEdit('name', p.name)}>
+              <span style={{ width: 9, height: 9, borderRadius: '50%', background: CATEGORY_COLORS[p.category] || CATEGORY_COLORS.primary, flexShrink: 0, display: 'inline-block' }} />
+              {p.name}
+            </span>
           )}
         </td>
 
@@ -1662,6 +1684,34 @@ function ProjectRow({
           )}
         </td>
 
+        {/* category — inline dropdown */}
+        <td style={{ borderRight: '1px solid var(--border)', color: 'var(--text2)', fontSize: 13, whiteSpace: 'nowrap', padding: '4px 12px' }}>
+          {editField === 'category' ? (
+            <select
+              autoFocus
+              defaultValue={p.category || 'primary'}
+              onChange={e => {
+                onSaveProject(p.id, { category: e.target.value })
+                setEditField(null)
+              }}
+              onBlur={() => setEditField(null)}
+              style={{ background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
+            >
+              {CATEGORY_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          ) : (
+            <span
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+              onClick={() => setEditField('category')}
+            >
+              <span style={{ width: 9, height: 9, borderRadius: '50%', background: CATEGORY_COLORS[p.category] || CATEGORY_COLORS.primary, flexShrink: 0, display: 'inline-block' }} />
+              {CATEGORY_OPTIONS.find(o => o.value === (p.category || 'primary'))?.label || 'Primary'}
+            </span>
+          )}
+        </td>
+
         <td onClick={e => e.stopPropagation()} style={{ width: 225, whiteSpace: 'nowrap', padding: '8px 10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
             {!showArchived && (
@@ -1678,7 +1728,7 @@ function ProjectRow({
 
       {isExpanded && (
         <tr className="drawer-row">
-          <td colSpan={6} style={{ padding: 0 }}>
+          <td colSpan={7} style={{ padding: 0 }}>
             <TaskDrawer projectId={p.id} tasks={tasks} profiles={profiles} onSaveTask={onSaveTask} onAddTask={onAddTask} onDeleteTask={onDeleteTask} onReorder={onReorderTasks} currentCycle={currentCycle} projectCycleTag={p.cycle_tag} onStampProject={onStampProject} />
           </td>
         </tr>
@@ -1686,7 +1736,7 @@ function ProjectRow({
 
       {expandedItemRows[p.id] && (
         <tr>
-          <td colSpan={6} style={{ padding: 0 }}>
+          <td colSpan={7} style={{ padding: 0 }}>
             <ItemDrawer projectId={p.id} items={projectItems[p.id] || []} onAddItem={onAddItem} onUpdateItem={onUpdateItem} onDeleteItem={onDeleteItem} onReorder={onReorderItems}
               expandedProofRows={expandedProofRows} itemProofs={itemProofs} onToggleProofExpand={onToggleProofExpand} onAddProof={onAddProof} onDeleteProof={onDeleteProof} onUpdateProof={onUpdateProof} />
           </td>
@@ -1811,6 +1861,17 @@ function WorkView({
                       ))}
                     </select>
                   </td>
+                  <td style={{ padding: '7px 8px' }}>
+                    <select
+                      value={addingRow.category}
+                      onChange={e => setAddingRow(r => ({ ...r, category: e.target.value }))}
+                      style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
+                    >
+                      {CATEGORY_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </td>
                   <td style={{ padding: '7px 10px', whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
                       <button className="btn btn-primary btn-sm" onClick={onAddSave}>Save</button>
@@ -1836,14 +1897,14 @@ function WorkView({
               <tbody key={`group-${group.name}`}>
                 {/* Gap between client bars */}
                 {groupIdx > 0 && (
-                  <tr aria-hidden="true"><td colSpan={6} style={{ padding: 0, height: 8, background: 'transparent', border: 'none' }} /></tr>
+                  <tr aria-hidden="true"><td colSpan={7} style={{ padding: 0, height: 8, background: 'transparent', border: 'none' }} /></tr>
                 )}
                 {/* Client group header */}
                 <tr
                   style={{ cursor: 'pointer' }}
                   onClick={() => toggleClient(group.clientId)}
                 >
-                  <td colSpan={6} style={{ padding: 0, border: 'none' }}>
+                  <td colSpan={7} style={{ padding: 0, border: 'none' }}>
                     <div style={{
                       background: '#595958',
                       borderRadius: 8,
@@ -1913,7 +1974,7 @@ function WorkView({
                 {/* Add project button — only visible when this client is expanded and not already adding */}
                 {expandedClientId === group.clientId && addingRow === null && (
                   <tr>
-                    <td colSpan={6} style={{ padding: '8px 16px', border: 'none' }}>
+                    <td colSpan={7} style={{ padding: '8px 16px', border: 'none' }}>
                       <button className="btn btn-ghost btn-sm" onClick={() => onStartAdd(group.clientId)}>+ Add project</button>
                     </td>
                   </tr>
@@ -1958,6 +2019,17 @@ function WorkView({
                         ))}
                       </select>
                     </td>
+                    <td style={{ padding: '7px 8px' }}>
+                      <select
+                        value={addingRow.category}
+                        onChange={e => setAddingRow(r => ({ ...r, category: e.target.value }))}
+                        style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13 }}
+                      >
+                        {CATEGORY_OPTIONS.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </td>
                     <td style={{ padding: '7px 10px', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
                         <button className="btn btn-primary btn-sm" onClick={onAddSave}>Save</button>
@@ -1974,7 +2046,7 @@ function WorkView({
             {/* Empty state + add button when no groups */}
             {groups.length === 0 && addingRow === null && (
               <tr>
-                <td colSpan={6} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>
+                <td colSpan={7} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>
                   No projects found.{' '}
                   <button className="btn btn-ghost btn-sm" onClick={onStartAdd}>+ Add first project</button>
                 </td>
@@ -2051,6 +2123,7 @@ function ProjectModal({ project, clients, projects, products, onClose, onSaved }
     client_id:      project?.client_id      || (clients[0]?.id || ''),
     product_id:     project?.product_id      || '',
     product_type:   project?.product_type   || '',
+    category:       project?.category       || 'primary',
     priority:       project?.priority       || 'Normal',
     area:           project?.area           || '',
     est_status:     project?.est_status     || 'Open',
@@ -2140,6 +2213,13 @@ function ProjectModal({ project, clients, projects, products, onClose, onSaved }
               <option key={p.id} value={p.id}>
                 {p.type}{p.name ? ` | ${p.name}` : ''}
               </option>
+            ))}
+          </select>
+        </FormGroup>
+        <FormGroup label="Category">
+          <select value={form.category} onChange={set('category')}>
+            {CATEGORY_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
         </FormGroup>

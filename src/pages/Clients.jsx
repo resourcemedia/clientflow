@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { DEMO_CLIENTS, CLIENT_STATUSES } from '../lib/demo-data'
-import { Modal, FormGroup, initials, Breadcrumb } from '../components/ui'
+import { Modal, FormGroup, initials, Breadcrumb, fmt$ } from '../components/ui'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 
@@ -47,7 +47,7 @@ export default function ClientsPage() {
 
   // ── inline add ──────────────────────────────────────────────────────────
   function startAdd() {
-    setAddingRow({ company: '', alias: '' })
+    setAddingRow({ company: '', alias: '', hourly_rate: '' })
   }
 
   async function handleAddSave() {
@@ -56,7 +56,12 @@ export default function ClientsPage() {
     if (isDemo)   { setAddingRow(null); return }
     const { data } = await supabase
       .from('clients')
-      .insert({ company, alias: addingRow.alias?.trim() || null, status: 'active' })
+      .insert({
+        company,
+        alias:       addingRow.alias?.trim() || null,
+        hourly_rate: addingRow.hourly_rate !== '' ? Number(addingRow.hourly_rate) : 0,
+        status:      'active',
+      })
       .select()
       .single()
     if (data) setClients(prev => [...prev, data])
@@ -123,6 +128,7 @@ export default function ClientsPage() {
                   <tr>
                     <th style={{ width: 24 }}></th>
                     <th>Client</th>
+                    <th style={{ width: 110, textAlign: 'right' }}>Hourly Rate</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -168,6 +174,11 @@ export default function ClientsPage() {
                             {client.alias && <div className="text-dim text-xs">{client.alias}</div>}
                           </div>
                         </div>
+                      </td>
+
+                      {/* Hourly rate */}
+                      <td style={{ textAlign: 'right', fontFamily: 'DM Mono, monospace', fontSize: 13, color: client.hourly_rate ? 'var(--text2)' : 'var(--text3)', paddingRight: 16, whiteSpace: 'nowrap' }}>
+                        {client.hourly_rate ? fmt$(client.hourly_rate) : '—'}
                       </td>
 
                       {/* Actions */}
@@ -219,6 +230,21 @@ export default function ClientsPage() {
                           style={{ width: '100%' }}
                         />
                       </td>
+                      <td style={{ padding: '7px 8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ color: 'var(--text3)', fontSize: 13 }}>$</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={addingRow.hourly_rate}
+                            onChange={e => setAddingRow(r => ({ ...r, hourly_rate: e.target.value }))}
+                            placeholder="0.00"
+                            onKeyDown={handleAddKeyDown}
+                            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 7px', color: 'var(--text)', fontSize: 13, textAlign: 'right' }}
+                          />
+                        </div>
+                      </td>
                       <td style={{ whiteSpace: 'nowrap' }}>
                         <button className="btn btn-primary btn-sm" style={{ marginRight: 4 }} onClick={handleAddSave}>
                           Save
@@ -233,7 +259,7 @@ export default function ClientsPage() {
                   {/* Empty state row */}
                   {filtered.length === 0 && addingRow === null && (
                     <tr>
-                      <td colSpan={3} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>
+                      <td colSpan={4} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>
                         No clients found.{' '}
                         <button className="btn btn-ghost btn-sm" onClick={startAdd}>
                           + Add first client
@@ -268,6 +294,7 @@ function ClientModal({ client, onClose, onSaved }) {
     email:             client?.email             || '',
     facebook_url:      client?.facebook_url      || '',
     google_drive_url:  client?.google_drive_url  || '',
+    hourly_rate:       client?.hourly_rate       ?? '',
     status:            client?.status            || 'active',
     transition_status: client?.transition_status || '',
     notes:             client?.notes             || '',
@@ -285,7 +312,11 @@ function ClientModal({ client, onClose, onSaved }) {
       setTimeout(() => { setSaving(false); onSaved() }, 400)
       return
     }
-    const payload = { ...form, updated_at: new Date().toISOString() }
+    const payload = {
+      ...form,
+      hourly_rate: form.hourly_rate !== '' ? Number(form.hourly_rate) : 0,
+      updated_at:  new Date().toISOString(),
+    }
     await supabase.from('clients').update(payload).eq('id', client.id)
     setSaving(false)
     onSaved()
@@ -310,6 +341,20 @@ function ClientModal({ client, onClose, onSaved }) {
         </FormGroup>
         <FormGroup label="Alias / short name">
           <input value={form.alias} onChange={set('alias')} placeholder="e.g. Arrow" />
+        </FormGroup>
+        <FormGroup label="Hourly Rate">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ color: 'var(--text3)', fontSize: 14 }}>$</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.hourly_rate}
+              onChange={set('hourly_rate')}
+              placeholder="0.00"
+              style={{ flex: 1 }}
+            />
+          </div>
         </FormGroup>
         <FormGroup label="Email">
           <input type="email" value={form.email} onChange={set('email')} placeholder="client@domain.com" />
