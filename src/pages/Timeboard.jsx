@@ -149,13 +149,24 @@ function ProjectInput({ existingEntry, projects, onSelect, onCancel, onClear }) 
 
   useEffect(() => { inputRef.current?.focus() }, [])
 
+  function sortProjects(list) {
+    return [...list].sort((a, b) => {
+      const clientCompare = (a.client?.alias || '').localeCompare(b.client?.alias || '')
+      if (clientCompare !== 0) return clientCompare
+      const jobA = parseInt(a.project_number, 10) || 0
+      const jobB = parseInt(b.project_number, 10) || 0
+      if (jobA !== jobB) return jobA - jobB
+      return (a.name || '').localeCompare(b.name || '')
+    })
+  }
+
   function filterProjects(q) {
-    if (!q) return projects.slice(0, 20)
-    return projects.filter(p =>
+    if (!q) return sortProjects(projects).slice(0, 20)
+    return sortProjects(projects.filter(p =>
       (p.client?.alias    || '').toLowerCase().includes(q) ||
       (p.project_number   || '').toLowerCase().includes(q) ||
       (p.name             || '').toLowerCase().includes(q)
-    ).slice(0, 12)
+    )).slice(0, 12)
   }
 
   function measure() {
