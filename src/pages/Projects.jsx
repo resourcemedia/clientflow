@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Fragment } from 'react'
+import { useState, useEffect, useRef, useMemo, Fragment } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
@@ -1108,6 +1108,174 @@ function TaskDrawer({ projectId, tasks, profiles, onSaveTask, onAddTask, onDelet
   )
 }
 
+// ── LIST VIEW ────────────────────────────────────────────────────────────
+function ListRow({ p, clients, products, onSaveProject, onArchive, onDeleteRequest, onEdit }) {
+  const [editField, setEditField] = useState(null)
+  const [editVal,   setEditVal]   = useState('')
+  const editValRef = useRef('')
+
+  function startEdit(field, val) { setEditField(field); setEditVal(val ?? ''); editValRef.current = val ?? '' }
+
+  function commit() {
+    const field = editField
+    setEditField(null)
+    const trimmed = editValRef.current.trim()
+    onSaveProject(p.id, { [field]: trimmed || null })
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter') e.target.blur()
+    if (e.key === 'Escape') setEditField(null)
+  }
+
+  const tdStyle  = { padding: '5px 10px', verticalAlign: 'middle' }
+  const inStyle  = { fontSize: 12, fontFamily: 'DM Mono, monospace', border: '1px solid var(--accent)', borderRadius: 4, padding: '2px 6px', background: 'rgba(255,255,255,0.88)', outline: 'none' }
+  const selStyle = { fontSize: 12, border: '1px solid var(--border)', borderRadius: 4, padding: '2px 4px', background: 'var(--bg)', color: 'var(--text)', cursor: 'pointer' }
+
+  return (
+    <tr
+      style={{ borderBottom: '1px solid var(--border)' }}
+      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg2)'}
+      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+    >
+      <td style={{ ...tdStyle, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
+        <select value={p.client_id || ''} onChange={e => onSaveProject(p.id, { client_id: e.target.value || null })} style={selStyle}>
+          <option value="">—</option>
+          {clients.map(c => <option key={c.id} value={c.id}>{c.alias || c.company}</option>)}
+        </select>
+      </td>
+      <td style={{ ...tdStyle, minWidth: 180 }}>
+        {editField === 'name' ? (
+          <input autoFocus value={editVal} style={{ ...inStyle, width: 200 }}
+            onChange={e => { setEditVal(e.target.value); editValRef.current = e.target.value }}
+            onBlur={commit} onKeyDown={handleKeyDown} />
+        ) : (
+          <span onClick={() => startEdit('name', p.name)} style={{ cursor: 'text', fontSize: 13 }}>
+            {p.name || <em style={{ color: 'var(--text3)' }}>—</em>}
+          </span>
+        )}
+      </td>
+      <td style={{ ...tdStyle, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
+        {editField === 'project_number' ? (
+          <input autoFocus value={editVal} style={{ ...inStyle, width: 80 }}
+            onChange={e => { setEditVal(e.target.value); editValRef.current = e.target.value }}
+            onBlur={commit} onKeyDown={handleKeyDown} />
+        ) : (
+          <span onClick={() => startEdit('project_number', p.project_number)} style={{ cursor: 'text' }}>
+            {p.project_number || <em style={{ color: 'var(--text3)' }}>—</em>}
+          </span>
+        )}
+      </td>
+      <td style={tdStyle}>
+        <select value={p.product_type || ''} onChange={e => onSaveProject(p.id, { product_type: e.target.value || null })} style={selStyle}>
+          <option value="">—</option>
+          {products.map(pr => <option key={pr.type} value={pr.type}>{pr.type}</option>)}
+        </select>
+      </td>
+      <td style={tdStyle}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: CATEGORY_COLORS[p.category] || '#ccc', flexShrink: 0 }} />
+          <select value={p.category || ''} onChange={e => onSaveProject(p.id, { category: e.target.value || null })} style={selStyle}>
+            <option value="">—</option>
+            {CATEGORY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+      </td>
+      <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
+        <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <button className="btn btn-ghost btn-icon btn-sm" title="Edit" onClick={() => onEdit(p)}>✏️</button>
+          <button className="btn btn-ghost btn-icon btn-sm" title={p.archived ? 'Restore' : 'Archive'} onClick={() => onArchive(p)}>
+            {p.archived ? <RestoreIcon /> : <ArchiveIcon />}
+          </button>
+          <button className="btn btn-ghost btn-icon btn-sm" title="Delete" onClick={() => onDeleteRequest(p.id)} style={{ color: 'var(--red)' }}>
+            <TrashIcon />
+          </button>
+        </div>
+      </td>
+    </tr>
+  )
+}
+
+function ListView({ projects, clients, products, confirmDelete, onSaveProject, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm, onEdit, onAdd }) {
+  const [sortField, setSortField] = useState('alias')
+  const [sortDir,   setSortDir]   = useState('asc')
+
+  function toggleSort(field) {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortField(field); setSortDir('asc') }
+  }
+
+  const sorted = useMemo(() => {
+    return [...projects].sort((a, b) => {
+      if (sortField === 'number') {
+        const va = parseInt(a.project_number, 10) || 0
+        const vb = parseInt(b.project_number, 10) || 0
+        return sortDir === 'asc' ? va - vb : vb - va
+      }
+      let va = '', vb = ''
+      if (sortField === 'alias')    { va = a.client?.alias || ''; vb = b.client?.alias || '' }
+      else if (sortField === 'name')     { va = a.name || ''; vb = b.name || '' }
+      else if (sortField === 'product')  { va = a.product_type || ''; vb = b.product_type || '' }
+      else if (sortField === 'category') { va = a.category || ''; vb = b.category || '' }
+      return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va)
+    })
+  }, [projects, sortField, sortDir])
+
+  function thProps(field) {
+    return {
+      onClick: () => toggleSort(field),
+      style: {
+        padding: '8px 10px', fontSize: 11, fontWeight: 700,
+        textTransform: 'uppercase', letterSpacing: '0.06em',
+        color: sortField === field ? 'var(--accent)' : 'var(--text3)',
+        cursor: 'pointer', userSelect: 'none', textAlign: 'left', whiteSpace: 'nowrap',
+      },
+    }
+  }
+
+  function ind(field) { return sortField === field ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '' }
+
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr style={{ borderBottom: '2px solid var(--border)' }}>
+            <th {...thProps('alias')}>Alias{ind('alias')}</th>
+            <th {...thProps('name')}>Project{ind('name')}</th>
+            <th {...thProps('number')}>Number{ind('number')}</th>
+            <th {...thProps('product')}>Product{ind('product')}</th>
+            <th {...thProps('category')}>Category{ind('category')}</th>
+            <th style={{ padding: '8px 10px' }}>
+              <button className="btn btn-ghost btn-sm" onClick={onAdd}
+                style={{ fontSize: 14, padding: '0 8px', color: 'var(--accent)', fontWeight: 700, lineHeight: 1.4 }}>+</button>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map(p =>
+            confirmDelete === p.id ? (
+              <tr key={p.id} style={{ background: 'var(--red-bg)' }}>
+                <td /><td />
+                <td colSpan={3} style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>
+                  Delete <strong>{p.name}</strong>? This cannot be undone.
+                </td>
+                <td style={{ whiteSpace: 'nowrap', padding: '10px 16px' }}>
+                  <button className="btn btn-sm" style={{ background: 'var(--red)', color: '#fff', marginRight: 6 }} onClick={() => onDeleteConfirm(p.id)}>Delete</button>
+                  <button className="btn btn-ghost btn-sm" onClick={onDeleteCancel}>Cancel</button>
+                </td>
+              </tr>
+            ) : (
+              <ListRow key={p.id} p={p} clients={clients} products={products}
+                onSaveProject={onSaveProject} onArchive={onArchive}
+                onDeleteRequest={onDeleteRequest} onEdit={onEdit} />
+            )
+          )}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 export default function ProjectsPage() {
   const [projects, setProjects]           = useState([])
   const [clients, setClients]             = useState([])
@@ -1116,6 +1284,7 @@ export default function ProjectsPage() {
   const [profiles, setProfiles]           = useState([])
   const [loading, setLoading]             = useState(true)
   const [tab, setTab]                     = useState('work')
+  const [viewMode, setViewMode]           = useState('client')
   const [editProject, setEditProject]     = useState(null)
   const [search, setSearch]               = useState('')
   const [showArchived, setShowArchived]   = useState(false)
@@ -1442,6 +1611,26 @@ export default function ProjectsPage() {
     if (e.key === 'Escape') setAddingRow(null)
   }
 
+  async function handleListAdd() {
+    if (isDemo) return
+    const nums = projects.map(p => parseInt(p.project_number, 10)).filter(n => !isNaN(n))
+    const nextNumber = nums.length ? String(Math.max(...nums) + 1) : '1000'
+    const { data } = await supabase
+      .from('projects')
+      .insert({
+        name:           'New Project',
+        project_number: nextNumber,
+        category:       'primary',
+        priority:       'Normal',
+        proof_status:   'Open',
+        inv_status:     'Open',
+        collect_status: 'Open',
+      })
+      .select('*, client:clients(company,alias), product:products(id,type,name)')
+      .single()
+    if (data) setProjects(prev => [...prev, data])
+  }
+
   const filtered = projects.filter(p => {
     if (!showArchived && p.archived) return false
     if (showArchived  && !p.archived) return false
@@ -1461,8 +1650,18 @@ export default function ProjectsPage() {
   return (
     <div className="fade-in">
       <div className="topbar">
-        <div className="breadcrumb">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span className="breadcrumb-current" style={{ fontSize: 20, fontWeight: 700 }}>Projects</span>
+          <div style={{ display: 'flex', border: '1px solid var(--border2)', borderRadius: 6, overflow: 'hidden' }}>
+            <button
+              onClick={() => setViewMode('client')}
+              style={{ padding: '4px 12px', fontSize: 12, fontWeight: 600, border: 'none', borderRight: '1px solid var(--border2)', cursor: 'pointer', background: viewMode === 'client' ? 'var(--bg3)' : 'transparent', color: viewMode === 'client' ? 'var(--text)' : 'var(--text3)' }}
+            >Client</button>
+            <button
+              onClick={() => setViewMode('list')}
+              style={{ padding: '4px 12px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', background: viewMode === 'list' ? 'var(--bg3)' : 'transparent', color: viewMode === 'list' ? 'var(--text)' : 'var(--text3)' }}
+            >List</button>
+          </div>
         </div>
         <select
           value={clientFilter}
@@ -1484,7 +1683,30 @@ export default function ProjectsPage() {
       </div>
 
       <div className="page-content">
-{tab === 'work' ? (
+        {tab !== 'work' ? (
+          <FinancialView
+            projects={filtered}
+            loading={loading}
+            totalEst={totalEst}
+            totalOwed={totalOwed}
+            totalPaid={totalPaid}
+            onView={id => navigate(`/projects/${id}`)}
+          />
+        ) : viewMode === 'list' ? (
+          <ListView
+            projects={filtered}
+            clients={clients}
+            products={products}
+            confirmDelete={confirmDelete}
+            onSaveProject={saveProject}
+            onArchive={handleArchive}
+            onDeleteRequest={id => setConfirmDelete(id)}
+            onDeleteCancel={() => setConfirmDelete(null)}
+            onDeleteConfirm={handleDelete}
+            onEdit={p => setEditProject(p)}
+            onAdd={handleListAdd}
+          />
+        ) : (
           <WorkView
             projects={filtered}
             clients={clients}
@@ -1531,15 +1753,6 @@ export default function ProjectsPage() {
             onSaveProject={saveProject}
             currentCycle={currentCycle}
             onStampProject={stampProject}
-          />
-        ) : (
-          <FinancialView
-            projects={filtered}
-            loading={loading}
-            totalEst={totalEst}
-            totalOwed={totalOwed}
-            totalPaid={totalPaid}
-            onView={id => navigate(`/projects/${id}`)}
           />
         )}
       </div>
