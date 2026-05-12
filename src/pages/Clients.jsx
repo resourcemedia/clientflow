@@ -14,8 +14,26 @@ export default function ClientsPage() {
   const [addingRow, setAddingRow] = useState(null) // null | {company:'', alias:''}
   const [dragIdx, setDragIdx]     = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
+  const [editingRateId, setEditingRateId] = useState(null)
+  const [editRateVal,   setEditRateVal]   = useState('')
+  const editRateRef = useRef('')
   const addInputRef = useRef(null)
   const navigate = useNavigate()
+
+  function startEditRate(client) {
+    setEditingRateId(client.id)
+    const val = client.hourly_rate != null ? String(client.hourly_rate) : ''
+    setEditRateVal(val)
+    editRateRef.current = val
+  }
+
+  async function commitRate(clientId) {
+    setEditingRateId(null)
+    const num = parseFloat(editRateRef.current)
+    const rate = isNaN(num) ? 0 : num
+    setClients(prev => prev.map(c => c.id === clientId ? { ...c, hourly_rate: rate } : c))
+    if (!isDemo) await supabase.from('clients').update({ hourly_rate: rate }).eq('id', clientId)
+  }
 
   useEffect(() => { loadClients() }, [])
 
@@ -141,12 +159,10 @@ export default function ClientsPage() {
                       onDragOver={e => handleDragOver(e, idx)}
                       onDrop={() => handleDrop(idx)}
                       onDragEnd={reset}
-                      onClick={() => navigate(`/projects?client=${client.id}`)}
                       style={{
                         opacity: dragIdx === idx ? 0.4 : 1,
                         outline: dragOverIdx === idx && dragIdx !== idx
                           ? '2px solid var(--accent)' : undefined,
-                        cursor: 'pointer',
                       }}
                     >
                       {/* Drag handle */}
@@ -177,8 +193,30 @@ export default function ClientsPage() {
                       </td>
 
                       {/* Hourly rate */}
-                      <td style={{ textAlign: 'right', fontFamily: 'DM Mono, monospace', fontSize: 13, color: client.hourly_rate ? 'var(--text2)' : 'var(--text3)', paddingRight: 16, whiteSpace: 'nowrap' }}>
-                        {client.hourly_rate ? fmt$(client.hourly_rate) : '—'}
+                      <td style={{ textAlign: 'right', paddingRight: 16, whiteSpace: 'nowrap' }}>
+                        {editingRateId === client.id ? (
+                          <input
+                            autoFocus
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={editRateVal}
+                            onChange={e => { setEditRateVal(e.target.value); editRateRef.current = e.target.value }}
+                            onBlur={() => commitRate(client.id)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') e.target.blur()
+                              if (e.key === 'Escape') setEditingRateId(null)
+                            }}
+                            style={{ width: 90, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontSize: 13 }}
+                          />
+                        ) : (
+                          <span
+                            onClick={() => startEditRate(client)}
+                            style={{ cursor: 'text', fontFamily: 'DM Mono, monospace', fontSize: 13, color: client.hourly_rate ? 'var(--text2)' : 'var(--text3)' }}
+                          >
+                            {client.hourly_rate ? fmt$(client.hourly_rate) : '—'}
+                          </span>
+                        )}
                       </td>
 
                       {/* Actions */}
