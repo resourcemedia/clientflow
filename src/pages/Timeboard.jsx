@@ -86,8 +86,10 @@ function enrichEntries(entries) {
     sorted.forEach((entry, i) => {
       const outTime = sorted[i + 1]?.start_time || '24:00'
       const hours = calcHoursFromTimes(entry.start_time, outTime)
-      const billableAmt = (entry.is_billable === true) ? hours * (entry.hourly_rate || 0) : 0
-      const invoiceAmt  = (entry.is_billable === true && !entry.invoice_number) ? hours * (entry.hourly_rate || 0) : 0
+      const isPrimary = entry.project?.category === 'primary'
+      const isBillable = entry.is_billable === true || (entry.is_billable === null && isPrimary)
+      const billableAmt = isBillable ? hours * (entry.hourly_rate || 0) : 0
+      const invoiceAmt  = (isBillable && !entry.invoice_number) ? hours * (entry.hourly_rate || 0) : 0
       if (result.length === 0) console.log('[DEBUG enrichEntries] first entry:', { id: entry.id, is_billable: entry.is_billable, is_billable_type: typeof entry.is_billable, hourly_rate: entry.hourly_rate, hours, billableAmt, invoiceAmt })
       result.push({ ...entry, outTime, hours, billableAmt, invoiceAmt })
     })
