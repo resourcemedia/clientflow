@@ -42,6 +42,7 @@ function fmtSlotTime(slot) {
 function fmtTime(timeStr) {
   if (!timeStr) return '—'
   const [h, m] = timeStr.split(':').map(Number)
+  if (h === 24) return '12:00 am'
   const ampm = h < 12 ? 'am' : 'pm'
   const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h
   return `${h12}:${String(m).padStart(2, '0')} ${ampm}`
@@ -75,7 +76,7 @@ function fmtHours(n) {
 }
 
 // Enrich entries with computed outTime, hours, billableAmt, invoiceAmt
-// outTime = start_time of next entry for same date (null if last)
+// outTime = start_time of next entry; last entry of day uses "24:00" (midnight) so hours extend to end of day
 function enrichEntries(entries) {
   const byDate = {}
   entries.forEach(e => { if (!byDate[e.date]) byDate[e.date] = []; byDate[e.date].push(e) })
@@ -83,11 +84,11 @@ function enrichEntries(entries) {
   Object.values(byDate).forEach(day => {
     const sorted = [...day].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''))
     sorted.forEach((entry, i) => {
-      const outTime = sorted[i + 1]?.start_time || null
+      const outTime = sorted[i + 1]?.start_time || '24:00'
       const hours = calcHoursFromTimes(entry.start_time, outTime)
-      const isPrimary = entry.project?.category === 'primary'
-      const billableAmt = isPrimary ? hours * (entry.hourly_rate || 0) : 0
-      const invoiceAmt  = (billableAmt > 0 && entry.invoice_number) ? billableAmt : 0
+      const billableAmt = (entry.is_billable === true) ? hours * (entry.hourly_rate || 0) : 0
+      const invoiceAmt  = (entry.is_billable === true && !entry.invoice_number) ? hours * (entry.hourly_rate || 0) : 0
+      if (result.length === 0) console.log('[DEBUG enrichEntries] first entry:', { id: entry.id, is_billable: entry.is_billable, is_billable_type: typeof entry.is_billable, hourly_rate: entry.hourly_rate, hours, billableAmt, invoiceAmt })
       result.push({ ...entry, outTime, hours, billableAmt, invoiceAmt })
     })
   })
@@ -96,44 +97,36 @@ function enrichEntries(entries) {
 
 // ── Summary Tiles ──────────────────────────────────────────────────────────────
 
-function PrimaryTile({ entries }) {
-  const hours = entries.reduce((s, e) => s + (e.hours || 0), 0)
-  const billable = entries.filter(e => e.is_billable === true)
-    .reduce((s, e) => s + (e.hours || 0) * (e.hourly_rate || 0), 0)
-  const toInvoice = entries.filter(e => e.is_billable === true && !e.invoice_number)
-    .reduce((s, e) => s + (e.hours || 0) * (e.hourly_rate || 0), 0)
-  const text = darken(CATEGORY_COLORS.primary)
-  return (
-    <div style={{ background: CATEGORY_COLORS.primary, borderRadius: 8, padding: '8px 14px', minWidth: 130, display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: text }}>Primary</div>
-      <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.1, color: text, fontFamily: 'DM Mono, monospace' }}>{fmtHours(hours)}</div>
-      <div style={{ fontSize: 11, color: text, fontFamily: 'DM Mono, monospace' }}>Billable {fmt$(billable)}</div>
-      <div style={{ fontSize: 11, color: text, fontFamily: 'DM Mono, monospace' }}>To Invoice {fmt$(toInvoice)}</div>
-    </div>
-  )
-}
-
-function CategoryTile({ label, entries, color }) {
-  const hours = entries.reduce((s, e) => s + (e.hours || 0), 0)
+function Tile({ label, value, color }) {
   const text = darken(color)
   return (
     <div style={{ background: color, borderRadius: 8, padding: '8px 14px', minWidth: 90, display: 'flex', flexDirection: 'column', gap: 2 }}>
       <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: text }}>{label}</div>
-      <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.1, color: text, fontFamily: 'DM Mono, monospace' }}>{fmtHours(hours)}</div>
+      <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.1, color: text, fontFamily: 'DM Mono, monospace' }}>{value}</div>
     </div>
   )
 }
 
 function SummaryTiles({ entries }) {
+  console.log('[DEBUG SummaryTiles] entry count:', entries.length, '| sample:', entries[0] ? { id: entries[0].id, hours: entries[0].hours, hourly_rate: entries[0].hourly_rate, is_billable: entries[0].is_billable, billableAmt: entries[0].billableAmt, invoiceAmt: entries[0].invoiceAmt } : 'none')
   const by = cat => entries.filter(e => e.project?.category === cat)
+
+  const primaryHours  = by('primary').reduce((s, e) => s + (e.hours || 0), 0)
+  const billableAmt   = entries.reduce((s, e) => s + (e.billableAmt || 0), 0)
+  const toInvoiceAmt  = entries.reduce((s, e) => s + (e.invoiceAmt  || 0), 0)
+  const totalHours    = entries.reduce((s, e) => s + (e.hours || 0), 0)
+
   return (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-      <PrimaryTile entries={by('primary')} />
-      <CategoryTile label="Secondary"  entries={by('secondary')}  color={CATEGORY_COLORS.secondary}  />
-      <CategoryTile label="Accounting" entries={by('accounting')} color={CATEGORY_COLORS.accounting} />
-      <CategoryTile label="Overhead"   entries={by('overhead')}   color={CATEGORY_COLORS.overhead}   />
-      <CategoryTile label="Charity"    entries={by('charity')}    color={CATEGORY_COLORS.charity}    />
-      <CategoryTile label="Personal"   entries={by('personal')}   color={CATEGORY_COLORS.personal}   />
+      <Tile label="Primary"    value={fmtHours(primaryHours)}                       color={CATEGORY_COLORS.primary}    />
+      <Tile label="Billable"   value={fmtHours(billableAmt)}                        color={CATEGORY_COLORS.primary}    />
+      <Tile label="To Invoice" value={fmtHours(toInvoiceAmt)}                       color={CATEGORY_COLORS.primary}    />
+      <Tile label="Secondary"  value={fmtHours(by('secondary').reduce((s,e)=>s+(e.hours||0),0))}  color={CATEGORY_COLORS.secondary}  />
+      <Tile label="Accounting" value={fmtHours(by('accounting').reduce((s,e)=>s+(e.hours||0),0))} color={CATEGORY_COLORS.accounting} />
+      <Tile label="Overhead"   value={fmtHours(by('overhead').reduce((s,e)=>s+(e.hours||0),0))}   color={CATEGORY_COLORS.overhead}   />
+      <Tile label="Charity"    value={fmtHours(by('charity').reduce((s,e)=>s+(e.hours||0),0))}    color={CATEGORY_COLORS.charity}    />
+      <Tile label="Personal"   value={fmtHours(by('personal').reduce((s,e)=>s+(e.hours||0),0))}   color={CATEGORY_COLORS.personal}   />
+      <Tile label="Total"      value={fmtHours(totalHours)}                         color="#d1d5db"                    />
     </div>
   )
 }
@@ -258,6 +251,41 @@ function InlineInput({ value, onSave, placeholder, width, align }) {
       placeholder={placeholder || '—'}
       style={{ width: width || 70, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 5px', fontSize: 12, textAlign: align || 'left', outline: 'none' }}
     />
+  )
+}
+
+function RateCell({ rate, onSave }) {
+  const [editing, setEditing] = useState(false)
+  const [val, setVal]         = useState('')
+  const valRef = useRef('')
+
+  function start() {
+    const s = rate != null ? String(rate) : ''
+    setVal(s); valRef.current = s; setEditing(true)
+  }
+
+  function commit() {
+    setEditing(false)
+    const num = parseFloat(valRef.current)
+    const newRate = isNaN(num) ? 0 : num
+    if (newRate !== (rate ?? 0)) onSave(newRate)
+  }
+
+  if (editing) {
+    return (
+      <input autoFocus type="number" min="0" step="1" value={val}
+        onChange={e => { setVal(e.target.value); valRef.current = e.target.value }}
+        onBlur={commit}
+        onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') setEditing(false) }}
+        style={{ width: 60, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontSize: 12, border: '1px solid var(--accent)', borderRadius: 4, padding: '2px 5px', outline: 'none', background: 'rgba(255,255,255,0.88)' }}
+      />
+    )
+  }
+
+  return (
+    <span onClick={start} style={{ cursor: 'text', fontFamily: 'DM Mono, monospace', fontSize: 12, color: rate ? 'var(--text2)' : 'var(--text3)' }}>
+      {rate != null ? rate : '—'}
+    </span>
   )
 }
 
@@ -516,6 +544,11 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
     onEntryChange({ ...entry, description: desc || null })
   }
 
+  async function saveRate(entry, rate) {
+    await supabase.from('time_entries').update({ hourly_rate: rate }).eq('id', entry.id)
+    onEntryChange({ ...entry, hourly_rate: rate })
+  }
+
   async function handleAddSave() {
     if (!addRow.date || !addRow.inTime || !addProject) return
     setSaving(true)
@@ -560,6 +593,7 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
               <th style={TH}>Description</th>
               <th style={{ ...TH, textAlign: 'right', width: 65 }}>Hours</th>
               <th style={{ ...TH, width: 50, textAlign: 'center' }}></th>
+              <th style={{ ...TH, textAlign: 'right', width: 65 }}>Rate</th>
               <th style={{ ...TH, textAlign: 'right', width: 80 }}>Billable</th>
               <th style={{ ...TH, textAlign: 'right', width: 80 }}>Invoice</th>
               <th style={{ ...TH, width: 90 }}>Invoice No.</th>
@@ -597,6 +631,9 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
                   </td>
                   <td style={{ ...rowStyle, textAlign: 'center' }}>
                     <BillableToggle value={row.is_billable} onChange={val => toggleBillable(row, val)} />
+                  </td>
+                  <td style={{ ...rowStyle, textAlign: 'right' }}>
+                    <RateCell rate={row.hourly_rate} onSave={rate => saveRate(row, rate)} />
                   </td>
                   <td style={{ ...rowStyle, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
                     {row.billableAmt > 0 ? fmt$(row.billableAmt) : '—'}
@@ -664,7 +701,7 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
                   style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: 13 }}
                 />
               </td>
-              <td colSpan={4} style={TD} />
+              <td colSpan={5} style={TD} />
               <td style={TD}>
                 <button className="btn btn-primary btn-sm" onClick={handleAddSave} disabled={saving || !addRow.date || !addRow.inTime || !addProject}>
                   {saving ? '…' : 'Save'}
@@ -678,6 +715,7 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
             <tr style={{ background: 'var(--bg3)', borderTop: '2px solid var(--border2)' }}>
               <td colSpan={5} style={{ ...TD, fontWeight: 700, fontSize: 13, color: 'var(--text2)' }}>Total</td>
               <td style={{ ...TD, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontWeight: 700, fontSize: 13 }}>{fmtHours(totalHours)}</td>
+              <td style={TD} />
               <td style={TD} />
               <td style={{ ...TD, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontWeight: 700, fontSize: 13 }}>{fmt$(totalBillable)}</td>
               <td style={{ ...TD, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontWeight: 700, fontSize: 13 }}>{fmt$(totalInvoice)}</td>
@@ -721,6 +759,7 @@ export default function TimeboardPage() {
           .select('id, name, project_number, category, client:clients(id, company, alias, hourly_rate)')
           .order('project_number'),
       ])
+      console.log('[DEBUG raw entries] first entry from Supabase:', (e || [])[0] ? { id: e[0].id, is_billable: e[0].is_billable, is_billable_type: typeof e[0].is_billable, hourly_rate: e[0].hourly_rate } : 'none')
       setEntries(e || [])
       setProjects(p || [])
     }
