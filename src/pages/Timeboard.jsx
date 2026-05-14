@@ -768,6 +768,22 @@ export default function TimeboardPage() {
     setLoading(false)
   }
 
+  function handlePrevDay() {
+    const base = dateMode === 'today' ? todayISO() : (dateStart || todayISO())
+    const d = new Date(base + 'T00:00:00')
+    d.setDate(d.getDate() - 1)
+    const iso = d.toISOString().slice(0, 10)
+    setDateStart(iso); setDateEnd(iso); setDateMode('range')
+  }
+
+  function handleNextDay() {
+    const base = dateMode === 'today' ? todayISO() : (dateStart || todayISO())
+    const d = new Date(base + 'T00:00:00')
+    d.setDate(d.getDate() + 1)
+    const iso = d.toISOString().slice(0, 10)
+    setDateStart(iso); setDateEnd(iso); setDateMode('range')
+  }
+
   function handleEntryChange(updated) {
     setEntries(prev => {
       const idx = prev.findIndex(e => e.id === updated.id)
@@ -845,6 +861,8 @@ export default function TimeboardPage() {
             style={{ fontWeight: 600 }}
             onClick={() => { setDateMode('today'); setDateStart(''); setDateEnd('') }}
           >Today</button>
+          <button className="btn btn-sm btn-ghost" onClick={handlePrevDay}>&lt;</button>
+          <button className="btn btn-sm btn-ghost" onClick={handleNextDay}>&gt;</button>
           <input type="date" value={dateStart}
             onChange={e => { setDateStart(e.target.value); setDateMode('range') }}
             style={{ width: 140, fontSize: 12 }}
