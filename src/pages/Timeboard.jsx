@@ -76,22 +76,27 @@ function fmtHours(n) {
 }
 
 // Enrich entries with computed outTime, hours, billableAmt, invoiceAmt
-// outTime = start_time of next entry; last entry of day uses "24:00" (midnight) so hours extend to end of day
+// outTime = start_time of next entry; for past dates, last entry uses "24:00".
+// For today's last entry (the "active" entry), outTime = null → hours = 0 so
+// it contributes nothing to summary tiles until a subsequent entry closes it.
 function enrichEntries(entries) {
+  const today = todayISO()
   const byDate = {}
   entries.forEach(e => { if (!byDate[e.date]) byDate[e.date] = []; byDate[e.date].push(e) })
   const result = []
   Object.values(byDate).forEach(day => {
     const sorted = [...day].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''))
     sorted.forEach((entry, i) => {
-      const outTime = sorted[i + 1]?.start_time || '24:00'
-      const hours = calcHoursFromTimes(entry.start_time, outTime)
-      const isPrimary = entry.project?.category === 'primary'
-      const isBillable = entry.is_billable === true || (entry.is_billable === null && isPrimary)
+      const isLast   = i === sorted.length - 1
+      const isActive = isLast && entry.date === today
+      const outTime  = isActive ? null : (sorted[i + 1]?.start_time || '24:00')
+      const hours    = calcHoursFromTimes(entry.start_time, outTime)
+      const isPrimary   = entry.project?.category === 'primary'
+      const isBillable  = entry.is_billable === true || (entry.is_billable === null && isPrimary)
       const billableAmt = isBillable ? hours * (entry.hourly_rate || 0) : 0
       const invoiceAmt  = (isBillable && !entry.invoice_number) ? hours * (entry.hourly_rate || 0) : 0
-      if (result.length === 0) console.log('[DEBUG enrichEntries] first entry:', { id: entry.id, is_billable: entry.is_billable, is_billable_type: typeof entry.is_billable, hourly_rate: entry.hourly_rate, hours, billableAmt, invoiceAmt })
-      result.push({ ...entry, outTime, hours, billableAmt, invoiceAmt })
+      if (result.length === 0) console.log('[DEBUG enrichEntries] first entry:', { id: entry.id, is_billable: entry.is_billable, is_billable_type: typeof entry.is_billable, hourly_rate: entry.hourly_rate, hours, billableAmt, invoiceAmt, isActive })
+      result.push({ ...entry, outTime, hours, billableAmt, invoiceAmt, isActive })
     })
   })
   return result
@@ -332,21 +337,31 @@ function ExpandedView({ entries, projects, expandedDate, onEntryChange, onEntryD
     [dayEntries]
   )
 
+  // The active entry is today's last entry — it only colors its own single slot.
+  const activeEntrySlot = useMemo(() => {
+    if (expandedDate !== todayISO() || sortedEntries.length === 0) return null
+    return sortedEntries[sortedEntries.length - 1].start_time?.slice(0, 5) || null
+  }, [sortedEntries, expandedDate])
+
   const activePerSlot = useMemo(() => {
     const result = new Array(288).fill(null)
     if (sortedEntries.length === 0) return result
     let ei = 0
     for (let i = 0; i < 288; i++) {
-      // Advance past all entries whose start_time is at or before this slot.
-      // Slots before the first entry keep ei=0 and return null (no fill).
       while (
         ei < sortedEntries.length &&
         (sortedEntries[ei].start_time || '').slice(0, 5) <= TIME_SLOTS[i]
       ) ei++
-      result[i] = ei > 0 ? sortedEntries[ei - 1] : null
+      const candidate = ei > 0 ? sortedEntries[ei - 1] : null
+      // Active entry only paints its own row; all slots after it stay white.
+      if (candidate && activeEntrySlot && candidate.start_time?.slice(0, 5) === activeEntrySlot && TIME_SLOTS[i] !== activeEntrySlot) {
+        result[i] = null
+      } else {
+        result[i] = candidate
+      }
     }
     return result
-  }, [sortedEntries])
+  }, [sortedEntries, activeEntrySlot])
 
   const firstEmptySlot = useMemo(() => {
     if (sortedEntries.length === 0) {
