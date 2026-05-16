@@ -745,6 +745,74 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
   )
 }
 
+// ── Rolling Stats ─────────────────────────────────────────────────────────────
+
+function StatCard({ label, stats }) {
+  const TH = { textAlign: 'right', fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)', paddingBottom: 6 }
+  const TD = { textAlign: 'right', fontSize: 17, fontWeight: 700, fontFamily: 'DM Mono, monospace', color: 'var(--text)', padding: '5px 0' }
+  const LB = { fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)', padding: '5px 12px 5px 0' }
+  return (
+    <div className="card" style={{ padding: '12px 16px', flex: '0 0 auto' }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid var(--border2)' }}>
+            <th style={{ ...TH, textAlign: 'left', paddingRight: 24 }}>{label}</th>
+            <th style={TH}>Hours</th>
+            <th style={{ ...TH, paddingLeft: 20 }}>Billable</th>
+            <th style={{ ...TH, paddingLeft: 20 }}>Invoice</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={LB}>AVG</td>
+            <td style={TD}>{fmtHours(stats.hrsAvg)}</td>
+            <td style={{ ...TD, paddingLeft: 20 }}>{fmtHours(stats.billAvg)}</td>
+            <td style={{ ...TD, paddingLeft: 20 }}>{fmtHours(stats.invAvg)}</td>
+          </tr>
+          <tr style={{ borderTop: '1px solid var(--border)' }}>
+            <td style={LB}>TTL</td>
+            <td style={TD}>{fmtHours(stats.hrsTtl)}</td>
+            <td style={{ ...TD, paddingLeft: 20 }}>{fmtHours(stats.billTtl)}</td>
+            <td style={{ ...TD, paddingLeft: 20 }}>{fmtHours(stats.invTtl)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function RollingStats({ enrichedEntries }) {
+  const today = todayISO()
+
+  function windowStats(days) {
+    const d = new Date(today + 'T00:00:00')
+    d.setDate(d.getDate() - days)
+    const startISO = d.toISOString().slice(0, 10)
+    const win = enrichedEntries.filter(e => e.date >= startISO && e.date < today)
+    const billTtl = win.reduce((s, e) => s + (e.billableAmt || 0), 0)
+    const invTtl  = win.filter(e => e.invoice_number).reduce((s, e) => s + (e.billableAmt || 0), 0)
+    const hrsTtl  = billTtl / 100
+    return {
+      hrsTtl,  hrsAvg:  hrsTtl  / days,
+      billTtl, billAvg: billTtl / days,
+      invTtl,  invAvg:  invTtl  / days,
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+      <StatCard label="7 Days"  stats={windowStats(7)}  />
+      <StatCard label="28 Days" stats={windowStats(28)} />
+      <div className="card" style={{ padding: '12px 16px', flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: 12, lineHeight: 1.6 }}>
+        <div>
+          <div>Placeholder</div>
+          <div>Yearly Report To Follow</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function TimeboardPage() {
@@ -918,6 +986,9 @@ export default function TimeboardPage() {
           ? <div style={{ color: 'var(--text3)', fontSize: 13, marginBottom: 16 }}>Loading…</div>
           : <SummaryTiles entries={displayRows} />
         }
+
+        {/* ── rolling stats ── */}
+        {!loading && <RollingStats enrichedEntries={enrichedEntries} />}
 
         {/* ── views ── */}
         {!loading && view === 'expanded' && (
