@@ -545,6 +545,9 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
   const [editAddProject, setEditAddProject] = useState(false)
   const [saving, setSaving]       = useState(false)
   const [selectedRows, setSelectedRows] = useState(new Set())
+  const [applyInvoiceDate,   setApplyInvoiceDate]   = useState('')
+  const [applyInvoiceWeek,   setApplyInvoiceWeek]   = useState('')
+  const [applyInvoiceNumber, setApplyInvoiceNumber] = useState('')
 
   const allSelected = rows.length > 0 && rows.every(r => selectedRows.has(r.id))
   function toggleSelectAll() {
@@ -624,6 +627,31 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
 
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      {selectedRows.size > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, padding: '8px 12px', borderBottom: '1px solid var(--border)', background: 'var(--accent-glow)' }}>
+          <input
+            type="date"
+            value={applyInvoiceDate}
+            onChange={e => setApplyInvoiceDate(e.target.value)}
+            style={{ width: 130, fontSize: 12 }}
+          />
+          <input
+            type="number"
+            value={applyInvoiceWeek}
+            onChange={e => setApplyInvoiceWeek(e.target.value)}
+            placeholder="Week"
+            style={{ width: 70, fontSize: 12 }}
+          />
+          <input
+            type="text"
+            value={applyInvoiceNumber}
+            onChange={e => setApplyInvoiceNumber(e.target.value)}
+            placeholder="Invoice No."
+            style={{ width: 110, fontSize: 12 }}
+          />
+          <button className="btn btn-primary btn-sm">Apply</button>
+        </div>
+      )}
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
           <thead>
