@@ -544,6 +544,19 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
   const [addProject, setAddProject]         = useState(null)
   const [editAddProject, setEditAddProject] = useState(false)
   const [saving, setSaving]       = useState(false)
+  const [selectedRows, setSelectedRows] = useState(new Set())
+
+  const allSelected = rows.length > 0 && rows.every(r => selectedRows.has(r.id))
+  function toggleSelectAll() {
+    setSelectedRows(allSelected ? new Set() : new Set(rows.map(r => r.id)))
+  }
+  function toggleRow(id) {
+    setSelectedRows(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
 
   async function toggleBillable(entry, val) {
     await supabase.from('time_entries').update({ is_billable: val }).eq('id', entry.id)
@@ -615,6 +628,11 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
           <thead>
             <tr>
+              <th style={{ ...TH, width: 32, textAlign: 'center' }}>
+                <button onClick={toggleSelectAll} title={allSelected ? 'Deselect all' : 'Select all'}
+                  style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid var(--text3)', padding: 0, cursor: 'pointer', background: allSelected ? 'var(--text)' : 'transparent', display: 'inline-block', verticalAlign: 'middle' }}
+                />
+              </th>
               <th style={{ ...TH, width: 48 }}>Date</th>
               <th style={{ ...TH, width: 90 }}>In</th>
               <th style={{ ...TH, width: 90 }}>Out</th>
@@ -637,6 +655,11 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
               const catColor = CATEGORY_COLORS[cat] || '#eee'
               return (
                 <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td style={{ ...rowStyle, textAlign: 'center' }}>
+                    <button onClick={() => toggleRow(row.id)} title={selectedRows.has(row.id) ? 'Deselect' : 'Select'}
+                      style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid var(--text3)', padding: 0, cursor: 'pointer', background: selectedRows.has(row.id) ? 'var(--text)' : 'transparent', display: 'inline-block', verticalAlign: 'middle' }}
+                    />
+                  </td>
                   <td style={rowStyle}><span style={{ fontSize: 12, color: 'var(--text3)' }}>{fmtDate(row.date)}</span></td>
                   <td style={rowStyle}><span style={timePillStyle}>{fmtTime(row.start_time)}</span></td>
                   <td style={rowStyle}>{row.outTime ? <span style={timePillStyle}>{fmtTime(row.outTime)}</span> : <span style={{ color: 'var(--text3)', fontSize: 12 }}>—</span>}</td>
@@ -701,6 +724,7 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
 
             {/* Add row */}
             <tr style={{ background: 'var(--accent-glow)', borderBottom: '1px solid var(--border)' }}>
+              <td style={TD} />
               <td style={TD}>
                 <input type="date" value={addRow.date}
                   onChange={e => setAddRow(r => ({ ...r, date: e.target.value }))}
@@ -758,7 +782,7 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
           {/* Totals footer */}
           <tfoot>
             <tr style={{ background: 'var(--bg3)', borderTop: '2px solid var(--border2)' }}>
-              <td colSpan={5} style={{ ...TD, fontWeight: 700, fontSize: 13, color: 'var(--text2)' }}>Total</td>
+              <td colSpan={6} style={{ ...TD, fontWeight: 700, fontSize: 13, color: 'var(--text2)' }}>Total</td>
               <td style={{ ...TD, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontWeight: 700, fontSize: 13 }}>{fmtHours(totalHours)}</td>
               <td style={TD} />
               <td style={TD} />
