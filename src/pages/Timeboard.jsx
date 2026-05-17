@@ -548,6 +548,7 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
   const [applyInvoiceDate,   setApplyInvoiceDate]   = useState('')
   const [applyInvoiceWeek,   setApplyInvoiceWeek]   = useState('')
   const [applyInvoiceNumber, setApplyInvoiceNumber] = useState('')
+  const [applyError, setApplyError] = useState('')
 
   const allSelected = rows.length > 0 && rows.every(r => selectedRows.has(r.id))
   function toggleSelectAll() {
@@ -559,6 +560,27 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
       next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
+  }
+
+  async function handleApply() {
+    const updateObj = {}
+    if (applyInvoiceDate)   updateObj.invoice_date   = applyInvoiceDate
+    if (applyInvoiceWeek)   updateObj.invoice_week   = parseInt(applyInvoiceWeek, 10) || null
+    if (applyInvoiceNumber) updateObj.invoice_number = applyInvoiceNumber
+    if (Object.keys(updateObj).length === 0) return
+    setApplyError('')
+    const ids = [...selectedRows]
+    const { error } = await supabase.from('time_entries').update(updateObj).in('id', ids)
+    if (error) {
+      console.error('Apply invoice info error:', error)
+      setApplyError('Failed to save. Please try again.')
+      return
+    }
+    rows.filter(r => ids.includes(r.id)).forEach(r => onEntryChange({ ...r, ...updateObj }))
+    setSelectedRows(new Set())
+    setApplyInvoiceDate('')
+    setApplyInvoiceWeek('')
+    setApplyInvoiceNumber('')
   }
 
   async function toggleBillable(entry, val) {
@@ -649,7 +671,8 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
             placeholder="Invoice No."
             style={{ width: 110, fontSize: 12 }}
           />
-          <button className="btn btn-primary btn-sm">Apply</button>
+          <button className="btn btn-primary btn-sm" onClick={handleApply}>Apply</button>
+          {applyError && <span style={{ fontSize: 12, color: '#f87171', marginLeft: 4 }}>{applyError}</span>}
         </div>
       )}
       <div style={{ overflowX: 'auto' }}>
