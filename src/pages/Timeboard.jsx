@@ -22,7 +22,10 @@ const TIME_SLOTS = Array.from({ length: 288 }, (_, i) => {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function todayISO() { return new Date().toISOString().slice(0, 10) }
+function toLocalISO(d) {
+  return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-')
+}
+function todayISO() { return toLocalISO(new Date()) }
 
 function calcHoursFromTimes(start, end) {
   if (!start || !end) return 0
@@ -938,20 +941,28 @@ export default function TimeboardPage() {
   const [filterInvoiceWeek, setFilterInvoiceWeek] = useState('')
   const [filterInvoice, setFilterInvoice]         = useState('')
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load(dateMode, dateStart, dateEnd) }, [dateMode, dateStart, dateEnd])
 
-  async function load() {
+  async function load(mode, start, end) {
     setLoading(true)
     if (!isDemo) {
-      const [{ data: e }, { data: p }] = await Promise.all([
-        supabase.from('time_entries')
-          .select('*, project:projects(id, name, project_number, category, client:clients(id, company, alias))')
-          .order('date').order('start_time'),
+      const today = todayISO()
+      let q = supabase.from('time_entries')
+        .select('*, project:projects(id, name, project_number, category, client:clients(id, company, alias))')
+        .order('date').order('start_time')
+      if (mode === 'today') {
+        q = q.gte('date', today).lte('date', today)
+      } else if (mode === 'range') {
+        if (start) q = q.gte('date', start)
+        if (end)   q = q.lte('date', end)
+      }
+      const [{ data: e, error: eErr }, { data: p }] = await Promise.all([
+        q,
         supabase.from('projects')
           .select('id, name, project_number, category, client:clients(id, company, alias, hourly_rate)')
           .order('project_number'),
       ])
-      console.log('[DEBUG raw entries] first entry from Supabase:', (e || [])[0] ? { id: e[0].id, is_billable: e[0].is_billable, is_billable_type: typeof e[0].is_billable, hourly_rate: e[0].hourly_rate } : 'none')
+      if (eErr) console.error('[load] time_entries error:', eErr)
       setEntries(e || [])
       setProjects(p || [])
     }
@@ -962,7 +973,7 @@ export default function TimeboardPage() {
     const base = dateMode === 'today' ? todayISO() : (dateStart || todayISO())
     const d = new Date(base + 'T00:00:00')
     d.setDate(d.getDate() - 1)
-    const iso = d.toISOString().slice(0, 10)
+    const iso = toLocalISO(d)
     setDateStart(iso); setDateEnd(iso); setDateMode('range')
   }
 
@@ -970,7 +981,7 @@ export default function TimeboardPage() {
     const base = dateMode === 'today' ? todayISO() : (dateStart || todayISO())
     const d = new Date(base + 'T00:00:00')
     d.setDate(d.getDate() + 1)
-    const iso = d.toISOString().slice(0, 10)
+    const iso = toLocalISO(d)
     setDateStart(iso); setDateEnd(iso); setDateMode('range')
   }
 
