@@ -856,10 +856,12 @@ export default function TimeboardPage() {
   const [dateMode, setDateMode]               = useState('today')
   const [dateStart, setDateStart]             = useState('')
   const [dateEnd, setDateEnd]                 = useState('')
-  const [filterClient, setFilterClient]       = useState('')
-  const [filterProject, setFilterProject]     = useState('')
-  const [filterCategory, setFilterCategory]   = useState('')
-  const [filterInvoice, setFilterInvoice]     = useState('')
+  const [filterClient, setFilterClient]           = useState('')
+  const [filterProject, setFilterProject]         = useState('')
+  const [filterCategory, setFilterCategory]       = useState('')
+  const [filterInvoiceDate, setFilterInvoiceDate] = useState('')
+  const [filterInvoiceWeek, setFilterInvoiceWeek] = useState('')
+  const [filterInvoice, setFilterInvoice]         = useState('')
 
   useEffect(() => { load() }, [])
 
@@ -939,11 +941,13 @@ export default function TimeboardPage() {
         if (!(e.project?.project_number || '').toLowerCase().includes(q) &&
             !(e.project?.name       || '').toLowerCase().includes(q)) return false
       }
-      if (filterCategory && e.project?.category !== filterCategory) return false
-      if (filterInvoice  && (e.invoice_number || '').toLowerCase() !== filterInvoice.toLowerCase()) return false
+      if (filterCategory    && e.project?.category !== filterCategory) return false
+      if (filterInvoiceDate && (e.invoice_date || '') !== filterInvoiceDate) return false
+      if (filterInvoiceWeek && String(e.invoice_week || '') !== filterInvoiceWeek.trim()) return false
+      if (filterInvoice     && (e.invoice_number || '').toLowerCase() !== filterInvoice.toLowerCase()) return false
       return true
     }).sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : (a.start_time || '').localeCompare(b.start_time || ''))
-  }, [enrichedEntries, dateMode, dateStart, dateEnd, filterClient, filterProject, filterCategory, filterInvoice])
+  }, [enrichedEntries, dateMode, dateStart, dateEnd, filterClient, filterProject, filterCategory, filterInvoiceDate, filterInvoiceWeek, filterInvoice])
 
   const expandedDate = dateMode === 'today' ? todayISO() : (dateStart || todayISO())
 
@@ -1004,6 +1008,12 @@ export default function TimeboardPage() {
                 <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
               ))}
             </select>
+            <input value={filterInvoiceDate} onChange={e => setFilterInvoiceDate(e.target.value)}
+              placeholder="Date" style={{ width: 90, fontSize: 12 }}
+            />
+            <input value={filterInvoiceWeek} onChange={e => setFilterInvoiceWeek(e.target.value)}
+              placeholder="Week" style={{ width: 70, fontSize: 12 }}
+            />
             <input value={filterInvoice} onChange={e => setFilterInvoice(e.target.value)}
               placeholder="Invoice No." style={{ width: 110, fontSize: 12 }}
             />
