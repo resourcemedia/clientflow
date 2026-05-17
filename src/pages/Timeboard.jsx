@@ -1008,6 +1008,7 @@ export default function TimeboardPage() {
                 <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
               ))}
             </select>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
             <input value={filterInvoiceDate} onChange={e => setFilterInvoiceDate(e.target.value)}
               placeholder="Date" style={{ width: 90, fontSize: 12 }}
             />
@@ -1024,6 +1025,7 @@ export default function TimeboardPage() {
                 Invoice Breakdown
               </button>
             )}
+            </div>
           </>)}
         </div>
 
