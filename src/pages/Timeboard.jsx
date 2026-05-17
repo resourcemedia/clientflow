@@ -556,6 +556,18 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
     onEntryChange({ ...entry, invoice_number: val })
   }
 
+  async function saveInvoiceDate(entry, val) {
+    const v = val || null
+    await supabase.from('time_entries').update({ invoice_date: v }).eq('id', entry.id)
+    onEntryChange({ ...entry, invoice_date: v })
+  }
+
+  async function saveInvoiceWeek(entry, val) {
+    const v = val ? (parseInt(val, 10) || null) : null
+    await supabase.from('time_entries').update({ invoice_week: v }).eq('id', entry.id)
+    onEntryChange({ ...entry, invoice_week: v })
+  }
+
   async function saveDescription(entry, desc) {
     await supabase.from('time_entries').update({ description: desc || null }).eq('id', entry.id)
     onEntryChange({ ...entry, description: desc || null })
@@ -613,16 +625,14 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
               <th style={{ ...TH, textAlign: 'right', width: 65 }}>Rate</th>
               <th style={{ ...TH, textAlign: 'right', width: 80 }}>Billable</th>
               <th style={{ ...TH, textAlign: 'right', width: 80 }}>Invoice</th>
+              <th style={{ ...TH, width: 90, textAlign: 'center' }}>Date</th>
+              <th style={{ ...TH, width: 60, textAlign: 'center' }}>Week</th>
               <th style={{ ...TH, width: 90 }}>Invoice No.</th>
             </tr>
           </thead>
           <tbody>
             {rows.map(row => {
-              const hasInvoice = !!row.invoice_number
-              const rowStyle = {
-                ...TD,
-                borderLeft: hasInvoice ? '3px solid var(--accent2)' : '3px solid transparent',
-              }
+              const rowStyle = { ...TD }
               const cat = row.project?.category
               const catColor = CATEGORY_COLORS[cat] || '#eee'
               return (
@@ -657,6 +667,24 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
                   </td>
                   <td style={{ ...rowStyle, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
                     {row.invoiceAmt > 0 ? fmt$(row.invoiceAmt) : '—'}
+                  </td>
+                  <td style={{ ...rowStyle, textAlign: 'center' }}>
+                    <InlineInput
+                      value={row.invoice_date || ''}
+                      onSave={v => saveInvoiceDate(row, v)}
+                      placeholder="—"
+                      width={84}
+                      align="center"
+                    />
+                  </td>
+                  <td style={{ ...rowStyle, textAlign: 'center' }}>
+                    <InlineInput
+                      value={row.invoice_week != null ? String(row.invoice_week) : ''}
+                      onSave={v => saveInvoiceWeek(row, v)}
+                      placeholder="—"
+                      width={44}
+                      align="center"
+                    />
                   </td>
                   <td style={rowStyle}>
                     <InlineInput
@@ -718,7 +746,7 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
                   style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: 13 }}
                 />
               </td>
-              <td colSpan={5} style={TD} />
+              <td colSpan={7} style={TD} />
               <td style={TD}>
                 <button className="btn btn-primary btn-sm" onClick={handleAddSave} disabled={saving || !addRow.date || !addRow.inTime || !addProject}>
                   {saving ? '…' : 'Save'}
@@ -736,6 +764,8 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
               <td style={TD} />
               <td style={{ ...TD, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontWeight: 700, fontSize: 13 }}>{fmt$(totalBillable)}</td>
               <td style={{ ...TD, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontWeight: 700, fontSize: 13 }}>{fmt$(totalInvoice)}</td>
+              <td style={TD} />
+              <td style={TD} />
               <td style={TD} />
             </tr>
           </tfoot>
@@ -937,6 +967,12 @@ export default function TimeboardPage() {
       </div>
 
       <div className="page-content">
+        {/* ── summary tiles ── */}
+        {loading
+          ? <div style={{ color: 'var(--text3)', fontSize: 13, marginBottom: 16 }}>Loading…</div>
+          : <SummaryTiles entries={displayRows} />
+        }
+
         {/* ── filter bar ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
           <button
@@ -981,14 +1017,8 @@ export default function TimeboardPage() {
           </>)}
         </div>
 
-        {/* ── summary tiles ── */}
-        {loading
-          ? <div style={{ color: 'var(--text3)', fontSize: 13, marginBottom: 16 }}>Loading…</div>
-          : <SummaryTiles entries={displayRows} />
-        }
-
-        {/* ── rolling stats ── */}
-        {!loading && <RollingStats enrichedEntries={enrichedEntries} />}
+        {/* ── rolling stats (expanded view only) ── */}
+        {!loading && view === 'expanded' && <RollingStats enrichedEntries={enrichedEntries} />}
 
         {/* ── views ── */}
         {!loading && view === 'expanded' && (
