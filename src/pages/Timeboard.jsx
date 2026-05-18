@@ -79,9 +79,7 @@ function fmtHours(n) {
 }
 
 // Enrich entries with computed outTime, hours, billableAmt, invoiceAmt
-// outTime = start_time of next entry; for past dates, last entry uses "24:00".
-// For today's last entry (the "active" entry), outTime = null → hours = 0 so
-// it contributes nothing to summary tiles until a subsequent entry closes it.
+// outTime priority: stored end_time → next entry's start_time → null (no hours calculated).
 function enrichEntries(entries) {
   const today = todayISO()
   const byDate = {}
@@ -92,7 +90,7 @@ function enrichEntries(entries) {
     sorted.forEach((entry, i) => {
       const isLast   = i === sorted.length - 1
       const isActive = isLast && entry.date === today
-      const outTime  = isActive ? null : (sorted[i + 1]?.start_time || '24:00')
+      const outTime  = entry.end_time || sorted[i + 1]?.start_time || null
       const hours    = calcHoursFromTimes(entry.start_time, outTime)
       const isPrimary   = entry.project?.category === 'primary'
       const isBillable  = entry.is_billable === true || (entry.is_billable === null && isPrimary)
@@ -941,12 +939,18 @@ export default function TimeboardPage() {
   const [filterInvoiceWeek, setFilterInvoiceWeek] = useState('')
   const [filterInvoice, setFilterInvoice]         = useState('')
 
-  useEffect(() => { load(dateMode, dateStart, dateEnd) }, [dateMode, dateStart, dateEnd])
+  useEffect(() => { load(dateMode, dateStart, dateEnd, filterClient) }, [dateMode, dateStart, dateEnd, filterClient])
 
-  async function load(mode, start, end) {
+  async function load(mode, start, end, clientId) {
     setLoading(true)
     if (!isDemo) {
       const today = todayISO()
+
+      const { data: p } = await supabase.from('projects')
+        .select('id, name, project_number, category, client:clients(id, company, alias, hourly_rate)')
+        .order('project_number')
+      setProjects(p || [])
+
       let q = supabase.from('time_entries')
         .select('*, project:projects(id, name, project_number, category, client:clients(id, company, alias))')
         .order('date').order('start_time')
@@ -956,15 +960,19 @@ export default function TimeboardPage() {
         if (start) q = q.gte('date', start)
         if (end)   q = q.lte('date', end)
       }
-      const [{ data: e, error: eErr }, { data: p }] = await Promise.all([
-        q,
-        supabase.from('projects')
-          .select('id, name, project_number, category, client:clients(id, company, alias, hourly_rate)')
-          .order('project_number'),
-      ])
+      if (clientId) {
+        const projectIds = (p || []).filter(proj => proj.client?.id === clientId).map(proj => proj.id)
+        if (projectIds.length === 0) {
+          setEntries([])
+          setLoading(false)
+          return
+        }
+        q = q.in('project_id', projectIds)
+      }
+
+      const { data: e, error: eErr } = await q
       if (eErr) console.error('[load] time_entries error:', eErr)
       setEntries(e || [])
-      setProjects(p || [])
     }
     setLoading(false)
   }
@@ -1021,7 +1029,6 @@ export default function TimeboardPage() {
         if (dateStart && e.date < dateStart) return false
         if (dateEnd   && e.date > dateEnd)   return false
       }
-      if (filterClient   && e.project?.client?.id !== filterClient) return false
       if (filterProject) {
         const q = filterProject.toLowerCase()
         if (!(e.project?.project_number || '').toLowerCase().includes(q) &&
@@ -1033,7 +1040,7 @@ export default function TimeboardPage() {
       if (filterInvoice     && (e.invoice_number || '').toLowerCase() !== filterInvoice.toLowerCase()) return false
       return true
     }).sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : (a.start_time || '').localeCompare(b.start_time || ''))
-  }, [enrichedEntries, dateMode, dateStart, dateEnd, filterClient, filterProject, filterCategory, filterInvoiceDate, filterInvoiceWeek, filterInvoice])
+  }, [enrichedEntries, dateMode, dateStart, dateEnd, filterProject, filterCategory, filterInvoiceDate, filterInvoiceWeek, filterInvoice])
 
   const expandedDate = dateMode === 'today' ? todayISO() : (dateStart || todayISO())
 
