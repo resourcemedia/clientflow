@@ -95,7 +95,7 @@ function enrichEntries(entries) {
       const isPrimary   = entry.project?.category === 'primary'
       const isBillable  = entry.is_billable === true || (entry.is_billable === null && isPrimary)
       const billableAmt = isBillable ? hours * (entry.hourly_rate || 0) : 0
-      const invoiceAmt  = (isBillable && !entry.invoice_number) ? hours * (entry.hourly_rate || 0) : 0
+      const invoiceAmt  = (isBillable && (entry.invoice_number == null || entry.invoice_number === '')) ? hours * (entry.hourly_rate || 0) : 0
       if (result.length === 0) console.log('[DEBUG enrichEntries] first entry:', { id: entry.id, is_billable: entry.is_billable, is_billable_type: typeof entry.is_billable, hourly_rate: entry.hourly_rate, hours, billableAmt, invoiceAmt, isActive })
       result.push({ ...entry, outTime, hours, billableAmt, invoiceAmt, isActive })
     })
@@ -887,14 +887,30 @@ function StatCard({ label, stats }) {
   )
 }
 
-function RollingStats({ enrichedEntries }) {
-  const today = todayISO()
+function RollingStats() {
+  const [statsEntries, setStatsEntries] = useState([])
+
+  useEffect(() => {
+    if (isDemo) return
+    const today = todayISO()
+    const d = new Date(today + 'T00:00:00')
+    d.setDate(d.getDate() - 28)
+    const startISO = toLocalISO(d)
+    supabase.from('time_entries')
+      .select('*, project:projects(id, name, project_number, category, client:clients(id, company, alias))')
+      .gte('date', startISO).lt('date', today)
+      .order('date').order('start_time')
+      .then(({ data }) => setStatsEntries(data || []))
+  }, [])
+
+  const enriched = useMemo(() => enrichEntries(statsEntries), [statsEntries])
 
   function windowStats(days) {
+    const today = todayISO()
     const d = new Date(today + 'T00:00:00')
     d.setDate(d.getDate() - days)
-    const startISO = d.toISOString().slice(0, 10)
-    const win = enrichedEntries.filter(e => e.date >= startISO && e.date < today)
+    const startISO = toLocalISO(d)
+    const win = enriched.filter(e => e.date >= startISO && e.date < today)
     const billTtl = win.reduce((s, e) => s + (e.billableAmt || 0), 0)
     const invTtl  = win.filter(e => e.invoice_number).reduce((s, e) => s + (e.billableAmt || 0), 0)
     const hrsTtl  = billTtl / 100
@@ -938,41 +954,33 @@ export default function TimeboardPage() {
   const [filterInvoiceDate, setFilterInvoiceDate] = useState('')
   const [filterInvoiceWeek, setFilterInvoiceWeek] = useState('')
   const [filterInvoice, setFilterInvoice]         = useState('')
+  const [filterToInvoice, setFilterToInvoice]     = useState(false)
 
-  useEffect(() => { load(dateMode, dateStart, dateEnd, filterClient) }, [dateMode, dateStart, dateEnd, filterClient])
+  useEffect(() => { load(dateMode, dateStart, dateEnd) }, [dateMode, dateStart, dateEnd])
 
-  async function load(mode, start, end, clientId) {
+  async function load(mode, start, end) {
     setLoading(true)
     if (!isDemo) {
       const today = todayISO()
-
-      const { data: p } = await supabase.from('projects')
-        .select('id, name, project_number, category, client:clients(id, company, alias, hourly_rate)')
-        .order('project_number')
-      setProjects(p || [])
-
       let q = supabase.from('time_entries')
         .select('*, project:projects(id, name, project_number, category, client:clients(id, company, alias))')
         .order('date').order('start_time')
+        .range(0, 4999)
       if (mode === 'today') {
         q = q.gte('date', today).lte('date', today)
       } else if (mode === 'range') {
         if (start) q = q.gte('date', start)
         if (end)   q = q.lte('date', end)
       }
-      if (clientId) {
-        const projectIds = (p || []).filter(proj => proj.client?.id === clientId).map(proj => proj.id)
-        if (projectIds.length === 0) {
-          setEntries([])
-          setLoading(false)
-          return
-        }
-        q = q.in('project_id', projectIds)
-      }
-
-      const { data: e, error: eErr } = await q
+      const [{ data: e, error: eErr }, { data: p }] = await Promise.all([
+        q,
+        supabase.from('projects')
+          .select('id, name, project_number, category, client:clients(id, company, alias, hourly_rate)')
+          .order('project_number'),
+      ])
       if (eErr) console.error('[load] time_entries error:', eErr)
       setEntries(e || [])
+      setProjects(p || [])
     }
     setLoading(false)
   }
@@ -1023,12 +1031,16 @@ export default function TimeboardPage() {
   // Filtered + sorted enriched entries (for tiles and collapsed view)
   const displayRows = useMemo(() => {
     const today = todayISO()
+    const clientProjectIds = filterClient
+      ? new Set(projects.filter(p => p.client?.id === filterClient).map(p => p.id))
+      : null
     return enrichedEntries.filter(e => {
       if (dateMode === 'today')       { if (e.date !== today) return false }
       else if (dateMode === 'range')  {
         if (dateStart && e.date < dateStart) return false
         if (dateEnd   && e.date > dateEnd)   return false
       }
+      if (clientProjectIds && !clientProjectIds.has(e.project_id)) return false
       if (filterProject) {
         const q = filterProject.toLowerCase()
         if (!(e.project?.project_number || '').toLowerCase().includes(q) &&
@@ -1038,9 +1050,10 @@ export default function TimeboardPage() {
       if (filterInvoiceDate && (e.invoice_date || '') !== filterInvoiceDate) return false
       if (filterInvoiceWeek && String(e.invoice_week || '') !== filterInvoiceWeek.trim()) return false
       if (filterInvoice     && (e.invoice_number || '').toLowerCase() !== filterInvoice.toLowerCase()) return false
+      if (filterToInvoice   && !(e.invoice_number == null || e.invoice_number === '')) return false
       return true
     }).sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : (a.start_time || '').localeCompare(b.start_time || ''))
-  }, [enrichedEntries, dateMode, dateStart, dateEnd, filterProject, filterCategory, filterInvoiceDate, filterInvoiceWeek, filterInvoice])
+  }, [enrichedEntries, dateMode, dateStart, dateEnd, filterClient, filterProject, filterCategory, filterInvoiceDate, filterInvoiceWeek, filterInvoice, filterToInvoice, projects])
 
   const expandedDate = dateMode === 'today' ? todayISO() : (dateStart || todayISO())
 
@@ -1075,7 +1088,10 @@ export default function TimeboardPage() {
           <button
             className={`btn btn-sm ${dateMode === 'today' ? 'btn-primary' : 'btn-ghost'}`}
             style={{ fontWeight: 600 }}
-            onClick={() => { setDateMode('today'); setDateStart(''); setDateEnd('') }}
+            onClick={() => {
+              if (dateMode === 'today') { setDateMode('all') }
+              else { setDateMode('today'); setDateStart(''); setDateEnd('') }
+            }}
           >Today</button>
           <button className="btn btn-sm btn-ghost" onClick={handlePrevDay}>&lt;</button>
           <button className="btn btn-sm btn-ghost" onClick={handleNextDay}>&gt;</button>
@@ -1102,6 +1118,10 @@ export default function TimeboardPage() {
               ))}
             </select>
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button
+              className={`btn btn-sm ${filterToInvoice ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setFilterToInvoice(v => !v)}
+            >To Invoice</button>
             <input value={filterInvoiceDate} onChange={e => setFilterInvoiceDate(e.target.value)}
               placeholder="Date" style={{ width: 90, fontSize: 12 }}
             />
@@ -1123,7 +1143,7 @@ export default function TimeboardPage() {
         </div>
 
         {/* ── rolling stats (expanded view only) ── */}
-        {!loading && view === 'expanded' && <RollingStats enrichedEntries={enrichedEntries} />}
+        {!loading && view === 'expanded' && <RollingStats />}
 
         {/* ── views ── */}
         {!loading && view === 'expanded' && (
