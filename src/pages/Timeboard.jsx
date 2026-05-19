@@ -94,8 +94,9 @@ function enrichEntries(entries) {
       const hours    = calcHoursFromTimes(entry.start_time, outTime)
       const isPrimary   = entry.project?.category === 'primary'
       const isBillable  = entry.is_billable === true || (entry.is_billable === null && isPrimary)
-      const billableAmt = isBillable ? hours * (entry.hourly_rate || 0) : 0
-      const invoiceAmt  = (isBillable && (entry.invoice_number == null || entry.invoice_number === '')) ? hours * (entry.hourly_rate || 0) : 0
+      const roundedHours = Math.round(hours * 100) / 100
+      const billableAmt = isBillable ? roundedHours * (entry.hourly_rate || 0) : 0
+      const invoiceAmt  = (isBillable && (entry.invoice_number == null || entry.invoice_number === '')) ? roundedHours * (entry.hourly_rate || 0) : 0
       if (result.length === 0) console.log('[DEBUG enrichEntries] first entry:', { id: entry.id, is_billable: entry.is_billable, is_billable_type: typeof entry.is_billable, hourly_rate: entry.hourly_rate, hours, billableAmt, invoiceAmt, isActive })
       result.push({ ...entry, outTime, hours, billableAmt, invoiceAmt, isActive })
     })
