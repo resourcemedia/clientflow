@@ -643,9 +643,9 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
   const totalInvoice  = rows.reduce((s, r) => s + r.invoiceAmt, 0)
 
   const timePillStyle = {
-    display: 'inline-block', padding: '2px 7px',
+    display: 'inline-block', padding: '1px 4px',
     border: '1px solid var(--border)', borderRadius: 4,
-    fontSize: 12, fontFamily: 'DM Mono, monospace',
+    fontSize: 11, fontFamily: 'DM Mono, monospace',
     background: 'var(--bg3)', whiteSpace: 'nowrap',
   }
 
@@ -686,11 +686,11 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
                   style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid var(--text3)', padding: 0, cursor: 'pointer', background: allSelected ? 'var(--text)' : 'transparent', display: 'inline-block', verticalAlign: 'middle' }}
                 />
               </th>
-              <th style={{ ...TH, width: 48 }}>Date</th>
-              <th style={{ ...TH, width: 90 }}>In</th>
-              <th style={{ ...TH, width: 90 }}>Out</th>
-              <th style={{ ...TH, width: 130 }}>Project</th>
-              <th style={TH}>Description</th>
+              <th style={{ ...TH, width: '1%', minWidth: 0, padding: '8px 6px 8px 4px', whiteSpace: 'nowrap' }}>Date</th>
+              <th style={{ ...TH, width: '1%', minWidth: 0, padding: '8px 6px 8px 4px', whiteSpace: 'nowrap' }}>In</th>
+              <th style={{ ...TH, width: '1%', minWidth: 0, padding: '8px 6px 8px 4px', whiteSpace: 'nowrap' }}>Out</th>
+              <th style={{ ...TH, minWidth: 200 }}>Project</th>
+              <th style={{ ...TH, width: '100%' }}>Description</th>
               <th style={{ ...TH, textAlign: 'right', width: 65 }}>Hours</th>
               <th style={{ ...TH, width: 50, textAlign: 'center' }}></th>
               <th style={{ ...TH, textAlign: 'right', width: 65 }}>Rate</th>
@@ -713,13 +713,20 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
                       style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid var(--text3)', padding: 0, cursor: 'pointer', background: selectedRows.has(row.id) ? 'var(--text)' : 'transparent', display: 'inline-block', verticalAlign: 'middle' }}
                     />
                   </td>
-                  <td style={rowStyle}><span style={{ fontSize: 12, color: 'var(--text3)' }}>{fmtDate(row.date)}</span></td>
-                  <td style={rowStyle}><span style={timePillStyle}>{fmtTime(row.start_time)}</span></td>
-                  <td style={rowStyle}>{row.outTime ? <span style={timePillStyle}>{fmtTime(row.outTime)}</span> : <span style={{ color: 'var(--text3)', fontSize: 12 }}>—</span>}</td>
+                  <td style={{ ...rowStyle, padding: '7px 6px 7px 4px', minWidth: 0, whiteSpace: 'nowrap' }}><span style={{ fontSize: 11, color: 'var(--text3)' }}>{fmtDate(row.date)}</span></td>
+                  <td style={{ ...rowStyle, padding: '7px 6px 7px 4px', minWidth: 0, whiteSpace: 'nowrap' }}><span style={timePillStyle}>{fmtTime(row.start_time)}</span></td>
+                  <td style={{ ...rowStyle, padding: '7px 6px 7px 4px', minWidth: 0, whiteSpace: 'nowrap' }}>{row.outTime ? <span style={timePillStyle}>{fmtTime(row.outTime)}</span> : <span style={{ color: 'var(--text3)', fontSize: 12 }}>—</span>}</td>
                   <td style={rowStyle}>
-                    <span style={{ display: 'inline-block', padding: '2px 8px', background: catColor, borderRadius: 4, fontSize: 12, fontFamily: 'DM Mono, monospace', color: darken(catColor), whiteSpace: 'nowrap' }}>
-                      {projectLabel(row)}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap' }}>
+                      <span style={{ display: 'inline-block', padding: '2px 8px', background: catColor, borderRadius: 4, fontSize: 12, fontFamily: 'DM Mono, monospace', color: darken(catColor), whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        {projectLabel(row)}
+                      </span>
+                      {row.project?.name && (
+                        <span style={{ fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {row.project.name}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td style={rowStyle}>
                     <InlineInput
@@ -778,16 +785,16 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
             {/* Add row */}
             <tr style={{ background: 'var(--accent-glow)', borderBottom: '1px solid var(--border)' }}>
               <td style={TD} />
-              <td style={TD}>
+              <td style={{ ...TD, padding: '7px 6px 7px 4px', minWidth: 0 }}>
                 <input type="date" value={addRow.date}
                   onChange={e => setAddRow(r => ({ ...r, date: e.target.value }))}
-                  style={{ width: 120, fontSize: 12 }}
+                  style={{ width: 80, fontSize: 11 }}
                 />
               </td>
-              <td style={TD}>
+              <td style={{ ...TD, padding: '7px 6px 7px 4px', minWidth: 0 }}>
                 <input type="time" value={addRow.inTime}
                   onChange={e => setAddRow(r => ({ ...r, inTime: e.target.value }))}
-                  style={{ width: 100, fontSize: 12, fontFamily: 'DM Mono, monospace' }}
+                  style={{ width: 80, fontSize: 11, fontFamily: 'DM Mono, monospace' }}
                 />
               </td>
               <td style={{ ...TD, color: 'var(--text3)', fontSize: 12 }}>auto</td>
