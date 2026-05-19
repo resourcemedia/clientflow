@@ -57,6 +57,23 @@ function fmtDate(isoDate) {
   return `${parseInt(mm, 10)}/${parseInt(dd, 10)}`
 }
 
+// Display invoice_date (YYYY-MM-DD) as MM/DD/YY
+function fmtInvoiceDate(isoDate) {
+  if (!isoDate) return ''
+  const [yyyy, mm, dd] = isoDate.split('-')
+  if (!yyyy || !mm || !dd) return isoDate
+  return `${mm}/${dd}/${yyyy.slice(2)}`
+}
+
+// Parse MM/DD/YY back to YYYY-MM-DD for storage
+function parseInvoiceDate(val) {
+  if (!val) return ''
+  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val
+  const m = val.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/)
+  if (m) return `20${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`
+  return val
+}
+
 function darken(hex) {
   const r = parseInt(hex.slice(1, 3), 16)
   const g = parseInt(hex.slice(3, 5), 16)
@@ -536,58 +553,103 @@ function ExpandedView({ entries, projects, expandedDate, onEntryChange, onEntryD
 // ── Invoice Breakdown print window ─────────────────────────────────────────────
 
 function openInvoiceBreakdown(rows, invoiceFilter) {
-  const target = invoiceFilter
+  const target = (invoiceFilter
     ? rows.filter(r => r.invoice_number === invoiceFilter)
     : rows.filter(r => r.invoice_number)
+  ).slice().sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : (a.start_time || '').localeCompare(b.start_time || ''))
 
-  const w = window.open('', '_blank', 'width=960,height=700')
+  if (target.length === 0) return
+  const w = window.open('', '_blank', 'width=900,height=700')
   if (!w) return
+
+  const clientName = target[0]?.project?.client?.company || target[0]?.project?.client?.alias || ''
+  const invoiceNum = target[0]?.invoice_number || ''
+  const invoiceWeek = target[0]?.invoice_week ? String(target[0].invoice_week) : ''
+
+  // Derive week start/end from WEEKS_2026 label (format: "2609 | 2/22 - 2/28")
+  let weekStart = '', weekEnd = ''
+  const weekEntry = WEEKS_2026.find(wk => wk.value === invoiceWeek)
+  if (weekEntry) {
+    const range = weekEntry.label.split('|')[1]?.trim().split(' - ')
+    if (range?.length === 2) {
+      weekStart = range[0].trim() + '/26'
+      weekEnd   = range[1].trim() + '/26'
+    }
+  }
+
   const totalHours = target.reduce((s, r) => s + r.hours, 0)
   const totalAmt   = target.reduce((s, r) => s + r.billableAmt, 0)
-  const title = invoiceFilter ? `Invoice Breakdown — Invoice #${invoiceFilter}` : 'Invoice Breakdown'
 
-  const dates = target.map(r => r.date).filter(Boolean).sort()
-  const dateRange = dates.length === 0 ? ''
-    : dates[0] === dates[dates.length - 1]
-      ? fmtDate(dates[0])
-      : `${fmtDate(dates[0])} – ${fmtDate(dates[dates.length - 1])}`
+  // Group entries by project, preserving encounter order
+  const groupOrder = []
+  const groupMap   = {}
+  target.forEach(r => {
+    const key = r.project_id || r.project?.project_number || 'unknown'
+    if (!groupMap[key]) {
+      const pn   = r.project?.project_number || ''
+      const name = r.project?.name || ''
+      groupMap[key] = { header: [pn, name].filter(Boolean).join(' | '), rows: [], hours: 0, amt: 0 }
+      groupOrder.push(key)
+    }
+    groupMap[key].rows.push(r)
+    groupMap[key].hours += r.hours
+    groupMap[key].amt   += r.billableAmt
+  })
 
-  w.document.write(`<!DOCTYPE html><html><head><title>${title}</title>
+  const groupsHtml = groupOrder.map(key => {
+    const g = groupMap[key]
+    const rowsHtml = g.rows.map(r => `<tr class="detail">
+      <td class="date">${fmtDate(r.date)}</td>
+      <td>${r.description || ''}</td>
+      <td class="num">${r.hours.toFixed(2)}</td>
+      <td class="num">${r.billableAmt > 0 ? r.billableAmt.toFixed(2) : '—'}</td>
+    </tr>`).join('')
+    return `<tr><td colspan="4" class="proj-hdr">${g.header}</td></tr>
+${rowsHtml}
+<tr class="subtotal"><td colspan="2" class="lbl">TOTAL</td><td class="num">${g.hours.toFixed(2)}</td><td class="num">${g.amt.toFixed(2)}</td></tr>
+<tr class="gap"><td colspan="4"></td></tr>`
+  }).join('\n')
+
+  w.document.write(`<!DOCTYPE html><html><head><title>Invoice #${invoiceNum}</title>
 <style>
-  body{font-family:Arial,sans-serif;font-size:13px;padding:32px;color:#222}
-  h1{font-size:18px;margin-bottom:4px}p{color:#666;margin:4px 0 12px}
-  button{margin-bottom:16px;padding:6px 14px;cursor:pointer}
+  *{box-sizing:border-box}
+  body{font-family:Arial,sans-serif;font-size:12px;padding:32px 36px;color:#222;max-width:860px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  button{margin-bottom:20px;padding:5px 14px;cursor:pointer;font-size:12px}
+  .hdr{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:10px;border-bottom:1px solid #cccccc;margin-bottom:20px}
+  .client{font-size:20px;font-weight:700}
+  .meta{display:flex;gap:20px;text-align:center}
+  .meta-field label{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:2px}
+  .meta-field span{font-weight:600;font-size:12px}
+  h2{font-size:13px;font-weight:700;margin:0 0 10px;padding-bottom:8px;border-bottom:1px solid #cccccc}
   table{width:100%;border-collapse:collapse}
-  th{text-align:left;border-bottom:2px solid #333;padding:6px 8px;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
-  td{border-bottom:1px solid #eee;padding:6px 8px}
-  .mono{font-family:monospace}.right{text-align:right}
-  tfoot td{font-weight:700;border-top:2px solid #333;border-bottom:none}
+  td{padding:3px 6px 3px 0;font-size:12px;vertical-align:top}
+  td.date{width:52px;white-space:nowrap;color:#555}
+  td.num{text-align:right;font-family:Helvetica,Arial,sans-serif;width:60px}
+  td.lbl{text-align:right;font-weight:700}
+  .proj-hdr{font-weight:700;font-size:12px;padding:10px 0 4px;border-top:none}
+  .subtotal td{font-weight:700;border-top:1px solid #cccccc;padding-top:5px;padding-bottom:6px}
+  .gap td{height:14px}
+  .grand td{font-weight:700;border-top:1px solid #cccccc;padding-top:7px;font-size:13px}
+  .detail td{border-bottom:0.5px solid #cccccc;padding-top:5px;padding-bottom:5px}
   @media print{button{display:none}}
 </style></head><body>
-<h1>${title}</h1>${dateRange ? `<p>${dateRange}</p>` : ''}
 <button onclick="window.print()">Print / Save PDF</button>
-<table>
-  <thead><tr>
-    <th>Date</th><th>Project</th><th>Description</th>
-    <th class="right">Hours</th><th class="right">Rate</th><th class="right">Amount</th>
-  </tr></thead>
-  <tbody>
-    ${target.map(r => `<tr>
-      <td>${fmtDate(r.date)}</td>
-      <td class="mono">${projectLabel(r)}</td>
-      <td>${r.description || ''}</td>
-      <td class="mono right">${r.hours.toFixed(2)}</td>
-      <td class="mono right">${fmt$(r.hourly_rate || 0)}</td>
-      <td class="mono right">${fmt$(r.billableAmt)}</td>
-    </tr>`).join('')}
-  </tbody>
-  <tfoot><tr>
-    <td colspan="3">Total</td>
-    <td class="mono right">${totalHours.toFixed(2)}</td>
-    <td></td>
-    <td class="mono right">${fmt$(totalAmt)}</td>
-  </tr></tfoot>
-</table></body></html>`)
+<div class="hdr">
+  <div class="client">${clientName}</div>
+  <div class="meta">
+    <div class="meta-field"><label>Week</label><span>${invoiceWeek || '—'}</span></div>
+    <div class="meta-field"><label>Start</label><span>${weekStart || '—'}</span></div>
+    <div class="meta-field"><label>End</label><span>${weekEnd || '—'}</span></div>
+    <div class="meta-field"><label>Inv No.</label><span>${invoiceNum || '—'}</span></div>
+  </div>
+</div>
+<h2>Hours Summary</h2>
+<table><tbody>
+${groupsHtml}
+</tbody><tfoot>
+  <tr class="grand"><td colspan="2" class="lbl">TOTAL</td><td class="num">${totalHours.toFixed(2)}</td><td class="num">${totalAmt.toFixed(2)}</td></tr>
+</tfoot></table>
+</body></html>`)
   w.document.close()
 }
 
@@ -606,6 +668,7 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
   const [applyInvoiceWeek,   setApplyInvoiceWeek]   = useState('')
   const [applyInvoiceNumber, setApplyInvoiceNumber] = useState('')
   const [applyError, setApplyError] = useState('')
+  const [editingProjectId, setEditingProjectId] = useState(null)
 
   const allSelected = rows.length > 0 && rows.every(r => selectedRows.has(r.id))
   function toggleSelectAll() {
@@ -673,6 +736,15 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
     onEntryChange({ ...entry, hourly_rate: rate })
   }
 
+  async function saveProject(entry, project) {
+    const sel = '*, project:projects(id, name, project_number, category, client:clients(id, company, alias))'
+    const { data } = await supabase.from('time_entries')
+      .update({ project_id: project.id, hourly_rate: project.client?.hourly_rate || 0 })
+      .eq('id', entry.id).select(sel).single()
+    if (data) onEntryChange(data)
+    setEditingProjectId(null)
+  }
+
   async function handleAddSave() {
     if (!addRow.date || !addRow.inTime || !addProject) return
     setSaving(true)
@@ -714,12 +786,19 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
             onChange={e => setApplyInvoiceDate(e.target.value)}
             style={{ width: 130, fontSize: 12 }}
           />
-          <select value={applyInvoiceWeek} onChange={e => setApplyInvoiceWeek(e.target.value)}
-            style={{ fontSize: 12, width: 160 }}
-          >
-            <option value="">Week</option>
-            {WEEKS_2026.map(w => <option key={w.value} value={w.value}>{w.label}</option>)}
-          </select>
+          {applyInvoiceWeek ? (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 2, border: '1px solid var(--border)', borderRadius: 4, padding: '1px 4px 1px 7px', fontSize: 12, background: 'var(--bg)', height: 26, boxSizing: 'border-box' }}>
+              <span style={{ fontFamily: 'DM Mono, monospace' }}>{applyInvoiceWeek}</span>
+              <button onClick={() => setApplyInvoiceWeek('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 15, lineHeight: 1, padding: '0 2px' }}>×</button>
+            </div>
+          ) : (
+            <select value="" onChange={e => setApplyInvoiceWeek(e.target.value)}
+              style={{ fontSize: 12, width: 160 }}
+            >
+              <option value="">Week</option>
+              {WEEKS_2026.map(w => <option key={w.value} value={w.value}>{w.label}</option>)}
+            </select>
+          )}
           <input
             type="text"
             value={applyInvoiceNumber}
@@ -771,16 +850,28 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
                   <td style={{ ...rowStyle, padding: '7px 6px 7px 4px', minWidth: 0, whiteSpace: 'nowrap' }}><span style={timePillStyle}>{fmtTime(row.start_time)}</span></td>
                   <td style={{ ...rowStyle, padding: '7px 6px 7px 4px', minWidth: 0, whiteSpace: 'nowrap' }}>{row.outTime ? <span style={timePillStyle}>{fmtTime(row.outTime)}</span> : <span style={{ color: 'var(--text3)', fontSize: 12 }}>—</span>}</td>
                   <td style={rowStyle}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap' }}>
-                      <span style={{ display: 'inline-block', padding: '2px 8px', background: catColor, borderRadius: 4, fontSize: 12, fontFamily: 'DM Mono, monospace', color: darken(catColor), whiteSpace: 'nowrap', flexShrink: 0 }}>
-                        {projectLabel(row)}
-                      </span>
-                      {row.project?.name && (
-                        <span style={{ fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {row.project.name}
+                    {editingProjectId === row.id ? (
+                      <ProjectInput
+                        existingEntry={row}
+                        projects={projects}
+                        onSelect={p => saveProject(row, p)}
+                        onCancel={() => setEditingProjectId(null)}
+                      />
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap' }}>
+                        <span
+                          onClick={() => setEditingProjectId(row.id)}
+                          style={{ display: 'inline-block', padding: '2px 8px', background: catColor, borderRadius: 4, fontSize: 12, fontFamily: 'DM Mono, monospace', color: darken(catColor), whiteSpace: 'nowrap', flexShrink: 0, cursor: 'pointer' }}
+                        >
+                          {projectLabel(row)}
                         </span>
-                      )}
-                    </div>
+                        {row.project?.name && (
+                          <span style={{ fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {row.project.name}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td style={rowStyle}>
                     <InlineInput
@@ -807,10 +898,10 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
                   </td>
                   <td style={{ ...rowStyle, textAlign: 'center' }}>
                     <InlineInput
-                      value={row.invoice_date || ''}
-                      onSave={v => saveInvoiceDate(row, v)}
+                      value={fmtInvoiceDate(row.invoice_date)}
+                      onSave={v => saveInvoiceDate(row, parseInvoiceDate(v))}
                       placeholder="—"
-                      width={84}
+                      width={72}
                       align="center"
                     />
                   </td>
@@ -1072,7 +1163,7 @@ function RollingStats() {
 
 export default function TimeboardPage() {
   const { user } = useAuth()
-  const [view, setView]       = useState('expanded')
+  const [view, setView]       = useState(() => localStorage.getItem('timeboard_view') || 'expanded')
   const [entries, setEntries] = useState([])
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
@@ -1199,11 +1290,11 @@ export default function TimeboardPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>Timeboard</span>
           <div style={{ display: 'flex', border: '1px solid var(--border2)', borderRadius: 6, overflow: 'hidden' }}>
-            <button onClick={() => setView('expanded')}
+            <button onClick={() => { setView('expanded'); localStorage.setItem('timeboard_view', 'expanded') }}
               style={{ padding: '4px 12px', fontSize: 12, fontWeight: 600, border: 'none', borderRight: '1px solid var(--border2)', cursor: 'pointer', background: view === 'expanded' ? 'var(--bg3)' : 'transparent', color: view === 'expanded' ? 'var(--text)' : 'var(--text3)' }}>
               Expand
             </button>
-            <button onClick={() => setView('collapsed')}
+            <button onClick={() => { setView('collapsed'); localStorage.setItem('timeboard_view', 'collapsed') }}
               style={{ padding: '4px 12px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', background: view === 'collapsed' ? 'var(--bg3)' : 'transparent', color: view === 'collapsed' ? 'var(--text)' : 'var(--text3)' }}>
               Collapse
             </button>
@@ -1263,12 +1354,19 @@ export default function TimeboardPage() {
             <input value={filterInvoiceDate} onChange={e => setFilterInvoiceDate(e.target.value)}
               placeholder="Date" style={{ width: 90, fontSize: 12 }}
             />
-            <select value={filterInvoiceWeek} onChange={e => setFilterInvoiceWeek(e.target.value)}
-              style={{ fontSize: 12, width: 160 }}
-            >
-              <option value="">Week</option>
-              {WEEKS_2026.map(w => <option key={w.value} value={w.value}>{w.label}</option>)}
-            </select>
+            {filterInvoiceWeek ? (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 2, border: '1px solid var(--border)', borderRadius: 4, padding: '1px 4px 1px 7px', fontSize: 12, background: 'var(--bg)', height: 26, boxSizing: 'border-box' }}>
+                <span style={{ fontFamily: 'DM Mono, monospace' }}>{filterInvoiceWeek}</span>
+                <button onClick={() => setFilterInvoiceWeek('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 15, lineHeight: 1, padding: '0 2px' }}>×</button>
+              </div>
+            ) : (
+              <select value="" onChange={e => setFilterInvoiceWeek(e.target.value)}
+                style={{ fontSize: 12, width: 160 }}
+              >
+                <option value="">Week</option>
+                {WEEKS_2026.map(w => <option key={w.value} value={w.value}>{w.label}</option>)}
+              </select>
+            )}
             <input value={filterInvoice} onChange={e => setFilterInvoice(e.target.value)}
               placeholder="Invoice No." style={{ width: 110, fontSize: 12 }}
             />
