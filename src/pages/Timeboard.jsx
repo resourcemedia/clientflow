@@ -1029,6 +1029,7 @@ export default function TimeboardPage() {
   const [dateEnd, setDateEnd]                 = useState('')
   const [filterClient, setFilterClient]           = useState('')
   const [filterProject, setFilterProject]         = useState('')
+  const [filterDescription, setFilterDescription] = useState('')
   const [filterCategory, setFilterCategory]       = useState('')
   const [filterInvoiceDate, setFilterInvoiceDate] = useState('')
   const [filterInvoiceWeek, setFilterInvoiceWeek] = useState('')
@@ -1125,6 +1126,7 @@ export default function TimeboardPage() {
         if (!(e.project?.project_number || '').toLowerCase().includes(q) &&
             !(e.project?.name       || '').toLowerCase().includes(q)) return false
       }
+      if (filterDescription && !(e.description || '').toLowerCase().includes(filterDescription.toLowerCase())) return false
       if (filterCategory    && e.project?.category !== filterCategory) return false
       if (filterInvoiceDate && (e.invoice_date || '') !== filterInvoiceDate) return false
       if (filterInvoiceWeek && String(e.invoice_week || '') !== filterInvoiceWeek.trim()) return false
@@ -1132,7 +1134,7 @@ export default function TimeboardPage() {
       if (filterToInvoice   && !(e.invoice_number == null || e.invoice_number === '')) return false
       return true
     }).sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : (a.start_time || '').localeCompare(b.start_time || ''))
-  }, [enrichedEntries, dateMode, dateStart, dateEnd, filterClient, filterProject, filterCategory, filterInvoiceDate, filterInvoiceWeek, filterInvoice, filterToInvoice, projects])
+  }, [enrichedEntries, dateMode, dateStart, dateEnd, filterClient, filterProject, filterDescription, filterCategory, filterInvoiceDate, filterInvoiceWeek, filterInvoice, filterToInvoice, projects])
 
   const expandedDate = dateMode === 'today' ? todayISO() : (dateStart || todayISO())
 
@@ -1189,6 +1191,9 @@ export default function TimeboardPage() {
             </select>
             <input value={filterProject} onChange={e => setFilterProject(e.target.value)}
               placeholder="Project…" style={{ width: 110, fontSize: 12 }}
+            />
+            <input value={filterDescription} onChange={e => setFilterDescription(e.target.value)}
+              placeholder="Description…" style={{ width: 130, fontSize: 12 }}
             />
             <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} style={{ fontSize: 12, width: 120 }}>
               <option value="">Category</option>
