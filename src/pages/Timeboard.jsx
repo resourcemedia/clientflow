@@ -851,6 +851,70 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
   )
 }
 
+// ── Annual Projection ─────────────────────────────────────────────────────────
+
+function AnnualProjection({ ytdEnriched, sevenAvg, twentyEightAvg }) {
+  const now = new Date()
+  const daysPassed = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000)
+  const totalDays = new Date(now.getFullYear(), 1, 29).getMonth() === 1 ? 366 : 365
+  const daysLeft = totalDays - daysPassed
+
+  const ytdTtl = ytdEnriched.reduce((s, e) => s + (e.billableAmt || 0), 0)
+  const A = daysPassed > 0 ? ytdTtl / daysPassed : 0
+  const B = twentyEightAvg
+  const C = sevenAvg
+
+  const D = A * totalDays
+  const E = A * daysPassed + B * daysLeft
+  const F = A * daysPassed + C * daysLeft
+  const G = A * 365
+  const H = B * 365
+  const I = C * 365
+
+  function fmtUSD(n) {
+    return '$' + Math.round(n || 0).toLocaleString('en-US')
+  }
+
+  const TH = { textAlign: 'right', fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)', paddingBottom: 6 }
+  const TD = { textAlign: 'right', fontSize: 17, fontWeight: 700, fontFamily: 'DM Mono, monospace', color: 'var(--text)', padding: '3px 0' }
+  const LB = { fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)', padding: '3px 12px 3px 0' }
+
+  return (
+    <div className="card" style={{ padding: '12px 16px', flex: '0 0 auto' }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid var(--border2)' }}>
+            <th style={{ ...TH, textAlign: 'left', paddingRight: 24 }}></th>
+            <th style={TH}>AVG</th>
+            <th style={{ ...TH, paddingLeft: 20 }}>Current Year</th>
+            <th style={{ ...TH, paddingLeft: 20 }}>12 Months</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={LB}>YTD Pace</td>
+            <td style={TD}>{fmtUSD(A)}</td>
+            <td style={{ ...TD, paddingLeft: 20 }}>{fmtUSD(D)}</td>
+            <td style={{ ...TD, paddingLeft: 20 }}>{fmtUSD(G)}</td>
+          </tr>
+          <tr style={{ borderTop: '1px solid var(--border)' }}>
+            <td style={LB}>28-Day Pace</td>
+            <td style={TD}>{fmtUSD(B)}</td>
+            <td style={{ ...TD, paddingLeft: 20 }}>{fmtUSD(E)}</td>
+            <td style={{ ...TD, paddingLeft: 20 }}>{fmtUSD(H)}</td>
+          </tr>
+          <tr style={{ borderTop: '1px solid var(--border)' }}>
+            <td style={LB}>7-Day Pace</td>
+            <td style={TD}>{fmtUSD(C)}</td>
+            <td style={{ ...TD, paddingLeft: 20 }}>{fmtUSD(F)}</td>
+            <td style={{ ...TD, paddingLeft: 20 }}>{fmtUSD(I)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 // ── Rolling Stats ─────────────────────────────────────────────────────────────
 
 function StatCard({ label, stats }) {
@@ -889,6 +953,7 @@ function StatCard({ label, stats }) {
 
 function RollingStats() {
   const [statsEntries, setStatsEntries] = useState([])
+  const [ytdEntries, setYtdEntries] = useState([])
 
   useEffect(() => {
     if (isDemo) return
@@ -901,9 +966,17 @@ function RollingStats() {
       .gte('date', startISO).lt('date', today)
       .order('date').order('start_time')
       .then(({ data }) => setStatsEntries(data || []))
+
+    const jan1 = toLocalISO(new Date(new Date().getFullYear(), 0, 1))
+    supabase.from('time_entries')
+      .select('*, project:projects(id, name, project_number, category, client:clients(id, company, alias))')
+      .gte('date', jan1).lt('date', today)
+      .order('date').order('start_time')
+      .then(({ data }) => setYtdEntries(data || []))
   }, [])
 
-  const enriched = useMemo(() => enrichEntries(statsEntries), [statsEntries])
+  const enriched    = useMemo(() => enrichEntries(statsEntries), [statsEntries])
+  const ytdEnriched = useMemo(() => enrichEntries(ytdEntries),   [ytdEntries])
 
   function windowStats(days) {
     const today = todayISO()
@@ -921,16 +994,14 @@ function RollingStats() {
     }
   }
 
+  const stats7  = windowStats(7)
+  const stats28 = windowStats(28)
+
   return (
     <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
-      <StatCard label="7 Days"  stats={windowStats(7)}  />
-      <StatCard label="28 Days" stats={windowStats(28)} />
-      <div className="card" style={{ padding: '12px 16px', flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: 12, lineHeight: 1.6 }}>
-        <div>
-          <div>Placeholder</div>
-          <div>Yearly Report To Follow</div>
-        </div>
-      </div>
+      <StatCard label="7 Days"  stats={stats7}  />
+      <StatCard label="28 Days" stats={stats28} />
+      <AnnualProjection ytdEnriched={ytdEnriched} sevenAvg={stats7.billAvg} twentyEightAvg={stats28.billAvg} />
     </div>
   )
 }
