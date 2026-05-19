@@ -317,6 +317,61 @@ function BillableToggle({ value, onChange }) {
 const EXP_ROW = { borderBottom: '1px solid rgba(0,0,0,0.07)', verticalAlign: 'middle' }
 const EXP_PAD = { padding: '1px 8px' }
 
+const WEEKS_2026 = [
+  { value: '2601', label: '2601 | 12/28 - 1/3' },
+  { value: '2602', label: '2602 | 1/4 - 1/10' },
+  { value: '2603', label: '2603 | 1/11 - 1/17' },
+  { value: '2604', label: '2604 | 1/18 - 1/24' },
+  { value: '2605', label: '2605 | 1/25 - 1/31' },
+  { value: '2606', label: '2606 | 2/1 - 2/7' },
+  { value: '2607', label: '2607 | 2/8 - 2/14' },
+  { value: '2608', label: '2608 | 2/15 - 2/21' },
+  { value: '2609', label: '2609 | 2/22 - 2/28' },
+  { value: '2610', label: '2610 | 3/1 - 3/7' },
+  { value: '2611', label: '2611 | 3/8 - 3/14' },
+  { value: '2612', label: '2612 | 3/15 - 3/21' },
+  { value: '2613', label: '2613 | 3/22 - 3/28' },
+  { value: '2614', label: '2614 | 3/29 - 4/4' },
+  { value: '2615', label: '2615 | 4/5 - 4/11' },
+  { value: '2616', label: '2616 | 4/12 - 4/18' },
+  { value: '2617', label: '2617 | 4/19 - 4/25' },
+  { value: '2618', label: '2618 | 4/26 - 5/2' },
+  { value: '2619', label: '2619 | 5/3 - 5/9' },
+  { value: '2620', label: '2620 | 5/10 - 5/16' },
+  { value: '2621', label: '2621 | 5/17 - 5/23' },
+  { value: '2622', label: '2622 | 5/24 - 5/30' },
+  { value: '2623', label: '2623 | 5/31 - 6/6' },
+  { value: '2624', label: '2624 | 6/7 - 6/13' },
+  { value: '2625', label: '2625 | 6/14 - 6/20' },
+  { value: '2626', label: '2626 | 6/21 - 6/27' },
+  { value: '2627', label: '2627 | 6/28 - 7/4' },
+  { value: '2628', label: '2628 | 7/5 - 7/11' },
+  { value: '2629', label: '2629 | 7/12 - 7/18' },
+  { value: '2630', label: '2630 | 7/19 - 7/25' },
+  { value: '2631', label: '2631 | 7/26 - 8/1' },
+  { value: '2632', label: '2632 | 8/2 - 8/8' },
+  { value: '2633', label: '2633 | 8/9 - 8/15' },
+  { value: '2634', label: '2634 | 8/16 - 8/22' },
+  { value: '2635', label: '2635 | 8/23 - 8/29' },
+  { value: '2636', label: '2636 | 8/30 - 9/5' },
+  { value: '2637', label: '2637 | 9/6 - 9/12' },
+  { value: '2638', label: '2638 | 9/13 - 9/19' },
+  { value: '2639', label: '2639 | 9/20 - 9/26' },
+  { value: '2640', label: '2640 | 9/27 - 10/3' },
+  { value: '2641', label: '2641 | 10/4 - 10/10' },
+  { value: '2642', label: '2642 | 10/11 - 10/17' },
+  { value: '2643', label: '2643 | 10/18 - 10/24' },
+  { value: '2644', label: '2644 | 10/25 - 10/31' },
+  { value: '2645', label: '2645 | 11/1 - 11/7' },
+  { value: '2646', label: '2646 | 11/8 - 11/14' },
+  { value: '2647', label: '2647 | 11/15 - 11/21' },
+  { value: '2648', label: '2648 | 11/22 - 11/28' },
+  { value: '2649', label: '2649 | 11/29 - 12/5' },
+  { value: '2650', label: '2650 | 12/6 - 12/12' },
+  { value: '2651', label: '2651 | 12/13 - 12/19' },
+  { value: '2652', label: '2652 | 12/20 - 12/26' },
+]
+
 function ExpandedView({ entries, projects, expandedDate, onEntryChange, onEntryDelete, user }) {
   const [editingSlot, setEditingSlot] = useState(null)
   const scrollRef = useRef(null)
@@ -659,13 +714,12 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
             onChange={e => setApplyInvoiceDate(e.target.value)}
             style={{ width: 130, fontSize: 12 }}
           />
-          <input
-            type="number"
-            value={applyInvoiceWeek}
-            onChange={e => setApplyInvoiceWeek(e.target.value)}
-            placeholder="Week"
-            style={{ width: 70, fontSize: 12 }}
-          />
+          <select value={applyInvoiceWeek} onChange={e => setApplyInvoiceWeek(e.target.value)}
+            style={{ fontSize: 12, width: 160 }}
+          >
+            <option value="">Week</option>
+            {WEEKS_2026.map(w => <option key={w.value} value={w.value}>{w.label}</option>)}
+          </select>
           <input
             type="text"
             value={applyInvoiceNumber}
@@ -1209,9 +1263,12 @@ export default function TimeboardPage() {
             <input value={filterInvoiceDate} onChange={e => setFilterInvoiceDate(e.target.value)}
               placeholder="Date" style={{ width: 90, fontSize: 12 }}
             />
-            <input value={filterInvoiceWeek} onChange={e => setFilterInvoiceWeek(e.target.value)}
-              placeholder="Week" style={{ width: 70, fontSize: 12 }}
-            />
+            <select value={filterInvoiceWeek} onChange={e => setFilterInvoiceWeek(e.target.value)}
+              style={{ fontSize: 12, width: 160 }}
+            >
+              <option value="">Week</option>
+              {WEEKS_2026.map(w => <option key={w.value} value={w.value}>{w.label}</option>)}
+            </select>
             <input value={filterInvoice} onChange={e => setFilterInvoice(e.target.value)}
               placeholder="Invoice No." style={{ width: 110, fontSize: 12 }}
             />
