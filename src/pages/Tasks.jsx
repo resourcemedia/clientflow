@@ -706,26 +706,45 @@ export default function TasksPage() {
       }
     }
 
-    // Auto-advance cycle when pool is exhausted
+    // Auto-advance cycle when pool is exhausted — but first verify every unique
+    // project in the visible set is actually stamped to guard against a premature advance
     let activeCycle = currentCycle
     let cycleAdvanced = false
     if (pool.length === 0) {
-      activeCycle = activeCycle
-        ? String.fromCharCode(((activeCycle.charCodeAt(0) - 65 + 1) % 26) + 65)
-        : 'A'
-      await supabase.from('app_config').update({ current_cycle: activeCycle }).eq('id', 1)
-      setCurrentCycle(activeCycle)
-
-      // Refill from all visible projects for the new cycle
-      const seen2 = new Set()
-      pool = []
+      // Re-derive unstamped projects directly from baseTasks as a gate
+      const gateChecked = new Set()
+      const unstampedPool = []
       for (const t of baseTasks) {
-        if (!seen2.has(t.project_id)) {
-          seen2.add(t.project_id)
-          pool.push(t.project_id)
+        if (!gateChecked.has(t.project_id)) {
+          gateChecked.add(t.project_id)
+          if (!t.project?.cycle_tag || t.project.cycle_tag !== currentCycle) {
+            unstampedPool.push(t.project_id)
+          }
         }
       }
-      cycleAdvanced = true
+
+      if (unstampedPool.length > 0) {
+        // Some projects are not yet stamped — stay on current cycle, refill from them
+        pool = unstampedPool
+      } else {
+        // All stamped — safe to advance
+        activeCycle = activeCycle
+          ? String.fromCharCode(((activeCycle.charCodeAt(0) - 65 + 1) % 26) + 65)
+          : 'A'
+        await supabase.from('app_config').update({ current_cycle: activeCycle }).eq('id', 1)
+        setCurrentCycle(activeCycle)
+
+        // Refill from all visible projects for the new cycle
+        const seen2 = new Set()
+        pool = []
+        for (const t of baseTasks) {
+          if (!seen2.has(t.project_id)) {
+            seen2.add(t.project_id)
+            pool.push(t.project_id)
+          }
+        }
+        cycleAdvanced = true
+      }
     }
 
     if (pool.length === 0) return
