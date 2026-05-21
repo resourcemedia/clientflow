@@ -59,7 +59,7 @@ export default function InvoicePrint() {
   const attn = [invoice.billing_first_name, invoice.billing_last_name].filter(Boolean).join(' ')
 
   const cell = (extra = {}) => ({
-    padding: '4px 10px',
+    padding: '2px 10px',
     borderRight: '1px solid #d8d8d8',
     borderBottom: '1px solid #d8d8d8',
     fontSize: 13,
@@ -116,7 +116,7 @@ export default function InvoicePrint() {
               <div style={{ fontSize: 30, fontWeight: 800, color: '#1a1a1a', lineHeight: 1, letterSpacing: '-0.5px' }}>
                 Invoice
               </div>
-              <div style={{ fontSize: 13, color: '#666', marginTop: 2 }}>
+              <div style={{ fontSize: 20, color: '#666', marginTop: 2 }}>
                 {invoice.invoice_number || ''}
               </div>
             </div>
@@ -208,7 +208,7 @@ export default function InvoicePrint() {
         {/* Footer */}
         <div className="invoice-footer" style={{
           position: 'fixed', bottom: 24, left: 0, right: 0,
-          textAlign: 'center', fontSize: 11, color: '#bbb', letterSpacing: '0.01em',
+          textAlign: 'center', fontSize: 13, color: '#222', letterSpacing: '0.01em',
         }}>
           Resource Media &nbsp;|&nbsp; 41 Machell Avenue, Dallas, PA 18612 &nbsp;|&nbsp; 570.706.6649 &nbsp;|&nbsp; www.ResourceMedia.net
         </div>
