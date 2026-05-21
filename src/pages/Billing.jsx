@@ -235,6 +235,7 @@ export default function BillingPage() {
                   <col style={{ width: 100 }} />
                   <col style={{ width: 80 }} />
                   <col style={{ width: 80 }} />
+                  <col />
                   <col style={{ width: 96 }} />
                 </colgroup>
                 <thead>
@@ -245,12 +246,13 @@ export default function BillingPage() {
                     <th style={{ textAlign: 'right' }}>Amount</th>
                     <th>Status</th>
                     <th>Sent</th>
+                    <th>Note</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {displayed.length === 0 ? (
-                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--text3)' }}>No invoices found</td></tr>
+                    <tr><td colSpan={8} style={{ textAlign: 'center', padding: 32, color: 'var(--text3)' }}>No invoices found</td></tr>
                   ) : displayed.map(inv => {
                     const sc = STATUS_COLORS[inv.status] || {}
                     return (
@@ -277,6 +279,27 @@ export default function BillingPage() {
                           </select>
                         </td>
                         <td className="text-mono text-dim">{fmtDate(inv.sent_date)}</td>
+                        <td>
+                          <input
+                            defaultValue={inv.notes || ''}
+                            placeholder="Add note..."
+                            onBlur={e => {
+                              const val = e.target.value
+                              if (val !== (inv.notes || '')) {
+                                setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, notes: val } : i))
+                                supabase.from('invoices').update({ notes: val }).eq('id', inv.id)
+                              }
+                            }}
+                            style={{
+                              width: '100%', fontSize: 12, color: 'var(--text2)',
+                              background: 'transparent', border: '1px solid transparent',
+                              borderRadius: 4, padding: '3px 6px', outline: 'none',
+                              transition: 'border-color 0.15s',
+                            }}
+                            onFocus={e => { e.target.style.borderColor = 'var(--border)' }}
+                            onBlurCapture={e => { e.target.style.borderColor = 'transparent' }}
+                          />
+                        </td>
                         <td>
                           <div style={{ display: 'flex', gap: 4 }}>
                             <button
@@ -314,7 +337,7 @@ export default function BillingPage() {
                     <td className="text-mono" style={{ textAlign: 'right', fontWeight: 700, color: 'var(--text)', fontSize: 13 }}>
                       {fmt$(total)}
                     </td>
-                    <td colSpan={3}></td>
+                    <td colSpan={4}></td>
                   </tr>
                 </tfoot>
               </table>
