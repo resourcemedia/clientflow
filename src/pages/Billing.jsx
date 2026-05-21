@@ -1,319 +1,303 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { DEMO_INVOICES, DEMO_CLIENTS, DEMO_PROJECTS } from '../lib/demo-data'
-import { Badge, Modal, EmptyState, StatCard, PillNav, FormGroup, fmt$ } from '../components/ui'
 
-const isDemo = !import.meta.env.VITE_SUPABASE_URL
+function fmtDate(d) {
+  if (!d) return '—'
+  const [y, m, day] = d.split('-')
+  return `${parseInt(m, 10)}/${parseInt(day, 10)}/${y.slice(2)}`
+}
 
-const TABS = [
-  { id: 'invoices', label: 'Invoices' },
-  { id: 'summary',  label: 'Revenue summary' },
-]
+function fmt$(n) {
+  if (n == null || isNaN(n)) return '—'
+  return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function WrenchIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+    </svg>
+  )
+}
+
+function PlusIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="3 6 5 6 21 6"/>
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+      <path d="M10 11v6"/><path d="M14 11v6"/>
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+    </svg>
+  )
+}
+
+const inputStyle = {
+  padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)',
+  background: 'var(--bg2)', color: 'var(--text)', fontSize: 12,
+  outline: 'none', height: 28,
+}
+
+const ICON_BTN = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)',
+  background: 'transparent', color: 'var(--text2)', cursor: 'pointer',
+  transition: 'all 0.15s',
+}
 
 const STATUS_COLORS = {
-  Open:    { bg: 'var(--blue-bg)',   color: 'var(--blue)',   label: 'Open'    },
-  Sent:    { bg: 'var(--amber-bg)',  color: 'var(--amber)',  label: 'Sent'    },
-  Paid:    { bg: 'var(--green-bg)',  color: 'var(--green)',  label: 'Paid'    },
-  Overdue: { bg: 'var(--red-bg)',    color: 'var(--red)',    label: 'Overdue' },
+  Open:    { bg: 'var(--blue-bg)',  color: 'var(--blue)'  },
+  Sent:    { bg: 'var(--amber-bg)', color: 'var(--amber)' },
+  Paid:    { bg: 'var(--green-bg)', color: 'var(--green)' },
+  Overdue: { bg: 'var(--red-bg)',   color: 'var(--red)'   },
 }
 
 export default function BillingPage() {
+  const navigate = useNavigate()
   const [invoices, setInvoices] = useState([])
-  const [clients, setClients]   = useState([])
-  const [projects, setProjects] = useState([])
   const [loading, setLoading]   = useState(true)
-  const [tab, setTab]           = useState('invoices')
-  const [showModal, setShowModal] = useState(false)
-  const [statusFilter, setStatusFilter] = useState('all')
+
+  const [fDateStart, setFDateStart] = useState('')
+  const [fDateEnd,   setFDateEnd]   = useState('')
+  const [fClient,    setFClient]    = useState('')
+  const [fNumber,    setFNumber]    = useState('')
+  const [fAmt,       setFAmt]       = useState('')
+  const [fStatus,    setFStatus]    = useState('')
 
   useEffect(() => { load() }, [])
 
   async function load() {
     setLoading(true)
-    if (isDemo) {
-      setInvoices(DEMO_INVOICES)
-      setClients(DEMO_CLIENTS)
-      setProjects(DEMO_PROJECTS)
-    } else {
-      const [{ data: inv }, { data: cl }, { data: pr }] = await Promise.all([
-        supabase.from('invoices').select('*, client:clients(company), project:projects(name)').order('issued_date', { ascending: false }),
-        supabase.from('clients').select('id,company,alias').eq('status','active').order('company'),
-        supabase.from('projects').select('id,name').order('name'),
-      ])
-      setInvoices(inv || [])
-      setClients(cl || [])
-      setProjects(pr || [])
-    }
+    const { data } = await supabase
+      .from('invoices')
+      .select('*, client:clients(company)')
+      .order('issued_date', { ascending: false })
+    setInvoices(data || [])
     setLoading(false)
   }
 
-  async function updateStatus(id, status) {
-    const update = { status, ...(status === 'Paid' ? { paid_date: new Date().toISOString().slice(0,10) } : {}) }
-    if (!isDemo) await supabase.from('invoices').update(update).eq('id', id)
-    setInvoices(prev => prev.map(i => i.id === id ? { ...i, ...update } : i))
+  const displayed = useMemo(() => {
+    return invoices.filter(inv => {
+      if (fDateStart && inv.issued_date && inv.issued_date < fDateStart) return false
+      if (fDateEnd   && inv.issued_date && inv.issued_date > fDateEnd)   return false
+      if (fClient && !(inv.client?.company || '').toLowerCase().includes(fClient.toLowerCase())) return false
+      if (fNumber && !(inv.invoice_number || '').toLowerCase().includes(fNumber.toLowerCase())) return false
+      if (fAmt) {
+        const needle = fAmt.replace(/[$,]/g, '').trim()
+        if (needle && !String(inv.amount || '').includes(needle)) return false
+      }
+      if (fStatus && inv.status !== fStatus) return false
+      return true
+    })
+  }, [invoices, fDateStart, fDateEnd, fClient, fNumber, fAmt, fStatus])
+
+  const total = displayed.reduce((s, i) => s + (i.amount || 0), 0)
+
+  async function handleDuplicate(inv) {
+    const { data: items } = await supabase
+      .from('invoice_items')
+      .select('*')
+      .eq('invoice_id', inv.id)
+
+    const { id, created_at, updated_at, client, ...fields } = inv
+    const newInv = {
+      ...fields,
+      status: 'Open',
+      sent_date: null,
+      paid_date: null,
+      issued_date: new Date().toISOString().slice(0, 10),
+    }
+
+    const { data: inserted } = await supabase
+      .from('invoices')
+      .insert(newInv)
+      .select()
+      .single()
+
+    if (inserted && items?.length) {
+      const newItems = items.map(({ id: _id, created_at: _ca, invoice_id: _inv, ...rest }) => ({
+        ...rest,
+        invoice_id: inserted.id,
+      }))
+      await supabase.from('invoice_items').insert(newItems)
+    }
+
+    if (inserted) navigate(`/invoices/${inserted.id}`)
   }
 
-  // Financial calculations
-  const outstanding = invoices.filter(i => i.status !== 'Paid').reduce((s, i) => s + (i.amount || 0), 0)
-  const paidMTD     = invoices.filter(i => i.status === 'Paid' && i.paid_date?.startsWith('2026-03')).reduce((s, i) => s + (i.amount || 0), 0)
-  const invoicedMTD = invoices.filter(i => i.issued_date?.startsWith('2026-03')).reduce((s, i) => s + (i.amount || 0), 0)
-  const overdue     = invoices.filter(i => i.status === 'Overdue')
-
-  const filtered = statusFilter === 'all' ? invoices : invoices.filter(i => i.status === statusFilter)
-
-  // Revenue by client for summary
-  const byClient = {}
-  invoices.forEach(inv => {
-    const name = inv.client?.company || 'Unknown'
-    if (!byClient[name]) byClient[name] = { invoiced: 0, collected: 0, outstanding: 0, count: 0 }
-    byClient[name].invoiced    += inv.amount || 0
-    byClient[name].count++
-    if (inv.status === 'Paid') byClient[name].collected  += inv.amount || 0
-    else                       byClient[name].outstanding += inv.amount || 0
-  })
+  async function handleDelete(inv) {
+    if (!window.confirm(`Delete invoice ${inv.invoice_number}? This cannot be undone.`)) return
+    await supabase.from('invoice_items').delete().eq('invoice_id', inv.id)
+    await supabase.from('invoices').delete().eq('id', inv.id)
+    setInvoices(prev => prev.filter(i => i.id !== inv.id))
+  }
 
   return (
     <div className="fade-in">
       <div className="topbar">
-        <div className="topbar-title">Billing</div>
-        <PillNav tabs={TABS} active={tab} onChange={setTab} />
-        {tab === 'invoices' && (
-          <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ New invoice</button>
-        )}
+        <div className="topbar-title">Invoices</div>
       </div>
 
       <div className="page-content">
-        {/* Stats */}
-        <div className="stat-grid mb-24">
-          <StatCard label="Outstanding"  value={fmt$(outstanding)} color="amber" />
-          <StatCard label="Paid (MTD)"   value={fmt$(paidMTD)}    color="green" />
-          <StatCard label="Invoiced MTD" value={fmt$(invoicedMTD)} color="blue"  />
-          <StatCard label="Overdue"      value={overdue.length}    color="red"
-            delta={overdue.length > 0 ? `${overdue.length} invoice${overdue.length > 1 ? 's' : ''} past due` : null} />
-        </div>
-
-        {tab === 'invoices' ? (
-          <InvoicesView
-            invoices={filtered}
-            loading={loading}
-            statusFilter={statusFilter}
-            onFilterChange={setStatusFilter}
-            onStatusUpdate={updateStatus}
+        {/* Filter bar */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+          <input
+            style={{ ...inputStyle, width: 120 }}
+            type="date"
+            value={fDateStart}
+            onChange={e => setFDateStart(e.target.value)}
+            title="Date start"
           />
-        ) : (
-          <SummaryView byClient={byClient} invoices={invoices} />
-        )}
-      </div>
-
-      {showModal && (
-        <NewInvoiceModal
-          clients={clients}
-          projects={projects}
-          onClose={() => setShowModal(false)}
-          onSaved={() => { setShowModal(false); load() }}
-        />
-      )}
-    </div>
-  )
-}
-
-// ── INVOICES VIEW ─────────────────────────────────────────────────────────────
-function InvoicesView({ invoices, loading, statusFilter, onFilterChange, onStatusUpdate }) {
-  return (
-    <>
-      {/* Status filter chips */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        {['all', 'Open', 'Sent', 'Overdue', 'Paid'].map(s => {
-          const col = STATUS_COLORS[s] || { bg: 'var(--bg3)', color: 'var(--text2)' }
-          const isActive = statusFilter === s
-          return (
-            <button key={s} onClick={() => onFilterChange(s)} style={{
-              padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 500,
-              cursor: 'pointer', border: `1px solid ${isActive ? (col.color || 'var(--border)') : 'var(--border)'}`,
-              background: isActive ? (col.bg || 'var(--bg3)') : 'transparent',
-              color: isActive ? (col.color || 'var(--text)') : 'var(--text2)',
-              transition: 'all 0.15s',
-            }}>
-              {s === 'all' ? 'All invoices' : col.label || s}
-            </button>
-          )
-        })}
-      </div>
-
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title">
-            {statusFilter === 'all' ? 'All invoices' : STATUS_COLORS[statusFilter]?.label || statusFilter}
-          </span>
-          <span style={{ fontSize: 12, color: 'var(--text3)' }}>{invoices.length} shown</span>
-        </div>
-        <div className="table-wrap">
-          {loading ? (
-            <div className="empty-state text-dim">Loading…</div>
-          ) : invoices.length === 0 ? (
-            <EmptyState icon="💰" title="No invoices found" />
-          ) : (
-            <table>
-              <thead>
-                <tr><th>Invoice</th><th>Client</th><th>Project</th><th>Amount</th><th>Issued</th><th>Due</th><th>Status</th><th>Action</th></tr>
-              </thead>
-              <tbody>
-                {invoices.map(inv => (
-                  <tr key={inv.id}>
-                    <td className="text-mono text-accent">{inv.invoice_number}</td>
-                    <td className="td-main">{inv.client?.company}</td>
-                    <td style={{ color: 'var(--text2)' }}>{inv.project?.name || '—'}</td>
-                    <td className="text-mono">{fmt$(inv.amount)}</td>
-                    <td className="text-mono text-dim">{inv.issued_date || '—'}</td>
-                    <td className="text-mono" style={{ color: inv.status === 'Overdue' ? 'var(--red)' : 'var(--text2)' }}>
-                      {inv.due_date || '—'}
-                    </td>
-                    <td><InvoiceStatusBadge status={inv.status} /></td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        {inv.status !== 'Paid' && (
-                          <button className="btn btn-primary btn-sm" onClick={() => onStatusUpdate(inv.id, 'Paid')}>
-                            Mark paid
-                          </button>
-                        )}
-                        {inv.status === 'Open' && (
-                          <button className="btn btn-ghost btn-sm" onClick={() => onStatusUpdate(inv.id, 'Sent')}>
-                            Mark sent
-                          </button>
-                        )}
-                        {inv.status === 'Overdue' && (
-                          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)' }}>
-                            Remind
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-    </>
-  )
-}
-
-// ── SUMMARY VIEW ──────────────────────────────────────────────────────────────
-function SummaryView({ byClient, invoices }) {
-  const grandInvoiced    = Object.values(byClient).reduce((s, c) => s + c.invoiced, 0)
-  const grandCollected   = Object.values(byClient).reduce((s, c) => s + c.collected, 0)
-  const grandOutstanding = Object.values(byClient).reduce((s, c) => s + c.outstanding, 0)
-
-  return (
-    <div className="card">
-      <div className="card-header"><span className="card-title">Revenue by client — all time</span></div>
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Client</th><th>Invoiced</th><th>Collected</th><th>Outstanding</th><th>Invoices</th><th>Avg invoice</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(byClient).sort((a,b) => b[1].invoiced - a[1].invoiced).map(([name, data]) => (
-              <tr key={name}>
-                <td className="td-main">{name}</td>
-                <td className="text-mono">{fmt$(data.invoiced)}</td>
-                <td className="text-mono text-green">{fmt$(data.collected)}</td>
-                <td className="text-mono" style={{ color: data.outstanding > 0 ? 'var(--amber)' : 'var(--text2)' }}>
-                  {fmt$(data.outstanding)}
-                </td>
-                <td className="text-mono text-dim">{data.count}</td>
-                <td className="text-mono text-dim">{fmt$(data.count > 0 ? data.invoiced / data.count : 0)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {/* Grand total */}
-        <div style={{ padding: '14px 20px', borderTop: '2px solid var(--border2)', display: 'flex', justifyContent: 'flex-end', gap: 40, fontFamily: 'DM Mono, monospace', fontSize: 13 }}>
-          <span style={{ color: 'var(--text3)' }}>Total invoiced: <span style={{ color: 'var(--text)', fontWeight: 600 }}>{fmt$(grandInvoiced)}</span></span>
-          <span style={{ color: 'var(--text3)' }}>Collected: <span style={{ color: 'var(--green)', fontWeight: 600 }}>{fmt$(grandCollected)}</span></span>
-          <span style={{ color: 'var(--text3)' }}>Outstanding: <span style={{ color: 'var(--amber)', fontWeight: 600 }}>{fmt$(grandOutstanding)}</span></span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── NEW INVOICE MODAL ─────────────────────────────────────────────────────────
-function NewInvoiceModal({ clients, projects, onClose, onSaved }) {
-  const [form, setForm] = useState({
-    invoice_number: `#${1049 + Math.floor(Math.random() * 10)}`,
-    client_id: clients[0]?.id || '',
-    project_id: projects[0]?.id || '',
-    amount: '',
-    status: 'Open',
-    issued_date: new Date(2026, 2, 13).toISOString().slice(0,10),
-    due_date: '',
-    notes: '',
-  })
-  const [saving, setSaving] = useState(false)
-  function set(f) { return e => setForm(p => ({ ...p, [f]: e.target.value })) }
-
-  async function save() {
-    if (!form.amount || isNaN(+form.amount)) return
-    setSaving(true)
-    if (!isDemo) await supabase.from('invoices').insert({ ...form, amount: +form.amount })
-    setTimeout(() => { setSaving(false); onSaved() }, isDemo ? 400 : 0)
-  }
-
-  return (
-    <Modal title="New invoice" onClose={onClose} footer={
-      <>
-        <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-        <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Create invoice'}</button>
-      </>
-    }>
-      <div className="form-grid">
-        <FormGroup label="Invoice #">
-          <input value={form.invoice_number} onChange={set('invoice_number')} />
-        </FormGroup>
-        <FormGroup label="Status">
-          <select value={form.status} onChange={set('status')}>
+          <input
+            style={{ ...inputStyle, width: 120 }}
+            type="date"
+            value={fDateEnd}
+            onChange={e => setFDateEnd(e.target.value)}
+            title="Date end"
+          />
+          <input
+            style={{ ...inputStyle, width: 140 }}
+            placeholder="Client"
+            value={fClient}
+            onChange={e => setFClient(e.target.value)}
+          />
+          <input
+            style={{ ...inputStyle, width: 110 }}
+            placeholder="Invoice #"
+            value={fNumber}
+            onChange={e => setFNumber(e.target.value)}
+          />
+          <input
+            style={{ ...inputStyle, width: 90 }}
+            placeholder="Amount"
+            value={fAmt}
+            onChange={e => setFAmt(e.target.value)}
+          />
+          <select
+            style={{ ...inputStyle, width: 120 }}
+            value={fStatus}
+            onChange={e => setFStatus(e.target.value)}
+          >
+            <option value="">All statuses</option>
             <option value="Open">Open</option>
             <option value="Sent">Sent</option>
             <option value="Paid">Paid</option>
+            <option value="Overdue">Overdue</option>
           </select>
-        </FormGroup>
-        <FormGroup label="Client" full>
-          <select value={form.client_id} onChange={set('client_id')}>
-            {clients.map(c => <option key={c.id} value={c.id}>{c.company}</option>)}
-          </select>
-        </FormGroup>
-        <FormGroup label="Project" full>
-          <select value={form.project_id} onChange={set('project_id')}>
-            <option value="">— None —</option>
-            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        </FormGroup>
-        <FormGroup label="Amount ($)">
-          <input type="number" step="0.01" min="0" value={form.amount} onChange={set('amount')} placeholder="0.00" />
-        </FormGroup>
-        <FormGroup label="Issued date">
-          <input type="date" value={form.issued_date} onChange={set('issued_date')} />
-        </FormGroup>
-        <FormGroup label="Due date">
-          <input type="date" value={form.due_date} onChange={set('due_date')} />
-        </FormGroup>
-        <FormGroup label="Notes" full>
-          <textarea value={form.notes} onChange={set('notes')} rows={2} placeholder="Optional notes…" />
-        </FormGroup>
-      </div>
-    </Modal>
-  )
-}
+          {(fDateStart || fDateEnd || fClient || fNumber || fAmt || fStatus) && (
+            <button
+              style={{ ...inputStyle, cursor: 'pointer', color: 'var(--text3)' }}
+              onClick={() => { setFDateStart(''); setFDateEnd(''); setFClient(''); setFNumber(''); setFAmt(''); setFStatus('') }}
+            >
+              Clear
+            </button>
+          )}
+          <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text3)' }}>
+            {displayed.length} invoice{displayed.length !== 1 ? 's' : ''}
+          </span>
+        </div>
 
-function InvoiceStatusBadge({ status }) {
-  const s = STATUS_COLORS[status] || { bg: 'var(--bg4)', color: 'var(--text2)', label: status }
-  return (
-    <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: s.bg, color: s.color }}>
-      {s.label}
-    </span>
+        <div className="card">
+          <div className="table-wrap">
+            {loading ? (
+              <div className="empty-state text-dim">Loading…</div>
+            ) : (
+              <table style={{ tableLayout: 'fixed', width: '100%' }}>
+                <colgroup>
+                  <col style={{ width: 80 }} />
+                  <col style={{ width: 160 }} />
+                  <col style={{ width: 110 }} />
+                  <col style={{ width: 100 }} />
+                  <col style={{ width: 80 }} />
+                  <col style={{ width: 80 }} />
+                  <col style={{ width: 96 }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Client</th>
+                    <th>Number</th>
+                    <th style={{ textAlign: 'right' }}>Amount</th>
+                    <th>Status</th>
+                    <th>Sent</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayed.length === 0 ? (
+                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--text3)' }}>No invoices found</td></tr>
+                  ) : displayed.map(inv => {
+                    const sc = STATUS_COLORS[inv.status] || {}
+                    return (
+                      <tr key={inv.id}>
+                        <td className="text-mono text-dim">{fmtDate(inv.issued_date)}</td>
+                        <td className="td-main">{inv.client?.company || '—'}</td>
+                        <td className="text-mono text-accent">{inv.invoice_number || '—'}</td>
+                        <td className="text-mono" style={{ textAlign: 'right' }}>{fmt$(inv.amount)}</td>
+                        <td>
+                          {inv.status ? (
+                            <span style={{
+                              fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20,
+                              background: sc.bg, color: sc.color,
+                            }}>
+                              {inv.status}
+                            </span>
+                          ) : '—'}
+                        </td>
+                        <td className="text-mono text-dim">{fmtDate(inv.sent_date)}</td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button
+                              style={ICON_BTN}
+                              title="Edit invoice"
+                              onClick={() => navigate(`/invoices/${inv.id}`)}
+                            >
+                              <WrenchIcon />
+                            </button>
+                            <button
+                              style={ICON_BTN}
+                              title="Duplicate invoice"
+                              onClick={() => handleDuplicate(inv)}
+                            >
+                              <PlusIcon />
+                            </button>
+                            <button
+                              style={{ ...ICON_BTN, color: 'var(--red)' }}
+                              title="Delete invoice"
+                              onClick={() => handleDelete(inv)}
+                            >
+                              <TrashIcon />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr style={{ borderTop: '2px solid var(--border2)' }}>
+                    <td colSpan={3} style={{ padding: '10px 16px', fontSize: 12, color: 'var(--text3)', fontWeight: 500 }}>
+                      Total ({displayed.length})
+                    </td>
+                    <td className="text-mono" style={{ textAlign: 'right', fontWeight: 700, color: 'var(--text)', fontSize: 13 }}>
+                      {fmt$(total)}
+                    </td>
+                    <td colSpan={3}></td>
+                  </tr>
+                </tfoot>
+              </table>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

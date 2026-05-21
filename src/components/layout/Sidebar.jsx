@@ -13,7 +13,7 @@ const MANAGER_NAV = [
   { to: '/tasks',     label: 'Tasks',                  icon: TasksIcon,   badgeKey: 'tasks', badgeWarn: true },
   { to: '/calendar',  label: 'Calendar',               icon: CalendarIcon },
   { to: '/timeboard', label: 'Time board',             icon: ClockIcon },
-  { to: '/billing',   label: 'Billing',                icon: DollarIcon },
+  { to: '/billing',   label: 'Invoices',               icon: DollarIcon },
   { to: '/products',  label: 'Products',               icon: ProductsIcon },
   { to: '/cashflow',  label: 'Cash Flow',              icon: CashFlowIcon },
 ]
