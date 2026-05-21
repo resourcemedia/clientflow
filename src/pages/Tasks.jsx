@@ -454,8 +454,8 @@ export default function TasksPage() {
   const [currentCycle, setCurrentCycle] = useState('A')
 
   // text filters
-  const [clientFilter,  setClientFilter]  = useState('')
-  const [projectFilter, setProjectFilter] = useState('')
+  const [clientFilter,  setClientFilter]  = useState(() => localStorage.getItem('tasks_clientFilter')  || '')
+  const [projectFilter, setProjectFilter] = useState(() => localStorage.getItem('tasks_projectFilter') || '')
 
   // execution buttons
   const [activeBtn,         setActiveBtn]         = useState('All')
@@ -818,7 +818,7 @@ export default function TasksPage() {
             type="text"
             placeholder="Client"
             value={clientFilter}
-            onChange={e => setClientFilter(e.target.value)}
+            onChange={e => { setClientFilter(e.target.value); localStorage.setItem('tasks_clientFilter', e.target.value) }}
             style={{
               background: 'var(--bg2)', border: '1px solid var(--border)',
               borderRadius: 8, padding: '5px 10px', color: 'var(--text)',
@@ -829,7 +829,7 @@ export default function TasksPage() {
             type="text"
             placeholder="Project"
             value={projectFilter}
-            onChange={e => setProjectFilter(e.target.value)}
+            onChange={e => { setProjectFilter(e.target.value); localStorage.setItem('tasks_projectFilter', e.target.value) }}
             style={{
               background: 'var(--bg2)', border: '1px solid var(--border)',
               borderRadius: 8, padding: '5px 10px', color: 'var(--text)',
