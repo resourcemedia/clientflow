@@ -55,7 +55,7 @@ const ICON_BTN = {
 
 const STATUS_COLORS = {
   Open:    { bg: 'var(--blue-bg)',  color: 'var(--blue)'  },
-  Sent:    { bg: 'var(--amber-bg)', color: 'var(--amber)' },
+  Send:    { bg: 'var(--amber-bg)', color: 'var(--amber)' },
   Collect: { bg: 'var(--amber-bg)', color: 'var(--amber)' },
   Paid:    { bg: 'var(--green-bg)', color: 'var(--green)' },
   Overdue: { bg: 'var(--red-bg)',   color: 'var(--red)'   },
@@ -142,7 +142,7 @@ export default function BillingPage() {
   async function handleCreate() {
     const { data, error } = await supabase
       .from('invoices')
-      .insert({ issued_date: new Date().toISOString().split('T')[0], status: 'Sent' })
+      .insert({ issued_date: new Date().toISOString().split('T')[0], status: 'Send' })
       .select('id')
       .single()
     console.log('INSERT ERROR:', JSON.stringify(error))
@@ -205,7 +205,7 @@ export default function BillingPage() {
           >
             <option value="">All statuses</option>
             <option value="Open">Open</option>
-            <option value="Sent">Sent</option>
+            <option value="Send">Send</option>
             <option value="Paid">Paid</option>
             <option value="Overdue">Overdue</option>
           </select>
@@ -271,7 +271,7 @@ export default function BillingPage() {
                               cursor: 'pointer', outline: 'none', appearance: 'none',
                             }}
                           >
-                            <option value="Sent">Sent</option>
+                            <option value="Send">Send</option>
                             <option value="Collect">Collect</option>
                             <option value="Paid">Paid</option>
                           </select>
