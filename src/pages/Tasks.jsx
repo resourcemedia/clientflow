@@ -647,7 +647,7 @@ export default function TasksPage() {
     setDragIdx(d => d)
   }
 
-  function handleDrop() {
+  async function handleDrop() {
     const from = dragIdx
     const to   = dragOver.current
     if (from === null || to === null || from === to) {
@@ -658,10 +658,11 @@ export default function TasksPage() {
     reordered.splice(to, 0, moved)
     const filteredIds = new Set(filtered.map(t => t.id))
     const others = tasks.filter(t => !filteredIds.has(t.id))
-    setTasks([...reordered, ...others])
-    reordered.forEach((t, i) => {
-      supabase.from('tasks').update({ sort_order: i }).eq('id', t.id)
-    })
+    const merged = [...reordered, ...others]
+    setTasks(merged)
+    await Promise.all(
+      merged.map((t, i) => supabase.from('tasks').update({ sort_order: i }).eq('id', t.id))
+    )
     setDragIdx(null)
     dragOver.current = null
   }
