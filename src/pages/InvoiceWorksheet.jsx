@@ -100,7 +100,7 @@ export default function InvoiceWorksheet() {
       supabase.from('clients')
         .select('id,company,billing_address1,billing_address2,billing_city,billing_state,billing_zip,billing_first_name,billing_last_name')
         .order('company'),
-      supabase.from('projects').select('id,job_number,name,client_id').order('name'),
+      supabase.from('projects').select('id,project_number,name,client_id').order('name'),
       supabase.from('invoice_items').select('*').eq('invoice_id', id).order('id'),
     ])
     if (inv) {
@@ -328,7 +328,7 @@ export default function InvoiceWorksheet() {
                         <option value="">— None —</option>
                         {filteredProjects.map(p => (
                           <option key={p.id} value={String(p.id)}>
-                            {[p.job_number, p.name].filter(Boolean).join(' ')}
+                            {[p.project_number, p.name].filter(Boolean).join(' ')}
                           </option>
                         ))}
                       </select>

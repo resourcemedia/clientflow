@@ -49,7 +49,7 @@ export default function InvoicePrint() {
           .select('*, client:clients(company)')
           .eq('id', id).single(),
         supabase.from('invoice_items')
-          .select('*, project:projects(id, job_number, name)')
+          .select('*, project:projects(id, project_number, name)')
           .eq('invoice_id', id)
           .order('id'),
       ])
@@ -177,7 +177,7 @@ export default function InvoicePrint() {
             <tbody>
               {items.map(item => (
                 <tr key={item.id}>
-                  <td style={cell()}>{item.project?.job_number || ''}</td>
+                  <td style={cell()}>{item.project?.project_number || ''}</td>
                   <td style={cell()}>{item.project?.name || ''}</td>
                   <td style={cell()}>{item.description || ''}</td>
                   <td style={cell()}>{item.date_range || ''}</td>
