@@ -59,7 +59,7 @@ export default function InvoicePrint() {
   const attn = [invoice.billing_first_name, invoice.billing_last_name].filter(Boolean).join(' ')
 
   const cell = (extra = {}) => ({
-    padding: '7px 10px',
+    padding: '4px 10px',
     borderRight: '1px solid #d8d8d8',
     borderBottom: '1px solid #d8d8d8',
     fontSize: 13,
@@ -82,6 +82,13 @@ export default function InvoicePrint() {
           }
           body { background: white !important; }
           .invoice-print-wrap { padding: 0 !important; }
+          .invoice-footer {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+          }
         }
       `}</style>
 
@@ -104,12 +111,12 @@ export default function InvoicePrint() {
 
           {/* Logo + Invoice title */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 36 }}>
-            <img src={logoSrc} alt="Resource Media" style={{ height: 54 }} />
+            <img src={logoSrc} alt="Resource Media" style={{ height: 74 }} />
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 38, fontWeight: 800, color: '#1a1a1a', lineHeight: 1, letterSpacing: '-1px' }}>
+              <div style={{ fontSize: 30, fontWeight: 800, color: '#1a1a1a', lineHeight: 1, letterSpacing: '-0.5px' }}>
                 Invoice
               </div>
-              <div style={{ fontSize: 16, color: '#666', marginTop: 2 }}>
+              <div style={{ fontSize: 13, color: '#666', marginTop: 2 }}>
                 {invoice.invoice_number || ''}
               </div>
             </div>
@@ -175,7 +182,7 @@ export default function InvoicePrint() {
               ))}
               {Array.from({ length: blankRows }, (_, i) => (
                 <tr key={`blank_${i}`}>
-                  <td style={cell({ height: 32 })}> </td>
+                  <td style={cell({ height: 24 })}> </td>
                   <td style={cell()}> </td>
                   <td style={cell()}> </td>
                   <td style={cell()}> </td>
@@ -184,7 +191,7 @@ export default function InvoicePrint() {
               ))}
             </tbody>
             <tfoot>
-              <tr style={{ borderTop: '2px solid #bbb' }}>
+              <tr style={{ borderTop: '2px solid #bbb', borderBottom: '2px solid #bbb' }}>
                 <td colSpan={3} style={{ padding: '10px 10px' }} />
                 <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: 700, fontSize: 14, borderRight: '1px solid #d8d8d8' }}>
                   Total
@@ -197,6 +204,15 @@ export default function InvoicePrint() {
           </table>
 
         </div>
+
+        {/* Footer */}
+        <div className="invoice-footer" style={{
+          position: 'fixed', bottom: 24, left: 0, right: 0,
+          textAlign: 'center', fontSize: 11, color: '#bbb', letterSpacing: '0.01em',
+        }}>
+          Resource Media &nbsp;|&nbsp; 41 Machell Avenue, Dallas, PA 18612 &nbsp;|&nbsp; 570.706.6649 &nbsp;|&nbsp; www.ResourceMedia.net
+        </div>
+
       </div>
     </>
   )
