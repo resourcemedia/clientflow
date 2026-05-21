@@ -56,6 +56,7 @@ const ICON_BTN = {
 const STATUS_COLORS = {
   Open:    { bg: 'var(--blue-bg)',  color: 'var(--blue)'  },
   Sent:    { bg: 'var(--amber-bg)', color: 'var(--amber)' },
+  Collect: { bg: 'var(--amber-bg)', color: 'var(--amber)' },
   Paid:    { bg: 'var(--green-bg)', color: 'var(--green)' },
   Overdue: { bg: 'var(--red-bg)',   color: 'var(--red)'   },
 }
@@ -131,6 +132,11 @@ export default function BillingPage() {
     }
 
     if (inserted) navigate(`/invoices/${inserted.id}`)
+  }
+
+  async function handleStatusChange(id, status) {
+    setInvoices(prev => prev.map(i => i.id === id ? { ...i, status } : i))
+    await supabase.from('invoices').update({ status }).eq('id', id)
   }
 
   async function handleCreate() {
@@ -254,14 +260,21 @@ export default function BillingPage() {
                         <td className="text-mono text-accent">{inv.invoice_number || '—'}</td>
                         <td className="text-mono" style={{ textAlign: 'right' }}>{fmt$(inv.amount)}</td>
                         <td>
-                          {inv.status ? (
-                            <span style={{
-                              fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20,
-                              background: sc.bg, color: sc.color,
-                            }}>
-                              {inv.status}
-                            </span>
-                          ) : '—'}
+                          <select
+                            value={inv.status || ''}
+                            onChange={e => handleStatusChange(inv.id, e.target.value)}
+                            style={{
+                              fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 20,
+                              border: `1px solid ${sc.color || 'var(--border)'}`,
+                              background: sc.bg || 'var(--bg2)',
+                              color: sc.color || 'var(--text2)',
+                              cursor: 'pointer', outline: 'none', appearance: 'none',
+                            }}
+                          >
+                            <option value="Sent">Sent</option>
+                            <option value="Collect">Collect</option>
+                            <option value="Paid">Paid</option>
+                          </select>
                         </td>
                         <td className="text-mono text-dim">{fmtDate(inv.sent_date)}</td>
                         <td>
