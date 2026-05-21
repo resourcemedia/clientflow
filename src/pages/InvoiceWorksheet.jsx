@@ -100,7 +100,7 @@ export default function InvoiceWorksheet() {
       supabase.from('clients')
         .select('id,company,billing_address1,billing_address2,billing_city,billing_state,billing_zip,billing_first_name,billing_last_name')
         .order('company'),
-      supabase.from('projects').select('id,job_number,name').order('name'),
+      supabase.from('projects').select('id,job_number,name,client_id').order('name'),
       supabase.from('invoice_items').select('*').eq('invoice_id', id).order('id'),
     ])
     if (inv) {
@@ -196,6 +196,10 @@ export default function InvoiceWorksheet() {
     }
     setSaving(false)
   }
+
+  const filteredProjects = form.client_id
+    ? projects.filter(p => String(p.client_id) === form.client_id)
+    : projects
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
@@ -322,7 +326,7 @@ export default function InvoiceWorksheet() {
                         onChange={e => updateItem(item._key, 'project_id', e.target.value || null)}
                       >
                         <option value="">— None —</option>
-                        {projects.map(p => (
+                        {filteredProjects.map(p => (
                           <option key={p.id} value={String(p.id)}>
                             {[p.job_number, p.name].filter(Boolean).join(' ')}
                           </option>
