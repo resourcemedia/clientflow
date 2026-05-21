@@ -133,6 +133,16 @@ export default function BillingPage() {
     if (inserted) navigate(`/invoices/${inserted.id}`)
   }
 
+  async function handleCreate() {
+    const today = new Date().toISOString().slice(0, 10)
+    const { data } = await supabase
+      .from('invoices')
+      .insert({ issued_date: today, status: 'Sent' })
+      .select('id')
+      .single()
+    if (data?.id) navigate(`/invoices/${data.id}`)
+  }
+
   async function handleDelete(inv) {
     if (!window.confirm(`Delete invoice ${inv.invoice_number}? This cannot be undone.`)) return
     await supabase.from('invoice_items').delete().eq('invoice_id', inv.id)
@@ -144,6 +154,7 @@ export default function BillingPage() {
     <div className="fade-in">
       <div className="topbar">
         <div className="topbar-title">Invoices</div>
+        <button className="btn btn-primary" onClick={handleCreate}>+Invoice</button>
       </div>
 
       <div className="page-content">
