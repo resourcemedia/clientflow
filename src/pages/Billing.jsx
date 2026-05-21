@@ -139,6 +139,7 @@ export default function BillingPage() {
       .insert({ issued_date: new Date().toISOString().split('T')[0], status: 'Sent' })
       .select('id')
       .single()
+    console.log('INSERT ERROR:', JSON.stringify(error))
     if (!error && data) navigate(`/invoices/${data.id}`)
   }
 
