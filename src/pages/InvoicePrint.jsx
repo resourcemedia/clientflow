@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import logoSrc from '../assets/resource_media_logo.svg'
 
 const MIN_ROWS = 10
 
@@ -19,22 +20,6 @@ function fmtAmt(n) {
   return Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-function ResourceMediaLogo() {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      {/* Stylized leaf/sprout — approximates Resource Media brand mark */}
-      <svg width="42" height="52" viewBox="0 0 42 52" fill="none">
-        <path d="M21 48 C9 36 5 26 5 18 C5 9 12 3 21 3 C30 3 37 9 37 18 C37 26 33 36 21 48Z" fill="#5a9e38"/>
-        <path d="M21 42 C13 32 10 24 10 18 C10 12 15 7 21 7 C27 7 32 12 32 18 C32 24 29 32 21 42Z" fill="#7ec044"/>
-        <rect x="19" y="47" width="4" height="5" rx="2" fill="#7a5c28"/>
-      </svg>
-      <div style={{ lineHeight: 1 }}>
-        <span style={{ fontSize: 22, fontWeight: 700, color: '#2a2a2a', letterSpacing: '-0.2px', fontFamily: 'system-ui, sans-serif' }}>resource</span>
-        <span style={{ fontSize: 22, fontWeight: 300, color: '#999', fontFamily: 'system-ui, sans-serif' }}>media</span>
-      </div>
-    </div>
-  )
-}
 
 export default function InvoicePrint() {
   const { id } = useParams()
@@ -119,19 +104,19 @@ export default function InvoicePrint() {
 
           {/* Logo + Invoice title */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 36 }}>
-            <ResourceMediaLogo />
+            <img src={logoSrc} alt="Resource Media" style={{ height: 54 }} />
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 38, fontWeight: 800, color: '#1a1a1a', lineHeight: 1, letterSpacing: '-1px' }}>
                 Invoice
               </div>
-              <div style={{ fontSize: 16, color: '#666', marginTop: 6 }}>
+              <div style={{ fontSize: 16, color: '#666', marginTop: 2 }}>
                 {invoice.invoice_number || ''}
               </div>
             </div>
           </div>
 
           {/* Bill-to block */}
-          <div style={{ marginBottom: 32, fontSize: 14, lineHeight: 1.75, color: '#222' }}>
+          <div style={{ marginBottom: 32, fontSize: 14, lineHeight: 1.4, color: '#222' }}>
             <div>{fmtLongDate(invoice.issued_date)}</div>
             {invoice.client?.company && (
               <div style={{ fontWeight: 700, fontSize: 15 }}>{invoice.client.company}</div>
@@ -152,20 +137,22 @@ export default function InvoicePrint() {
               <col style={{ width: 88 }} />
             </colgroup>
             <thead>
-              <tr style={{ borderBottom: '2px solid #bbb' }}>
+              <tr style={{ borderTop: '1px solid #bbb', borderBottom: '2px solid #bbb' }}>
                 {[
-                  { label: 'No.',           align: 'left'  },
-                  { label: 'Category',      align: 'left'  },
-                  { label: 'Description',   align: 'left'  },
-                  { label: 'Project Dates', align: 'left'  },
-                  { label: 'Amount',        align: 'right' },
+                  { label: 'No.',         align: 'left'  },
+                  { label: 'Project',     align: 'left'  },
+                  { label: 'Description', align: 'left'  },
+                  { label: 'Date Range',  align: 'left'  },
+                  { label: 'Amount',      align: 'right' },
                 ].map((col, i) => (
                   <th key={col.label} style={{
                     padding: '8px 10px',
                     textAlign: col.align,
-                    fontWeight: 700,
+                    fontWeight: 'bold',
                     fontSize: 13,
                     color: '#222',
+                    background: 'white',
+                    textTransform: 'none',
                     borderRight: i < 4 ? '1px solid #d8d8d8' : 'none',
                     borderBottom: '2px solid #bbb',
                   }}>
