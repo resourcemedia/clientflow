@@ -134,13 +134,12 @@ export default function BillingPage() {
   }
 
   async function handleCreate() {
-    const today = new Date().toISOString().slice(0, 10)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('invoices')
-      .insert({ issued_date: today, status: 'Sent' })
+      .insert({ issued_date: new Date().toISOString().split('T')[0], status: 'Sent' })
       .select('id')
       .single()
-    if (data?.id) navigate(`/invoices/${data.id}`)
+    if (!error && data) navigate(`/invoices/${data.id}`)
   }
 
   async function handleDelete(inv) {
