@@ -194,6 +194,8 @@ export default function InvoiceWorksheet() {
         }))
       )
     }
+    const lineTotal = items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
+    await supabase.from('invoices').update({ amount: lineTotal }).eq('id', id)
     setSaving(false)
   }
 
