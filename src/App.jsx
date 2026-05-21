@@ -15,6 +15,7 @@ import Items from './pages/Items'
 import ProductsPage from './pages/Products'
 import { CampaignsPage, BillingPage } from './pages/Placeholders'
 import TimeboardPage from './pages/Timeboard'
+import CashFlowPage from './pages/CashFlow'
 import ClientAccount from './pages/ClientAccount'
 import ProjectsSandbox from './sandbox/ProjectsSandbox'
 import ClientDashboard     from './pages/client/ClientDashboard'
@@ -81,6 +82,7 @@ function AppShell() {
           <Route path="/timeboard"           element={<TimeboardPage />} />
           <Route path="/billing"             element={<BillingPage />} />
           <Route path="/products"            element={<ProductsPage />} />
+          <Route path="/cashflow"            element={<CashFlowPage />} />
           <Route path="/sandbox"             element={<ProjectsSandbox />} />
           <Route path="/login"               element={<Navigate to="/" replace />} />
           <Route path="/client"               element={<ClientRoute><ClientDashboard /></ClientRoute>} />
