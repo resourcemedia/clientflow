@@ -462,6 +462,7 @@ export default function TasksPage() {
   const [activeBtn,         setActiveBtn]         = useState('All')
   const [filteredProjectId, setFilteredProjectId] = useState(null)
   const [hotHighlightId,    setHotHighlightId]    = useState(null)
+  const [showMode,          setShowMode]          = useState('show')
 
   // deck shuffle state
   const [projectDeck,    setProjectDeck]    = useState([])
@@ -533,9 +534,10 @@ export default function TasksPage() {
       const pname = (t.project?.name || '').toLowerCase()
       if (!pname.includes(projectFilter.toLowerCase())) return false
     }
-    if (activeBtn === 'Hot')           return t.status === 'Hot'
-    if (activeBtn === 'RandomProject') return t.project_id === filteredProjectId
-    if (activeBtn === 'RandomHot')     return t.status === 'Hot'
+    if (activeBtn === 'Hot')           { if (t.status !== 'Hot')                      return false }
+    if (activeBtn === 'RandomProject') { if (t.project_id !== filteredProjectId)        return false }
+    if (activeBtn === 'RandomHot')     { if (t.status !== 'Hot')                        return false }
+    if (showMode === 'hide' && t.visible === false) return false
     return true
   })
 
@@ -854,7 +856,7 @@ export default function TasksPage() {
             fontSize: 12, fontWeight: 600, color: 'var(--text2)',
             whiteSpace: 'nowrap', fontFamily: 'DM Mono, monospace',
           }}>
-            {currentCycle} | {cycleRemaining} of {cycleTotal}
+            {currentCycle} | {filtered.length} of {tasks.length}
           </div>
         )}
 
@@ -863,6 +865,25 @@ export default function TasksPage() {
           <button style={execBtnStyle('RandomProject')} onClick={handleRandomProject}>Random Project Tasks</button>
           <button style={execBtnStyle('RandomHot')}     onClick={handleRandomHot}>Random Hot Task</button>
           <button style={execBtnStyle('Hot')}           onClick={handleHot}>Hot</button>
+          <div style={{ display: 'flex', gap: 0, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border)' }}>
+            <button
+              onClick={() => setShowMode('show')}
+              style={{
+                padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none',
+                background: showMode === 'show' ? '#6b7280' : 'transparent',
+                color:      showMode === 'show' ? '#fff'    : 'var(--text2)',
+                borderRight: '1px solid var(--border)',
+              }}
+            >Show</button>
+            <button
+              onClick={() => setShowMode('hide')}
+              style={{
+                padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none',
+                background: showMode === 'hide' ? '#6b7280' : 'transparent',
+                color:      showMode === 'hide' ? '#fff'    : 'var(--text2)',
+              }}
+            >Hide</button>
+          </div>
           <button
             className="btn btn-primary"
             onClick={() => addNewRow(unassignedProject?.id)}
