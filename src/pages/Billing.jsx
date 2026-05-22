@@ -54,11 +54,11 @@ const ICON_BTN = {
 }
 
 const STATUS_COLORS = {
-  Open:    { bg: 'var(--blue-bg)',  color: 'var(--blue)'  },
-  Send:    { bg: 'var(--amber-bg)', color: 'var(--amber)' },
-  Collect: { bg: 'var(--amber-bg)', color: 'var(--amber)' },
-  Paid:    { bg: 'var(--green-bg)', color: 'var(--green)' },
-  Overdue: { bg: 'var(--red-bg)',   color: 'var(--red)'   },
+  Open:    { bg: '#e8e8f8', color: '#4a4a9c' },
+  Send:    { bg: '#e8e8f8', color: '#4a4a9c' },
+  Collect: { bg: '#fde8e8', color: '#9c2a2a' },
+  Paid:    { bg: '#e6f4e6', color: '#2a6b2a' },
+  Overdue: { bg: '#fde8e8', color: '#9c2a2a' },
 }
 
 export default function BillingPage() {
@@ -267,8 +267,8 @@ export default function BillingPage() {
                             value={inv.status || ''}
                             onChange={e => handleStatusChange(inv.id, e.target.value)}
                             style={{
-                              fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 20,
-                              border: `1px solid ${sc.color || 'var(--border)'}`,
+                              fontSize: 12, fontWeight: 500, padding: '3px 12px', borderRadius: 999,
+                              border: 'none',
                               background: sc.bg || 'var(--bg2)',
                               color: sc.color || 'var(--text2)',
                               cursor: 'pointer', outline: 'none', appearance: 'none',
