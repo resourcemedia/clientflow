@@ -234,11 +234,11 @@ export default function BillingPage() {
         </div>
 
         <div className="card">
-          <div className="table-wrap">
+          <div className="table-wrap" style={{ overflow: 'visible' }}>
             {loading ? (
               <div className="empty-state text-dim">Loading…</div>
             ) : (
-              <table style={{ tableLayout: 'fixed', width: '100%' }}>
+              <table style={{ tableLayout: 'fixed', width: '100%', overflow: 'visible' }}>
                 <colgroup>
                   <col style={{ width: 80 }} />
                   <col style={{ width: 160 }} />
@@ -291,7 +291,7 @@ export default function BillingPage() {
                         </td>
                         <td
                           className="text-mono text-dim"
-                          style={{ cursor: 'pointer' }}
+                          style={{ cursor: 'pointer', position: 'relative', zIndex: 10, overflow: 'visible' }}
                           onClick={() => setEditingSentId(inv.id)}
                         >
                           {editingSentId === inv.id ? (
@@ -305,6 +305,7 @@ export default function BillingPage() {
                                 fontSize: 12, color: 'var(--text2)',
                                 background: 'transparent', border: '1px solid var(--border)',
                                 borderRadius: 4, padding: '2px 4px', outline: 'none', width: 110,
+                                position: 'relative', zIndex: 20,
                               }}
                             />
                           ) : (
