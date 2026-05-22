@@ -74,6 +74,8 @@ export default function BillingPage() {
   const [fAmt,       setFAmt]       = useState('')
   const [fStatus,    setFStatus]    = useState('')
 
+  const [editingSentId, setEditingSentId] = useState(null)
+
   useEffect(() => { load() }, [])
 
   async function load() {
@@ -138,6 +140,14 @@ export default function BillingPage() {
   async function handleStatusChange(id, status) {
     setInvoices(prev => prev.map(i => i.id === id ? { ...i, status } : i))
     await supabase.from('invoices').update({ status }).eq('id', id)
+  }
+
+  async function handleSentDateChange(inv, newDate) {
+    const prev = inv.sent_date
+    setInvoices(ts => ts.map(i => i.id === inv.id ? { ...i, sent_date: newDate || null } : i))
+    setEditingSentId(null)
+    const { error } = await supabase.from('invoices').update({ sent_date: newDate || null }).eq('id', inv.id)
+    if (error) setInvoices(ts => ts.map(i => i.id === inv.id ? { ...i, sent_date: prev } : i))
   }
 
   async function handleCreate() {
@@ -279,7 +289,28 @@ export default function BillingPage() {
                             <option value="Paid">Paid</option>
                           </select>
                         </td>
-                        <td className="text-mono text-dim">{fmtDate(inv.sent_date)}</td>
+                        <td
+                          className="text-mono text-dim"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => setEditingSentId(inv.id)}
+                        >
+                          {editingSentId === inv.id ? (
+                            <input
+                              type="date"
+                              autoFocus
+                              defaultValue={inv.sent_date || ''}
+                              onChange={e => handleSentDateChange(inv, e.target.value)}
+                              onBlur={() => setEditingSentId(null)}
+                              style={{
+                                fontSize: 12, color: 'var(--text2)',
+                                background: 'transparent', border: '1px solid var(--border)',
+                                borderRadius: 4, padding: '2px 4px', outline: 'none', width: 110,
+                              }}
+                            />
+                          ) : (
+                            fmtDate(inv.sent_date)
+                          )}
+                        </td>
                         <td>
                           <input
                             defaultValue={inv.notes || ''}
