@@ -7,6 +7,7 @@ import { Modal, FormGroup, initials, Breadcrumb, fmt$ } from '../components/ui'
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 
 export default function ClientsPage() {
+  useEffect(() => { document.title = 'Clients | ClientFlow' }, [])
   const [clients, setClients]     = useState([])
   const [loading, setLoading]     = useState(true)
   const [editClient, setEditClient] = useState(null)

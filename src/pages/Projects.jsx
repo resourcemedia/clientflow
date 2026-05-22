@@ -1277,6 +1277,7 @@ function ListView({ projects, clients, products, confirmDelete, onSaveProject, o
 }
 
 export default function ProjectsPage() {
+  useEffect(() => { document.title = 'Projects | ClientFlow' }, [])
   const [projects, setProjects]           = useState([])
   const [clients, setClients]             = useState([])
   const [productMap, setProductMap]       = useState({}) // { type: name }

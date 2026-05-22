@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { Modal, FormGroup, Breadcrumb } from '../components/ui'
 
 export default function ProductsPage() {
+  useEffect(() => { document.title = 'Products | ClientFlow' }, [])
   const [products, setProducts]   = useState([])
   const [loading, setLoading]     = useState(true)
   const [editProduct, setEditProduct] = useState(null)

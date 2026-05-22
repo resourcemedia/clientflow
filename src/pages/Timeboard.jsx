@@ -1162,6 +1162,7 @@ function RollingStats() {
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function TimeboardPage() {
+  useEffect(() => { document.title = 'Time Board | ClientFlow' }, [])
   const { user } = useAuth()
   const [view, setView]       = useState(() => localStorage.getItem('timeboard_view') || 'expanded')
   const [entries, setEntries] = useState([])

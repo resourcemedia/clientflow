@@ -65,6 +65,7 @@ function fmt$(n) {
 }
 
 export default function InvoiceWorksheet() {
+  useEffect(() => { document.title = 'Invoice Worksheet | ClientFlow' }, [])
   const { id } = useParams()
   const navigate = useNavigate()
 

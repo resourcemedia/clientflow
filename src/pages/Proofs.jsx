@@ -72,6 +72,7 @@ function PlusIcon() {
 
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 export default function ProofsPage() {
+  useEffect(() => { document.title = 'Proofs | ClientFlow' }, [])
   const location      = useLocation()
   const { profile }   = useAuth()
 

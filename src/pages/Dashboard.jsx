@@ -38,6 +38,7 @@ function Avatar({ name, size = 24 }) {
 }
 
 export default function Dashboard() {
+  useEffect(() => { document.title = 'Dashboard | ClientFlow' }, [])
   const navigate  = useNavigate()
   const location  = useLocation()
   const [stats,          setStats]          = useState({ projects: 0, proofs: 0, tasks: 0, scheduled: 0, openInvoices: 0 })
