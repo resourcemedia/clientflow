@@ -122,7 +122,7 @@ function QuickAddRow({ onCommit, onDiscard }) {
 }
 
 // ── TASK ROW ─────────────────────────────────────────────────────────────────
-function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDragStart, onDragOver, onDrop, isDragging, isDragTarget, highlighted, currentCycle, onStamp }) {
+function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onAddBelow, onDelete, onDragStart, onDragOver, onDrop, isDragging, isDragTarget, highlighted, currentCycle, onStamp }) {
   const [editField,  setEditField]  = useState(null)
   const [noteVal,    setNoteVal]    = useState(task.note || '')
   const [snoteVal,   setSnoteVal]   = useState(task.status_note || '')
@@ -301,21 +301,22 @@ function TaskRow({ task, profiles, projects, onSave, onAddBelow, onDelete, onDra
 
       {/* status dot — click to toggle Normal ↔ Hot */}
       <td style={{ width: 52, textAlign: 'center', borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }}>
-        <button
-          onClick={() => onSave(task.id, { status: isHot ? 'Normal' : 'Hot' })}
-          title={isHot ? 'Hot — click for Normal' : 'Normal — click for Hot'}
-          style={{
-            width: 32, height: 32, border: 'none', background: 'none',
-            cursor: 'pointer', padding: 0, margin: '0 auto',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-        >
-          <div style={{
-            width: 14, height: 14, borderRadius: '50%',
-            background: isHot ? '#e05252' : '#6ab04c',
-            flexShrink: 0,
-          }} />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+          <button
+            onClick={() => onSave(task.id, { status: isHot ? 'Normal' : 'Hot' })}
+            title={isHot ? 'Hot — click for Normal' : 'Normal — click for Hot'}
+            style={{ width: 20, height: 20, border: 'none', background: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <div style={{ width: 13, height: 13, borderRadius: '50%', background: isHot ? '#e05252' : '#6ab04c', flexShrink: 0 }} />
+          </button>
+          <button
+            onClick={() => onToggleVisible(task.id, task.visible)}
+            title={task.visible === false ? 'Hidden — click to show' : 'Visible — click to hide'}
+            style={{ width: 20, height: 20, border: 'none', background: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <div style={{ width: 13, height: 13, borderRadius: '50%', background: task.visible === false ? '#d1d5db' : '#6b7280', flexShrink: 0 }} />
+          </button>
+        </div>
       </td>
 
       {/* assigned */}
@@ -565,6 +566,13 @@ export default function TasksPage() {
   ).length
 
   // ── SAVE ───────────────────────────────────────────────────────────────────
+  async function toggleTaskVisible(taskId, currentVisible) {
+    const newVal = currentVisible === false ? true : false
+    setTasks(ts => ts.map(t => t.id === taskId ? { ...t, visible: newVal } : t))
+    const { error } = await supabase.from('tasks').update({ visible: newVal }).eq('id', taskId)
+    if (error) setTasks(ts => ts.map(t => t.id === taskId ? { ...t, visible: currentVisible } : t))
+  }
+
   async function saveTask(taskId, updates) {
     const { data } = await supabase
       .from('tasks')
@@ -909,6 +917,7 @@ export default function TasksPage() {
                         profiles={profiles}
                         projects={projects}
                         onSave={saveTask}
+                        onToggleVisible={toggleTaskVisible}
                         onAddBelow={() => addNewRow(task.project_id)}
                         onDelete={deleteTask}
                         isDragging={dragIdx === idx}
