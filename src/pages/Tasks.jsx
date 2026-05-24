@@ -122,7 +122,7 @@ function QuickAddRow({ onCommit, onDiscard }) {
 }
 
 // ── TASK ROW ─────────────────────────────────────────────────────────────────
-function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onAddBelow, onDelete, onDragStart, onDragOver, onDrop, isDragging, isDragTarget, highlighted, currentCycle, onStamp }) {
+function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onContext, isContext, onAddBelow, onDelete, onDragStart, onDragOver, onDrop, isDragging, isDragTarget, highlighted, currentCycle, onStamp }) {
   const [editField,  setEditField]  = useState(null)
   const [noteVal,    setNoteVal]    = useState(task.note || '')
   const [snoteVal,   setSnoteVal]   = useState(task.status_note || '')
@@ -316,6 +316,13 @@ function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onAddBelow
           >
             <div style={{ width: 13, height: 13, borderRadius: '50%', background: task.visible === false ? '#d1d5db' : '#6b7280', flexShrink: 0 }} />
           </button>
+          <button
+            onClick={() => onContext(task)}
+            title={isContext ? 'Exit context view' : 'Show project context'}
+            style={{ width: 20, height: 20, border: 'none', background: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <div style={{ width: 13, height: 13, borderRadius: '50%', background: isContext ? '#3b82f6' : '#bfdbfe', flexShrink: 0 }} />
+          </button>
         </div>
       </td>
 
@@ -464,6 +471,9 @@ export default function TasksPage() {
   const [filteredProjectId, setFilteredProjectId] = useState(null)
   const [hotHighlightId,    setHotHighlightId]    = useState(null)
   const [showMode,          setShowMode]          = useState('show')
+
+  const [contextTaskId, setContextTaskId] = useState(null)
+  const savedFilters = useRef(null)
 
   // deck shuffle state
   const [projectDeck,    setProjectDeck]    = useState([])
@@ -679,6 +689,32 @@ export default function TasksPage() {
   }
 
   // ── EXECUTION BUTTON HANDLERS ─────────────────────────────────────────────
+  function handleContext(task) {
+    if (contextTaskId === task.id) {
+      const s = savedFilters.current
+      setClientFilter(s.clientFilter)
+      setProjectFilter(s.projectFilter)
+      localStorage.setItem('tasks_clientFilter', s.clientFilter)
+      localStorage.setItem('tasks_projectFilter', s.projectFilter)
+      setActiveBtn(s.activeBtn)
+      setFilteredProjectId(s.filteredProjectId)
+      setHotHighlightId(s.hotHighlightId)
+      setShowMode(s.showMode)
+      savedFilters.current = null
+      setContextTaskId(null)
+    } else {
+      savedFilters.current = { clientFilter, projectFilter, activeBtn, filteredProjectId, hotHighlightId, showMode }
+      setClientFilter('')
+      setProjectFilter('')
+      localStorage.setItem('tasks_clientFilter', '')
+      localStorage.setItem('tasks_projectFilter', '')
+      setActiveBtn('RandomProject')
+      setFilteredProjectId(task.project_id)
+      setHotHighlightId(null)
+      setContextTaskId(task.id)
+    }
+  }
+
   function handleAll() {
     setActiveBtn('All')
     setFilteredProjectId(null)
@@ -950,6 +986,8 @@ export default function TasksPage() {
                         highlighted={activeBtn === 'RandomHot' && task.id === hotHighlightId}
                         currentCycle={currentCycle}
                         onStamp={stampProject}
+                        onContext={handleContext}
+                        isContext={contextTaskId === task.id}
                       />
                     ))}
                   </>
