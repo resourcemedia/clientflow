@@ -3,6 +3,15 @@ import { useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Breadcrumb } from '../components/ui'
 
+const CATEGORY_COLORS = {
+  primary:    '#ffb8b8',
+  secondary:  '#4fd1b8',
+  accounting: '#63ca7a',
+  overhead:   '#b9dd67',
+  charity:    '#c6c7fe',
+  personal:   '#ebb8e5',
+}
+
 function initials(str) {
   if (!str) return '?'
   return str.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
@@ -224,6 +233,8 @@ function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onContext,
 
       {/* project dropdown */}
       <td style={{ paddingLeft: 4, borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, background: CATEGORY_COLORS[task.project?.category] || '#e5e7eb' }} />
         <div style={{ position: 'relative', display: 'inline-block', maxWidth: 200, minWidth: 200 }}>
           <select
             value={task.project_id || ''}
@@ -249,6 +260,7 @@ function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onContext,
               ? (projects.find(p => p.id === task.project_id)?.name || '—')
               : '— None —'}
           </span>
+        </div>
         </div>
       </td>
 
@@ -465,6 +477,7 @@ export default function TasksPage() {
   // text filters
   const [clientFilter,  setClientFilter]  = useState(() => localStorage.getItem('tasks_clientFilter')  || '')
   const [projectFilter, setProjectFilter] = useState(() => localStorage.getItem('tasks_projectFilter') || '')
+  const [categoryFilter, setCategoryFilter] = useState('')
 
   // execution buttons
   const [activeBtn,         setActiveBtn]         = useState('All')
@@ -497,7 +510,7 @@ export default function TasksPage() {
           .from('tasks')
           .select(`
             *,
-            project:projects(id, name, product_type, cycle_tag,
+            project:projects(id, name, product_type, cycle_tag, category,
               client:clients(company, alias)
             ),
             updater:profiles!tasks_updated_by_fkey(name)
@@ -545,6 +558,7 @@ export default function TasksPage() {
       const pname = (t.project?.name || '').toLowerCase()
       if (!pname.includes(projectFilter.toLowerCase())) return false
     }
+    if (categoryFilter && t.project?.category !== categoryFilter) return false
     if (activeBtn === 'Hot')           { if (t.status !== 'Hot')                      return false }
     if (activeBtn === 'RandomProject') { if (t.project_id !== filteredProjectId)        return false }
     if (activeBtn === 'RandomHot')     { if (t.status !== 'Hot')                        return false }
@@ -884,6 +898,19 @@ export default function TasksPage() {
               fontSize: 13, width: 130, outline: 'none',
             }}
           />
+          <select
+            value={categoryFilter}
+            onChange={e => setCategoryFilter(e.target.value)}
+            style={{ padding: '5px 8px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13, color: categoryFilter ? 'var(--text1)' : 'var(--text2)', background: 'var(--surface1)', cursor: 'pointer' }}
+          >
+            <option value=''>Category</option>
+            <option value='primary'>Primary</option>
+            <option value='secondary'>Secondary</option>
+            <option value='accounting'>Accounting</option>
+            <option value='overhead'>Overhead</option>
+            <option value='charity'>Charity</option>
+            <option value='personal'>Personal</option>
+          </select>
         </div>
 
         {currentCycle && (
