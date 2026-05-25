@@ -1827,6 +1827,7 @@ function ProjectRow({
         onDrop={onDrop}
         onDragEnd={onDragEnd}
         style={{
+          background: '#ffffff',
           opacity: isDragging ? 0.4 : (p.archived ? 0.55 : 1),
           outline: isDragTarget ? '2px solid var(--accent)' : undefined,
           cursor: 'default',
@@ -2104,7 +2105,7 @@ function WorkView({
   const groups = groupByClient(projects)
 
   return (
-    <div className="card">
+    <div className="card" style={{ background: 'transparent', border: 'none' }}>
       <div className="table-wrap">
         <table>
           {groups.map((group, groupIdx) => (
@@ -2120,14 +2121,12 @@ function WorkView({
                 >
                   <td colSpan={7} style={{ padding: 0, border: 'none' }}>
                     <div style={{
-                      background: '#595958',
+                      background: expandedClientId === group.clientId ? '#1a1a1a' : '#ffffff',
                       borderRadius: 8,
                       padding: '7px 16px',
-                      fontSize: 11,
+                      fontSize: 13,
                       fontWeight: 600,
-                      letterSpacing: '0.07em',
-                      textTransform: 'uppercase',
-                      color: '#fff',
+                      color: expandedClientId === group.clientId ? '#ffffff' : '#1a1a1a',
                       userSelect: 'none',
                     }}>
                       {group.name}
