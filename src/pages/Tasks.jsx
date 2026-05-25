@@ -131,7 +131,7 @@ function QuickAddRow({ onCommit, onDiscard }) {
 }
 
 // ── TASK ROW ─────────────────────────────────────────────────────────────────
-function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onContext, isContext, onAddBelow, onDelete, onDragStart, onDragOver, onDrop, isDragging, isDragTarget, highlighted, currentCycle, onStamp }) {
+function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onContext, isContext, onAddBelow, onDelete, onDragStart, onDragOver, onDrop, isDragging, isDragTarget, highlighted, currentCycle, onStamp, onStartEdit, onEndEdit }) {
   const [editField,  setEditField]  = useState(null)
   const [noteVal,    setNoteVal]    = useState(task.note || '')
   const [snoteVal,   setSnoteVal]   = useState(task.status_note || '')
@@ -272,7 +272,8 @@ function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onContext,
             ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
             value={noteVal}
             onChange={e => { setNoteVal(e.target.value); noteValRef.current = e.target.value; e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
-            onBlur={commitNote}
+            onFocus={onStartEdit}
+            onBlur={() => { commitNote(); onEndEdit?.() }}
             onKeyDown={e => { if (e.key === 'Escape') { setNoteVal(task.note || ''); noteValRef.current = task.note || ''; setEditField(null) } }}
             style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 6, padding: '4px 8px', color: 'var(--text)', fontSize: 13, resize: 'none', lineHeight: '1.4', boxSizing: 'border-box', overflow: 'hidden', minHeight: 28 }}
           />
@@ -294,7 +295,8 @@ function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onContext,
             ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
             value={snoteVal}
             onChange={e => { setSnoteVal(e.target.value); snoteValRef.current = e.target.value; e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
-            onBlur={commitStatusNote}
+            onFocus={onStartEdit}
+            onBlur={() => { commitStatusNote(); onEndEdit?.() }}
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitStatusNote() }
               if (e.key === 'Escape') { setSnoteVal(task.status_note || ''); snoteValRef.current = task.status_note || ''; setEditField(null) }
@@ -475,18 +477,30 @@ export default function TasksPage() {
   const [currentCycle, setCurrentCycle] = useState('A')
 
   // text filters
-  const [clientFilter,  setClientFilter]  = useState(() => localStorage.getItem('tasks_clientFilter')  || '')
-  const [projectFilter, setProjectFilter] = useState(() => localStorage.getItem('tasks_projectFilter') || '')
-  const [categoryFilter, setCategoryFilter] = useState('')
+  const [clientFilter,   setClientFilter]   = useState(() => localStorage.getItem('tasks_clientFilter')   || '')
+  const [projectFilter,  setProjectFilter]  = useState(() => localStorage.getItem('tasks_projectFilter')  || '')
+  const [categoryFilter, setCategoryFilter] = useState(() => localStorage.getItem('tasks_categoryFilter') || '')
 
   // execution buttons
-  const [activeBtn,         setActiveBtn]         = useState('All')
+  const [activeBtn, setActiveBtn] = useState(() => {
+    const saved = localStorage.getItem('tasks_activeBtn')
+    return (saved === 'Hot') ? 'Hot' : 'All'
+  })
   const [filteredProjectId, setFilteredProjectId] = useState(null)
   const [hotHighlightId,    setHotHighlightId]    = useState(null)
-  const [showMode,          setShowMode]          = useState('show')
+  const [showMode, setShowMode] = useState(() => localStorage.getItem('tasks_showMode') || 'show')
 
   const [contextTaskId, setContextTaskId] = useState(null)
+  const [editingTaskId, setEditingTaskId] = useState(null)
   const savedFilters = useRef(null)
+
+  useEffect(() => {
+    localStorage.setItem('tasks_clientFilter',   clientFilter)
+    localStorage.setItem('tasks_projectFilter',  projectFilter)
+    localStorage.setItem('tasks_categoryFilter', categoryFilter)
+    localStorage.setItem('tasks_activeBtn',      activeBtn)
+    localStorage.setItem('tasks_showMode',       showMode)
+  }, [clientFilter, projectFilter, categoryFilter, activeBtn, showMode])
 
   // deck shuffle state
   const [projectDeck,    setProjectDeck]    = useState([])
@@ -550,6 +564,7 @@ export default function TasksPage() {
 
   // ── FILTERING ──────────────────────────────────────────────────────────────
   const filtered = tasks.filter(t => {
+    if (t.id === editingTaskId) return true
     if (clientFilter) {
       const alias = (t.project?.client?.alias || t.project?.client?.company || '').toLowerCase()
       if (!alias.includes(clientFilter.toLowerCase())) return false
@@ -558,7 +573,7 @@ export default function TasksPage() {
       const pname = (t.project?.name || '').toLowerCase()
       if (!pname.includes(projectFilter.toLowerCase())) return false
     }
-    if (categoryFilter && t.project?.category !== categoryFilter) return false
+    if (categoryFilter && t.id !== editingTaskId && t.project?.category != null && t.project.category !== categoryFilter) return false
     if (activeBtn === 'Hot')           { if (t.status !== 'Hot')                      return false }
     if (activeBtn === 'RandomProject') { if (t.project_id !== filteredProjectId)        return false }
     if (activeBtn === 'RandomHot')     { if (t.status !== 'Hot')                        return false }
@@ -720,8 +735,6 @@ export default function TasksPage() {
       savedFilters.current = { clientFilter, projectFilter, activeBtn, filteredProjectId, hotHighlightId, showMode }
       setClientFilter('')
       setProjectFilter('')
-      localStorage.setItem('tasks_clientFilter', '')
-      localStorage.setItem('tasks_projectFilter', '')
       setActiveBtn('RandomProject')
       setFilteredProjectId(task.project_id)
       setHotHighlightId(null)
@@ -1015,6 +1028,8 @@ export default function TasksPage() {
                         onStamp={stampProject}
                         onContext={handleContext}
                         isContext={contextTaskId === task.id}
+                        onStartEdit={() => setEditingTaskId(task.id)}
+                        onEndEdit={() => setEditingTaskId(null)}
                       />
                     ))}
                   </>

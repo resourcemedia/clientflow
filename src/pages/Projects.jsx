@@ -4,8 +4,10 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { DEMO_PROJECTS, DEMO_CLIENTS, PRIORITIES, PROOF_STATUSES, INV_STATUSES, COLLECT_STATUSES } from '../lib/demo-data'
 import { StatusBadge, Modal, EmptyState, PillNav, FormGroup, fmt$, initials } from '../components/ui'
-import iconTodo   from '../assets/icon_todo.svg'
-import iconItem   from '../assets/icon_item.svg'
+import iconTodo      from '../assets/icon_todo.svg'
+import iconTodoEmpty from '../assets/icon_todo_empty.svg'
+import iconItem      from '../assets/icon_item.svg'
+import iconItemEmpty from '../assets/icon_item_empty.svg'
 import iconProofs from '../assets/icon_proofs.svg'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
@@ -1285,27 +1287,37 @@ export default function ProjectsPage() {
   const [profiles, setProfiles]           = useState([])
   const [loading, setLoading]             = useState(true)
   const [tab, setTab]                     = useState('work')
-  const [viewMode, setViewMode]           = useState('client')
+  const [viewMode, setViewMode]           = useState(() => localStorage.getItem('cf_view_mode') || 'client')
   const [editProject, setEditProject]     = useState(null)
   const [search, setSearch]               = useState('')
   const [showArchived, setShowArchived]   = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [searchParams]                    = useSearchParams()
-  const [clientFilter, setClientFilter]   = useState(searchParams.get('client') || '')
+  const [clientFilter, setClientFilter]   = useState(() => searchParams.get('client') || localStorage.getItem('cf_client_filter') || '')
   const [addingRow, setAddingRow]         = useState(null) // null | { client_id, name, product_type }
-  const [expandedRows, setExpandedRows]         = useState({}) // { [projectId]: true }
-  const [expandedItemRows, setExpandedItemRows] = useState({}) // { [projectId]: true }
+  const [expandedRows, setExpandedRows]         = useState(() => { try { return JSON.parse(localStorage.getItem('cf_open_tasks') || '{}') } catch { return {} } })
+  const [expandedItemRows, setExpandedItemRows] = useState(() => { try { return JSON.parse(localStorage.getItem('cf_open_items') || '{}') } catch { return {} } })
   const [projectTasks, setProjectTasks]         = useState({}) // { [projectId]: Task[] }
   const [projectItems, setProjectItems]         = useState({}) // { [projectId]: Item[] }
   const [loadedProjects, setLoadedProjects]     = useState(new Set())
+  const [projectsWithTasks, setProjectsWithTasks] = useState(new Set())
+  const [projectsWithItems, setProjectsWithItems] = useState(new Set())
   const [loadedItemProjects, setLoadedItemProjects] = useState(new Set())
-  const [expandedProofRows, setExpandedProofRows]   = useState({}) // { [itemId]: true }
+  const [expandedProofRows, setExpandedProofRows]   = useState(() => { try { return JSON.parse(localStorage.getItem('cf_open_proofs') || '{}') } catch { return {} } })
   const [itemProofs, setItemProofs]                 = useState({}) // { [itemId]: Proof[] }
   const [loadedProofItems, setLoadedProofItems]     = useState(new Set())
   const [currentCycle, setCurrentCycle]             = useState('A')
   const addInputRef = useRef(null)
   const navigate = useNavigate()
   const isAdding = addingRow !== null
+
+  useEffect(() => {
+    localStorage.setItem('cf_view_mode',     viewMode)
+    localStorage.setItem('cf_client_filter', clientFilter)
+    localStorage.setItem('cf_open_tasks',    JSON.stringify(expandedRows))
+    localStorage.setItem('cf_open_items',    JSON.stringify(expandedItemRows))
+    localStorage.setItem('cf_open_proofs',   JSON.stringify(expandedProofRows))
+  }, [viewMode, clientFilter, expandedRows, expandedItemRows, expandedProofRows])
 
   useEffect(() => {
     let isMounted = true
@@ -1322,7 +1334,8 @@ export default function ProjectsPage() {
           supabase.from('app_config').select('current_cycle').eq('id', 1).maybeSingle(),
         ])
         if (!isMounted) return
-        setProjects(p || [])
+        const projectList = p || []
+        setProjects(projectList)
         setClients(c || [])
         setProfiles(profs || [])
         setCurrentCycle(settingsRow?.current_cycle || 'A')
@@ -1330,6 +1343,17 @@ export default function ProjectsPage() {
         ;(prods || []).forEach(prod => { if (prod.type) map[prod.type] = prod.name })
         setProductMap(map)
         setProducts(prods || [])
+        if (projectList.length > 0) {
+          const ids = projectList.map(proj => proj.id)
+          const [{ data: taskRows }, { data: itemRows }] = await Promise.all([
+            supabase.from('tasks').select('project_id').in('project_id', ids),
+            supabase.from('project_items').select('project_id').in('project_id', ids),
+          ])
+          if (isMounted) {
+            if (taskRows) setProjectsWithTasks(new Set(taskRows.map(r => r.project_id)))
+            if (itemRows) setProjectsWithItems(new Set(itemRows.map(r => r.project_id)))
+          }
+        }
       }
       if (isMounted) setLoading(false)
     }
@@ -1724,7 +1748,9 @@ export default function ProjectsPage() {
             expandedRows={expandedRows}
             expandedItemRows={expandedItemRows}
             projectTasks={projectTasks}
+            projectsWithTasks={projectsWithTasks}
             projectItems={projectItems}
+            projectsWithItems={projectsWithItems}
             onToggleExpand={toggleExpand}
             onToggleItemExpand={toggleItemExpand}
             onAddItem={addProjectItem}
@@ -1776,7 +1802,7 @@ export default function ProjectsPage() {
 function ProjectRow({
   p, showArchived, confirmDelete, products,
   isExpanded, expandedItemRows,
-  tasks, profiles, projectItems, expandedProofRows, itemProofs,
+  tasks, hasTasks, hasItems, profiles, projectItems, expandedProofRows, itemProofs,
   isDragging, isDragTarget,
   onDragStart, onDragOver, onDrop, onDragEnd,
   onToggleExpand, onToggleItemExpand,
@@ -1837,10 +1863,10 @@ function ProjectRow({
 
         <td onClick={e => e.stopPropagation()} style={{ borderRight: '1px solid var(--border)', width: 65, padding: '8px 8px 8px 12px', whiteSpace: 'nowrap' }}>
           <button className="btn btn-ghost btn-icon" onClick={() => onToggleExpand(p.id)} title="Toggle Tasks" style={{ padding: 0, border: 'none', background: 'none', marginRight: 4, opacity: isExpanded ? 1 : 0.45, transition: 'opacity 0.15s' }}>
-            <img src={iconTodo} width={25} height={25} alt="Tasks" style={{ display: 'block' }} />
+            <img src={hasTasks ? iconTodo : iconTodoEmpty} width={25} height={25} alt="Tasks" style={{ display: 'block' }} />
           </button>
           <button className="btn btn-ghost btn-icon" onClick={() => onToggleItemExpand(p.id)} title="Toggle Items" style={{ padding: 0, border: 'none', background: 'none', opacity: expandedItemRows[p.id] ? 1 : 0.45, transition: 'opacity 0.15s' }}>
-            <img src={iconItem} width={25} height={25} alt="Items" style={{ display: 'block' }} />
+            <img src={hasItems ? iconItem : iconItemEmpty} width={25} height={25} alt="Items" style={{ display: 'block' }} />
           </button>
         </td>
 
@@ -1977,7 +2003,7 @@ function groupByClient(projects) {
 function WorkView({
   projects, clients, productMap, products, profiles, loading, showArchived, confirmDelete,
   addingRow, setAddingRow, addInputRef, clientFilter,
-  expandedRows, expandedItemRows, projectTasks, projectItems, onToggleExpand, onToggleItemExpand, onSaveTask, onAddTask, onDeleteTask, onReorderTasks, onAddItem, onUpdateItem, onDeleteItem, onReorderItems,
+  expandedRows, expandedItemRows, projectTasks, projectsWithTasks, projectItems, projectsWithItems, onToggleExpand, onToggleItemExpand, onSaveTask, onAddTask, onDeleteTask, onReorderTasks, onAddItem, onUpdateItem, onDeleteItem, onReorderItems,
   expandedProofRows, itemProofs, onToggleProofExpand, onAddProof, onDeleteProof, onUpdateProof,
   onEdit, onArchive, onDeleteRequest, onDeleteCancel, onDeleteConfirm,
   onView, onReorder, onStartAdd, onAddSave, onAddKeyDown, onSaveProject,
@@ -1985,7 +2011,12 @@ function WorkView({
 }) {
   const [dragIdx, setDragIdx]               = useState(null)
   const [dragOverIdx, setDragOverIdx]       = useState(null)
-  const [expandedClientId, setExpandedClientId] = useState(null)
+  const [expandedClientId, setExpandedClientId] = useState(() => localStorage.getItem('cf_open_clients') || null)
+
+  useEffect(() => {
+    if (expandedClientId === null) localStorage.removeItem('cf_open_clients')
+    else localStorage.setItem('cf_open_clients', expandedClientId)
+  }, [expandedClientId])
 
   function toggleClient(clientId) {
     setExpandedClientId(prev => prev === clientId ? null : clientId)
@@ -2103,12 +2134,15 @@ function WorkView({
   }
 
   const groups = groupByClient(projects)
+  const visibleGroups = expandedClientId
+    ? groups.filter(g => g.clientId === expandedClientId)
+    : groups
 
   return (
     <div className="card" style={{ background: 'transparent', border: 'none' }}>
       <div className="table-wrap">
         <table>
-          {groups.map((group, groupIdx) => (
+          {visibleGroups.map((group, groupIdx) => (
               <tbody key={`group-${group.name}`}>
                 {/* Gap between client bars */}
                 {groupIdx > 0 && (
@@ -2146,6 +2180,8 @@ function WorkView({
                       isExpanded={expandedRows[p.id]}
                       expandedItemRows={expandedItemRows}
                       tasks={projectTasks[p.id] || []}
+                      hasTasks={projectTasks[p.id] ? (projectTasks[p.id].length > 0) : projectsWithTasks.has(p.id)}
+                      hasItems={projectItems[p.id] ? (projectItems[p.id].length > 0) : projectsWithItems.has(p.id)}
                       profiles={profiles}
                       projectItems={projectItems}
                       expandedProofRows={expandedProofRows}
