@@ -265,6 +265,7 @@ function CashFlowRow({ row, contribution, balance, onSave, onToggleActive, onTog
         {editingAccount === row.id ? (
           <select
             autoFocus
+            style={{ width: '100%' }}
             value={row.account || ''}
             onChange={async (e) => {
               const val = e.target.value || null
