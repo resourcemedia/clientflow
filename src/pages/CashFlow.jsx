@@ -194,6 +194,17 @@ function CashFlowRow({ row, contribution, balance, onSave, onToggleActive, onTog
     return () => document.removeEventListener('mousedown', handleClick)
   }, [urlOpen])
 
+  useEffect(() => {
+    if (!editingAccount) return
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('select')) {
+        setEditingAccount(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [editingAccount])
+
   async function commitUrl() {
     const trimmed = urlDraft.trim()
     await onSave(row.id, { url: trimmed || null })
@@ -272,7 +283,6 @@ function CashFlowRow({ row, contribution, balance, onSave, onToggleActive, onTog
               await onSave(row.id, { account: val })
               setEditingAccount(null)
             }}
-            onBlur={() => setEditingAccount(null)}
           >
             <option value="">—</option>
             <option value="CBNA">CBNA</option>
