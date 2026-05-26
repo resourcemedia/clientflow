@@ -266,9 +266,10 @@ function CashFlowRow({ row, contribution, balance, onSave, onToggleActive, onTog
           <input
             autoFocus
             list="account-options"
-            defaultValue={row.account || ''}
+            defaultValue=""
+            placeholder={row.account || ''}
             onBlur={async (e) => {
-              const val = e.target.value || null
+              const val = e.target.value.trim() || row.account || null
               setEditingAccount(null)
               if (val !== row.account) await onSave(row.id, { account: val })
             }}
