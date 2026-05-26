@@ -415,8 +415,6 @@ export default function CashFlowPage() {
     const { data } = await supabase
       .from('cashflow_entries')
       .select('*')
-      .order('day', { ascending: true })
-      .order('amount', { ascending: false })
       .order('sort_order', { ascending: true })
     setRows(data || [])
     setLoading(false)
