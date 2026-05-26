@@ -261,7 +261,7 @@ function CashFlowRow({ row, contribution, balance, onSave, onToggleActive, onTog
       </td>
 
       {/* Account */}
-      <td onClick={() => setEditingAccount(row.id)} style={{ ...TD, width: 100, cursor: 'pointer' }}>
+      <td onMouseDown={(e) => { e.preventDefault(); setEditingAccount(row.id) }} style={{ ...TD, width: 100, cursor: 'pointer' }}>
         {editingAccount === row.id ? (
           <select
             autoFocus
