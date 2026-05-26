@@ -404,6 +404,7 @@ export default function CashFlowPage() {
   const [filterWho, setFilterWho]     = useState('')
   const [filterCat, setFilterCat]     = useState('')
   const [filterTag, setFilterTag]     = useState('')
+  const [filterAccount, setFilterAccount] = useState('')
   const [dragIdx, setDragIdx]         = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
   const [showInactive, setShowInactive] = useState(true)
@@ -428,9 +429,10 @@ export default function CashFlowPage() {
     if (filterWho && !(row.who || '').toLowerCase().includes(filterWho.toLowerCase())) return false
     if (filterCat && row.category !== filterCat) return false
     if (filterTag && !(row.tag || '').toLowerCase().includes(filterTag.toLowerCase())) return false
+    if (filterAccount && row.account !== filterAccount) return false
     if (!showInactive && row.visible === false) return false
     return true
-  }), [rows, dayStart, dayEnd, filterWho, filterCat, filterTag, showInactive])
+  }), [rows, dayStart, dayEnd, filterWho, filterCat, filterTag, filterAccount, showInactive])
 
   const { filteredIncome, filteredExpense, filteredBalance } = useMemo(() => {
     let filteredIncome = 0
@@ -640,6 +642,17 @@ export default function CashFlowPage() {
             value={filterTag} onChange={e => setFilterTag(e.target.value)}
             style={{ ...inputStyle, width: 130 }}
           />
+          <select
+            value={filterAccount} onChange={e => setFilterAccount(e.target.value)}
+            style={{ ...inputStyle, width: 130 }}
+          >
+            <option value="">Account</option>
+            <option value="CBNA">CBNA</option>
+            <option value="PayPal">PayPal</option>
+            <option value="Apple Credit">Apple Credit</option>
+            <option value="Online">Online</option>
+            <option value="Check">Check</option>
+          </select>
         </div>
 
         {loading ? (
