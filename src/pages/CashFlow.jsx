@@ -194,17 +194,6 @@ function CashFlowRow({ row, contribution, balance, onSave, onToggleActive, onTog
     return () => document.removeEventListener('mousedown', handleClick)
   }, [urlOpen])
 
-  useEffect(() => {
-    if (!editingAccount) return
-    const handleClickOutside = (e) => {
-      if (!e.target.closest('select')) {
-        setEditingAccount(null)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [editingAccount])
-
   async function commitUrl() {
     const trimmed = urlDraft.trim()
     await onSave(row.id, { url: trimmed || null })
@@ -274,22 +263,17 @@ function CashFlowRow({ row, contribution, balance, onSave, onToggleActive, onTog
       {/* Account */}
       <td onMouseDown={(e) => { e.preventDefault(); setEditingAccount(row.id) }} style={{ ...TD, width: 100, cursor: 'pointer' }}>
         {editingAccount === row.id ? (
-          <select
+          <input
             autoFocus
-            style={{ width: '100%' }}
-            value={row.account || ''}
-            onChange={async (e) => {
+            list="account-options"
+            defaultValue={row.account || ''}
+            onBlur={async (e) => {
               const val = e.target.value || null
-              await onSave(row.id, { account: val })
               setEditingAccount(null)
+              if (val !== row.account) await onSave(row.id, { account: val })
             }}
-          >
-            <option value="">—</option>
-            <option value="CBNA">CBNA</option>
-            <option value="PayPal">PayPal</option>
-            <option value="Apple Credit">Apple Credit</option>
-            <option value="Check">Check</option>
-          </select>
+            style={{ width: '100%' }}
+          />
         ) : (
           <span>{row.account || ''}</span>
         )}
@@ -660,6 +644,13 @@ export default function CashFlowPage() {
           <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 170px)' }}>
             {/* shared colgroup — identical in all three tables to keep columns aligned */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowX: 'auto' }}>
+
+              <datalist id="account-options">
+                <option value="CBNA" />
+                <option value="PayPal" />
+                <option value="Apple Credit" />
+                <option value="Check" />
+              </datalist>
 
               {/* ── pinned header ── */}
               <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 1070, flexShrink: 0 }}>
