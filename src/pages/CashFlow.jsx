@@ -269,7 +269,8 @@ function CashFlowRow({ row, contribution, balance, onSave, onToggleActive, onTog
             defaultValue=""
             placeholder={row.account || ''}
             onBlur={async (e) => {
-              const val = e.target.value.trim() || null
+              const raw = e.target.value.trim()
+              const val = (raw === '' || raw === '—') ? null : raw
               setEditingAccount(null)
               if (val !== row.account) await onSave(row.id, { account: val })
             }}
@@ -647,7 +648,7 @@ export default function CashFlowPage() {
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowX: 'auto' }}>
 
               <datalist id="account-options">
-                <option value="" />
+                <option value="—" />
                 <option value="CBNA" />
                 <option value="PayPal" />
                 <option value="Apple Credit" />
