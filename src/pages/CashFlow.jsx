@@ -563,11 +563,15 @@ export default function CashFlowPage() {
     })
     setDragIdx(null)
     setDragOverIdx(null)
-    await Promise.all(
-      newOrders.map(({ id, sort_order }) =>
-        supabase.from('cashflow_entries').update({ sort_order }).eq('id', id)
+    try {
+      await Promise.all(
+        newOrders.map(({ id, sort_order }) =>
+          supabase.from('cashflow_entries').update({ sort_order }).eq('id', id)
+        )
       )
-    )
+    } catch (err) {
+      console.error('sort_order save failed:', err)
+    }
   }
 
   async function sortByDay(dir) {
