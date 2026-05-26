@@ -179,7 +179,7 @@ function AmountCell({ amount, isExpenseField, onSave }) {
 function CashFlowRow({ row, contribution, balance, onSave, onToggleActive, onToggleVisible, onAddAfter, onDelete, isDragging, isDragTarget, onDragStart, onDragOver, onDrop, onDragEnd }) {
   const [urlOpen, setUrlOpen] = useState(false)
   const [urlDraft, setUrlDraft] = useState('')
-  const [editingAccount, setEditingAccount] = useState(false)
+  const [editingAccount, setEditingAccount] = useState(null)
   const urlInputRef = useRef(null)
   const urlPopoverRef = useRef(null)
 
@@ -261,35 +261,26 @@ function CashFlowRow({ row, contribution, balance, onSave, onToggleActive, onTog
       </td>
 
       {/* Account */}
-      <td style={{ ...TD, width: 100 }}>
-        {editingAccount ? (
+      <td onClick={() => setEditingAccount(row.id)} style={{ ...TD, width: 100, cursor: 'pointer' }}>
+        {editingAccount === row.id ? (
           <select
             autoFocus
             value={row.account || ''}
-            onChange={e => {
-              onSave(row.id, { account: e.target.value || null })
-              setEditingAccount(false)
+            onChange={async (e) => {
+              const val = e.target.value || null
+              await onSave(row.id, { account: val })
+              setEditingAccount(null)
             }}
-            onBlur={() => setEditingAccount(false)}
-            style={{
-              fontSize: 12, border: '1px solid var(--accent)', borderRadius: 4,
-              padding: '2px 6px', cursor: 'pointer', background: 'var(--bg3)',
-              color: 'var(--text)', outline: 'none',
-            }}
+            onBlur={() => setEditingAccount(null)}
           >
-            <option value=""></option>
+            <option value="">—</option>
             <option value="CBNA">CBNA</option>
             <option value="PayPal">PayPal</option>
             <option value="Apple Credit">Apple Credit</option>
             <option value="Check">Check</option>
           </select>
         ) : (
-          <span
-            onClick={() => setEditingAccount(true)}
-            style={{ cursor: 'text', display: 'inline-block', minWidth: 32, minHeight: 20 }}
-          >
-            {row.account || ''}
-          </span>
+          <span>{row.account || ''}</span>
         )}
       </td>
 
