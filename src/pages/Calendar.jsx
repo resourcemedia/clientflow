@@ -33,7 +33,7 @@ function colorFor(channel) {
 }
 
 export default function CalendarPage() {
-  useEffect(() => { document.title = 'Calendar | ClientFlow' }, [])
+  useEffect(() => { document.title = 'Calendar' }, [])
   const navigate  = useNavigate()
   const location  = useLocation()
   const [events, setEvents]           = useState([])

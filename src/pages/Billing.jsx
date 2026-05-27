@@ -62,7 +62,7 @@ const STATUS_COLORS = {
 }
 
 export default function BillingPage() {
-  useEffect(() => { document.title = 'Invoices | ClientFlow' }, [])
+  useEffect(() => { document.title = 'Invoices' }, [])
   const navigate = useNavigate()
   const [invoices, setInvoices] = useState([])
   const [loading, setLoading]   = useState(true)

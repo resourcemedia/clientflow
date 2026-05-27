@@ -22,7 +22,7 @@ function fmtAmt(n) {
 
 
 export default function InvoicePrint() {
-  useEffect(() => { document.title = 'Invoice | ClientFlow' }, [])
+  useEffect(() => { document.title = 'Invoice' }, [])
   const { id } = useParams()
   const [invoice, setInvoice]  = useState(null)
   const [items, setItems]       = useState([])

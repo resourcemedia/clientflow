@@ -396,7 +396,7 @@ function CashFlowRow({ row, contribution, balance, onSave, onToggleActive, onTog
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 
 export default function CashFlowPage() {
-  useEffect(() => { document.title = 'Cash Flow | ClientFlow' }, [])
+  useEffect(() => { document.title = 'Cash Flow' }, [])
   const [rows, setRows]               = useState([])
   const [loading, setLoading]         = useState(true)
   const [dayStart, setDayStart]       = useState('')

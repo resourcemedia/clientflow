@@ -6,7 +6,7 @@ import { StatusBadge, Breadcrumb } from '../components/ui'
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 
 export default function ItemsPage() {
-  useEffect(() => { document.title = 'Items | ClientFlow' }, [])
+  useEffect(() => { document.title = 'Items' }, [])
   const navigate      = useNavigate()
   const location      = useLocation()
   const [searchParams] = useSearchParams()

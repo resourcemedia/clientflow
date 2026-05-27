@@ -467,7 +467,7 @@ function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onContext,
 
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 export default function TasksPage() {
-  useEffect(() => { document.title = 'Tasks | ClientFlow' }, [])
+  useEffect(() => { document.title = 'Tasks' }, [])
   const location = useLocation()
 
   const [tasks,        setTasks]        = useState([])

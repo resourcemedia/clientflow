@@ -20,7 +20,7 @@ const STATUS_TABS = [
 ]
 
 export default function CampaignsPage() {
-  useEffect(() => { document.title = 'Campaigns | ClientFlow' }, [])
+  useEffect(() => { document.title = 'Campaigns' }, [])
   const [campaigns, setCampaigns] = useState([])
   const [clients, setClients]     = useState([])
   const [loading, setLoading]     = useState(true)
