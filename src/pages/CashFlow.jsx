@@ -365,6 +365,9 @@ function CashFlowRow({ row, contribution, balance, onSave, onToggleActive, onTog
             ...ICON_BTN, textDecoration: 'none',
             opacity: row.url ? 1 : 0.35,
             pointerEvents: row.url ? 'auto' : 'none',
+            background: row.url ? '#22c55e' : undefined,
+            color: row.url ? '#fff' : undefined,
+            borderColor: row.url ? '#22c55e' : undefined,
           }}
         >
           <ExternalLinkIcon />
