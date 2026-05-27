@@ -255,6 +255,27 @@ function CashFlowRow({ row, contribution, balance, onSave, onToggleActive, onTog
         <EditableCell value={row.tag || ''} onSave={v => onSave(row.id, { tag: v })} placeholder="—" />
       </td>
 
+      {/* Checked */}
+      <td
+        style={{ ...TD, width: 60, textAlign: 'center', cursor: 'pointer' }}
+        onClick={() => onSave(row.id, { checked_at: new Date().toISOString() })}
+        title="Mark as checked"
+      >
+        {(() => {
+          if (!row.checked_at) return <span style={{ color: 'var(--text3)' }}>—</span>
+          const d = new Date(row.checked_at)
+          const label = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`
+          const recent = Date.now() - d.getTime() <= 30 * 24 * 60 * 60 * 1000
+          return (
+            <span style={{
+              background: recent ? '#22c55e' : '#ef4444',
+              color: '#fff', borderRadius: 4,
+              padding: '1px 5px', fontSize: 11, display: 'inline-block',
+            }}>{label}</span>
+          )
+        })()}
+      </td>
+
       {/* Note */}
       <td style={TD}>
         <EditableCell value={row.note || ''} onSave={v => onSave(row.id, { note: v })} placeholder="—" />
@@ -675,10 +696,10 @@ export default function CashFlowPage() {
               </datalist>
 
               {/* ── pinned header ── */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 1070, flexShrink: 0 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 1130, flexShrink: 0 }}>
                 <colgroup>
                   <col style={{ width: 28 }} /><col style={{ width: 52 }} /><col style={{ width: 110 }} />
-                  <col style={{ width: 100 }} /><col style={{ width: 110 }} /><col /><col style={{ width: 100 }} /><col style={{ width: 100 }} />
+                  <col style={{ width: 100 }} /><col style={{ width: 110 }} /><col style={{ width: 60 }} /><col /><col style={{ width: 100 }} /><col style={{ width: 100 }} />
                   <col style={{ width: 100 }} /><col style={{ width: 60 }} /><col style={{ width: 90 }} />
                   <col style={{ width: 90 }} /><col style={{ width: 36 }} /><col style={{ width: 36 }} />
                   <col style={{ width: 36 }} /><col style={{ width: 36 }} />
@@ -706,6 +727,7 @@ export default function CashFlowPage() {
                     <th style={TH}>Who</th>
                     <th style={{ ...TH, width: 100 }}>Category</th>
                     <th style={{ ...TH, width: 110 }}>Tag</th>
+                    <th style={{ ...TH, width: 60, textAlign: 'center' }}>Chk</th>
                     <th style={TH}>Note</th>
                     <th style={TH}>Account</th>
                     <th style={{ ...TH, textAlign: 'right', width: 100 }}>Income</th>
@@ -736,10 +758,10 @@ export default function CashFlowPage() {
 
               {/* ── scrollable body ── */}
               <div style={{ flex: 1, overflowY: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 1070 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 1130 }}>
                   <colgroup>
                     <col style={{ width: 28 }} /><col style={{ width: 52 }} /><col style={{ width: 110 }} />
-                    <col style={{ width: 100 }} /><col style={{ width: 110 }} /><col /><col style={{ width: 100 }} /><col style={{ width: 100 }} />
+                    <col style={{ width: 100 }} /><col style={{ width: 110 }} /><col style={{ width: 60 }} /><col /><col style={{ width: 100 }} /><col style={{ width: 100 }} />
                     <col style={{ width: 100 }} /><col style={{ width: 60 }} /><col style={{ width: 90 }} />
                     <col style={{ width: 90 }} /><col style={{ width: 36 }} /><col style={{ width: 36 }} />
                     <col style={{ width: 36 }} /><col style={{ width: 36 }} />
@@ -747,7 +769,7 @@ export default function CashFlowPage() {
                   <tbody>
                     {rows.length === 0 ? (
                       <tr>
-                        <td colSpan={16} style={{ ...TD, textAlign: 'center', color: 'var(--text3)', padding: 32 }}>
+                        <td colSpan={17} style={{ ...TD, textAlign: 'center', color: 'var(--text3)', padding: 32 }}>
                           No entries yet.{' '}
                           <button className="btn btn-ghost btn-sm" onClick={addFirstRow}>Add first row</button>
                         </td>
@@ -776,10 +798,10 @@ export default function CashFlowPage() {
               </div>
 
               {/* ── pinned footer ── */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 1070, flexShrink: 0, borderTop: '2px solid var(--border2)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 1130, flexShrink: 0, borderTop: '2px solid var(--border2)' }}>
                 <colgroup>
                   <col style={{ width: 28 }} /><col style={{ width: 52 }} /><col style={{ width: 110 }} />
-                  <col style={{ width: 100 }} /><col style={{ width: 110 }} /><col /><col style={{ width: 100 }} /><col style={{ width: 100 }} />
+                  <col style={{ width: 100 }} /><col style={{ width: 110 }} /><col style={{ width: 60 }} /><col /><col style={{ width: 100 }} /><col style={{ width: 100 }} />
                   <col style={{ width: 100 }} /><col style={{ width: 60 }} /><col style={{ width: 90 }} />
                   <col style={{ width: 90 }} /><col style={{ width: 36 }} /><col style={{ width: 36 }} />
                   <col style={{ width: 36 }} /><col style={{ width: 36 }} />
@@ -787,7 +809,7 @@ export default function CashFlowPage() {
                 <tbody>
                   <tr style={{ background: 'var(--bg3)' }}>
                     <td style={TD} />
-                    <td colSpan={5} style={{ ...TD, textAlign: 'right', fontWeight: 700, fontSize: 13, color: 'var(--text2)' }}>Total</td>
+                    <td colSpan={6} style={{ ...TD, textAlign: 'right', fontWeight: 700, fontSize: 13, color: 'var(--text2)' }}>Total</td>
                     <td style={TD} />
                     <td style={{ ...TD, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontWeight: 700, fontSize: 13 }}>{fmt$(filteredIncome)}</td>
                     <td style={{ ...TD, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontWeight: 700, fontSize: 13 }}>{fmt$(filteredExpense)}</td>
