@@ -135,7 +135,7 @@ function AmountCell({ amount, isExpenseField, onSave }) {
   function commit(raw) {
     setEditing(false)
     const n = parseFloat(raw)
-    if (!isNaN(n) && n > 0) onSave(isExpenseField ? -n : n)
+    if (!isNaN(n) && n >= 0) onSave(isExpenseField ? -n : n)
   }
 
   if (editing) {
