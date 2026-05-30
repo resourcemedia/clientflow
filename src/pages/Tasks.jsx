@@ -3,6 +3,14 @@ import { useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Breadcrumb } from '../components/ui'
 
+function todayISO() {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 const CATEGORY_COLORS = {
   primary:    '#ffb8b8',
   secondary:  '#4fd1b8',
