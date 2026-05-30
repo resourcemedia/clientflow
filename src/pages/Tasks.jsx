@@ -139,7 +139,7 @@ function QuickAddRow({ onCommit, onDiscard }) {
 }
 
 // ── TASK ROW ─────────────────────────────────────────────────────────────────
-function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onContext, isContext, onAddBelow, onDelete, onDragStart, onDragOver, onDrop, isDragging, isDragTarget, highlighted, onCycleToggle, onStartEdit, onEndEdit }) {
+function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onContext, isContext, onAddBelow, onDelete, onDragStart, onDragOver, onDrop, isDragging, isDragTarget, highlighted, onCycleToggle, isSelected, onToggleSelect, onStartEdit, onEndEdit }) {
   const [editField,  setEditField]  = useState(null)
   const [noteVal,    setNoteVal]    = useState(task.note || '')
   const [snoteVal,   setSnoteVal]   = useState(task.status_note || '')
@@ -208,28 +208,33 @@ function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onContext,
         <DragHandle />
       </td>
 
-      {/* cycle date tag */}
-      <td
-        onClick={() => onCycleToggle(task.id, task.cycle_date)}
-        style={{ width: 56, textAlign: 'center', padding: '0 4px', borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691', cursor: 'pointer' }}
-      >
-        {task.cycle_date ? (() => {
-          const today = todayISO()
-          const parts = task.cycle_date.split('-')
-          const label = `${parseInt(parts[1])}/${parseInt(parts[2])}`
-          return (
-            <span style={{
-              background: task.cycle_date === today ? '#22c55e' : '#ef4444',
-              color: '#fff', borderRadius: 4,
-              padding: '2px 6px', fontSize: 11, fontWeight: 600, display: 'inline-block',
-            }}>{label}</span>
-          )
-        })() : (
-          <span style={{
-            display: 'inline-block', width: 40, height: 22,
-            border: '1.5px solid var(--border2)', borderRadius: 4,
-          }} />
-        )}
+      {/* cycle date tag + select circle */}
+      <td style={{ width: 76, padding: '0 4px', borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
+          <button
+            onClick={e => { e.stopPropagation(); onToggleSelect(task.id) }}
+            style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid var(--text3)', padding: 0, cursor: 'pointer', background: isSelected ? 'var(--text)' : 'transparent', flexShrink: 0 }}
+          />
+          <div onClick={() => onCycleToggle(task.id, task.cycle_date)} style={{ cursor: 'pointer' }}>
+            {task.cycle_date ? (() => {
+              const today = todayISO()
+              const parts = task.cycle_date.split('-')
+              const label = `${parseInt(parts[1])}/${parseInt(parts[2])}`
+              return (
+                <span style={{
+                  background: task.cycle_date === today ? '#22c55e' : '#ef4444',
+                  color: '#fff', borderRadius: 4,
+                  padding: '2px 6px', fontSize: 11, fontWeight: 600, display: 'inline-block',
+                }}>{label}</span>
+              )
+            })() : (
+              <span style={{
+                display: 'inline-block', width: 40, height: 22,
+                border: '1.5px solid var(--border2)', borderRadius: 4,
+              }} />
+            )}
+          </div>
+        </div>
       </td>
 
       {/* alias */}
@@ -499,6 +504,9 @@ export default function TasksPage() {
 
   const [contextTaskId, setContextTaskId] = useState(null)
   const [editingTaskId, setEditingTaskId] = useState(null)
+  const [selectedRows,   setSelectedRows]   = useState(new Set())
+  const [applyCycleValue, setApplyCycleValue] = useState(todayISO)
+  const [applyError,      setApplyError]      = useState(null)
   const savedFilters = useRef(null)
 
   useEffect(() => {
@@ -581,6 +589,49 @@ export default function TasksPage() {
     if (showMode === 'hide' && t.visible === false) return false
     return true
   })
+
+  // ── SELECTION ─────────────────────────────────────────────────────────────
+  const allSelected = filtered.length > 0 && filtered.every(t => selectedRows.has(t.id))
+
+  function toggleRow(id) {
+    setSelectedRows(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelectedRows(prev => {
+        const next = new Set(prev)
+        filtered.forEach(t => next.delete(t.id))
+        return next
+      })
+    } else {
+      setSelectedRows(prev => {
+        const next = new Set(prev)
+        filtered.forEach(t => next.add(t.id))
+        return next
+      })
+    }
+  }
+
+  async function handleApply() {
+    setApplyError(null)
+    const ids = [...selectedRows]
+    const { error } = await supabase
+      .from('tasks')
+      .update({ cycle_date: applyCycleValue })
+      .in('id', ids)
+    if (error) {
+      console.error('Apply cycle_date failed:', error)
+      setApplyError('Update failed')
+      return
+    }
+    setTasks(ts => ts.map(t => ids.includes(t.id) ? { ...t, cycle_date: applyCycleValue } : t))
+    setSelectedRows(new Set())
+  }
 
   // ── SAVE ───────────────────────────────────────────────────────────────────
   async function toggleTaskVisible(taskId, currentVisible) {
@@ -876,13 +927,47 @@ export default function TasksPage() {
       </div>
 
       <div className="page-content">
-        <div className="card">
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          {selectedRows.size > 0 && (() => {
+            const today = todayISO()
+            const isToday = applyCycleValue === today
+            const parts = today.split('-')
+            const label = `${parseInt(parts[1])}/${parseInt(parts[2])}`
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderBottom: '1px solid var(--border)', background: 'var(--accent-glow)' }}>
+                <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600 }}>
+                  {selectedRows.size} selected
+                </span>
+                <div style={{ flex: 1 }} />
+                <button
+                  onClick={() => setApplyCycleValue(isToday ? null : today)}
+                  title="Toggle cycle date"
+                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                >
+                  {isToday ? (
+                    <span style={{ background: '#22c55e', color: '#fff', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 600, display: 'inline-block' }}>{label}</span>
+                  ) : (
+                    <span style={{ display: 'inline-block', width: 40, height: 22, border: '1.5px solid var(--border2)', borderRadius: 4, verticalAlign: 'middle' }} />
+                  )}
+                </button>
+                <button className="btn btn-primary btn-sm" onClick={handleApply}>Apply</button>
+                {applyError && <span style={{ fontSize: 12, color: '#f87171' }}>{applyError}</span>}
+              </div>
+            )
+          })()}
           <div style={{ overflowX: 'auto' }}>
             <table>
               <thead>
                 <tr>
                   <th style={{ width: 28, padding: '10px 6px 10px 4px', background: '#9dc691', color: '#fff' }} />
-                  <th style={{ width: 36, background: '#9dc691', color: '#fff', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase' }}>Cycle</th>
+                  <th style={{ width: 76, background: '#9dc691', color: '#fff', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
+                      <button onClick={toggleSelectAll} title={allSelected ? 'Deselect all' : 'Select all'}
+                        style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.7)', padding: 0, cursor: 'pointer', background: allSelected ? '#fff' : 'transparent', flexShrink: 0 }}
+                      />
+                      Cycle
+                    </div>
+                  </th>
                   <th style={{ background: '#9dc691', color: '#fff' }}>Alias</th>
                   <th style={{ background: '#9dc691', color: '#fff' }}>Project</th>
                   <th style={{ background: '#9dc691', color: '#fff' }}>Task</th>
@@ -932,6 +1017,8 @@ export default function TasksPage() {
                         onDrop={handleDrop}
                         highlighted={activeBtn === 'RandomHot' && task.id === hotHighlightId}
                         onCycleToggle={toggleCycleDate}
+                        isSelected={selectedRows.has(task.id)}
+                        onToggleSelect={toggleRow}
                         onContext={handleContext}
                         isContext={contextTaskId === task.id}
                         onStartEdit={() => setEditingTaskId(task.id)}
