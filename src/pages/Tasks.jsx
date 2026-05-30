@@ -526,7 +526,7 @@ export default function TasksPage() {
           .from('tasks')
           .select(`
             *,
-            project:projects(id, name, product_type, cycle_tag, category,
+            project:projects(id, name, product_type, category,
               client:clients(company, alias)
             ),
             updater:profiles!tasks_updated_by_fkey(name)
@@ -597,7 +597,7 @@ export default function TasksPage() {
       .eq('id', taskId)
       .select(`
         *,
-        project:projects(id, name, product_type, cycle_tag,
+        project:projects(id, name, product_type,
           client:clients(company, alias)
         ),
         updater:profiles!tasks_updated_by_fkey(name)
@@ -613,7 +613,7 @@ export default function TasksPage() {
       .insert(payload)
       .select(`
         *,
-        project:projects(id, name, product_type, cycle_tag,
+        project:projects(id, name, product_type,
           client:clients(company, alias)
         ),
         updater:profiles!tasks_updated_by_fkey(name)
