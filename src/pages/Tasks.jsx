@@ -934,11 +934,7 @@ export default function TasksPage() {
             const parts = today.split('-')
             const label = `${parseInt(parts[1])}/${parseInt(parts[2])}`
             return (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderBottom: '1px solid var(--border)', background: 'var(--accent-glow)' }}>
-                <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600 }}>
-                  {selectedRows.size} selected
-                </span>
-                <div style={{ flex: 1 }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px 8px 28px', borderBottom: '1px solid var(--border)', background: 'var(--accent-glow)' }}>
                 <button
                   onClick={() => setApplyCycleValue(isToday ? null : today)}
                   title="Toggle cycle date"
@@ -951,6 +947,9 @@ export default function TasksPage() {
                   )}
                 </button>
                 <button className="btn btn-primary btn-sm" onClick={handleApply}>Apply</button>
+                <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600 }}>
+                  {selectedRows.size} selected
+                </span>
                 {applyError && <span style={{ fontSize: 12, color: '#f87171' }}>{applyError}</span>}
               </div>
             )
