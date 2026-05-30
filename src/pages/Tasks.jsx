@@ -484,6 +484,7 @@ export default function TasksPage() {
     return (saved === 'Hot') ? 'Hot' : 'All'
   })
   const [filteredProjectId, setFilteredProjectId] = useState(null)
+  const [filteredTaskId,    setFilteredTaskId]    = useState(null)
   const [hotHighlightId,    setHotHighlightId]    = useState(null)
   const [showMode, setShowMode] = useState(() => localStorage.getItem('tasks_showMode') || 'show')
 
@@ -498,12 +499,6 @@ export default function TasksPage() {
     localStorage.setItem('tasks_activeBtn',      activeBtn)
     localStorage.setItem('tasks_showMode',       showMode)
   }, [clientFilter, projectFilter, categoryFilter, activeBtn, showMode])
-
-  // deck shuffle state
-  const [projectDeck,    setProjectDeck]    = useState([])
-  const [projectDeckPos, setProjectDeckPos] = useState(0)
-  const [hotDeck,        setHotDeck]        = useState([])
-  const [hotDeckPos,     setHotDeckPos]     = useState(0)
 
   // inline add rows
   const [newRows, setNewRows] = useState([])
@@ -565,9 +560,11 @@ export default function TasksPage() {
       if (!pname.includes(projectFilter.toLowerCase())) return false
     }
     if (categoryFilter && t.id !== editingTaskId && t.project?.category != null && t.project.category !== categoryFilter) return false
-    if (activeBtn === 'Hot')           { if (t.status !== 'Hot')                      return false }
-    if (activeBtn === 'RandomProject') { if (t.project_id !== filteredProjectId)        return false }
-    if (activeBtn === 'RandomHot')     { if (t.status !== 'Hot')                        return false }
+    if (activeBtn === 'Hot')           { if (t.status !== 'Hot') return false }
+    if (activeBtn === 'RandomProject') {
+      if (filteredTaskId != null ? t.id !== filteredTaskId : t.project_id !== filteredProjectId) return false
+    }
+    if (activeBtn === 'RandomHot')     { if (t.id !== filteredTaskId) return false }
     if (showMode === 'hide' && t.visible === false) return false
     return true
   })
@@ -690,6 +687,7 @@ export default function TasksPage() {
       localStorage.setItem('tasks_projectFilter', s.projectFilter)
       setActiveBtn(s.activeBtn)
       setFilteredProjectId(s.filteredProjectId)
+      setFilteredTaskId(null)
       setHotHighlightId(s.hotHighlightId)
       setShowMode(s.showMode)
       savedFilters.current = null
@@ -700,6 +698,7 @@ export default function TasksPage() {
       setProjectFilter('')
       setActiveBtn('RandomProject')
       setFilteredProjectId(task.project_id)
+      setFilteredTaskId(null)
       setHotHighlightId(null)
       setContextTaskId(task.id)
     }
@@ -708,17 +707,20 @@ export default function TasksPage() {
   function handleAll() {
     setActiveBtn('All')
     setFilteredProjectId(null)
+    setFilteredTaskId(null)
     setHotHighlightId(null)
   }
 
   function handleHot() {
     setActiveBtn('Hot')
     setFilteredProjectId(null)
+    setFilteredTaskId(null)
     setHotHighlightId(null)
   }
 
   function handleRandomProject() {
-    const baseTasks = tasks.filter(t => {
+    const today = todayISO()
+    const pool = tasks.filter(t => {
       if (!t.project_id) return false
       if (clientFilter) {
         const alias = (t.project?.client?.alias || t.project?.client?.company || '').toLowerCase()
@@ -728,53 +730,29 @@ export default function TasksPage() {
         const pname = (t.project?.name || '').toLowerCase()
         if (!pname.includes(projectFilter.toLowerCase())) return false
       }
-      return true
+      if (categoryFilter && t.project?.category !== categoryFilter) return false
+      return !t.cycle_date || t.cycle_date < today
     })
-
-    const seenIds = new Set()
-    const pool = []
-    for (const t of baseTasks) {
-      if (!seenIds.has(t.project_id)) {
-        seenIds.add(t.project_id)
-        pool.push(t.project_id)
-      }
-    }
     if (pool.length === 0) return
-
-    const poolSet = new Set(pool)
-    let deck = projectDeck.filter(id => poolSet.has(id))
-    let pos  = projectDeckPos
-
-    if (deck.length === 0 || pos >= deck.length) {
-      deck = shuffle(pool)
-      pos  = 0
-      setProjectDeck(deck)
-    }
-
+    const picked = pool[Math.floor(Math.random() * pool.length)]
     setActiveBtn('RandomProject')
-    setFilteredProjectId(deck[pos])
-    setProjectDeckPos(pos + 1)
+    setFilteredTaskId(picked.id)
+    setFilteredProjectId(null)
     setHotHighlightId(null)
   }
 
   function handleRandomHot() {
-    const hotIds = tasks.filter(t => t.status === 'Hot').map(t => t.id)
-    if (hotIds.length === 0) return
-
-    const poolSet   = new Set(hotIds)
-    const validDeck = hotDeck.filter(id => poolSet.has(id))
-    let   deck      = validDeck
-    let   pos       = hotDeckPos
-
-    if (deck.length === 0 || pos >= deck.length) {
-      deck = shuffle(hotIds)
-      pos  = 0
-      setHotDeck(deck)
-    }
-
+    const today = todayISO()
+    const pool = tasks.filter(t => {
+      if (t.status !== 'Hot') return false
+      if (categoryFilter && t.project?.category !== categoryFilter) return false
+      return !t.cycle_date || t.cycle_date < today
+    })
+    if (pool.length === 0) return
+    const picked = pool[Math.floor(Math.random() * pool.length)]
     setActiveBtn('RandomHot')
-    setHotHighlightId(deck[pos])
-    setHotDeckPos(pos + 1)
+    setFilteredTaskId(picked.id)
+    setHotHighlightId(picked.id)
     setFilteredProjectId(null)
   }
 
