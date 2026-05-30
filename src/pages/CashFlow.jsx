@@ -769,7 +769,7 @@ export default function CashFlowPage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 1230 }}>
                   <colgroup>
                     <col style={{ width: 28 }} /><col style={{ width: 52 }} /><col style={{ width: 110 }} />
-                    <col style={{ width: 100 }} /><col style={{ width: 110 }} /><col style={{ width: 60 }} /><col /><col style={{ width: 100 }} /><col style={{ width: 100 }} /><col style={{ width: 100 }} /><col style={{ width: 100 }} />
+                    <col style={{ width: 100 }} /><col style={{ width: 110 }} /><col style={{ width: 60 }} /><col /><col style={{ width: 100 }} /><col style={{ width: 100 }} /><col style={{ width: 100 }} />
                     <col style={{ width: 100 }} /><col style={{ width: 60 }} /><col style={{ width: 90 }} />
                     <col style={{ width: 90 }} /><col style={{ width: 36 }} /><col style={{ width: 36 }} />
                     <col style={{ width: 36 }} /><col style={{ width: 36 }} />
