@@ -484,6 +484,7 @@ export default function TasksPage() {
   // text filters
   const [clientFilter,   setClientFilter]   = useState(() => localStorage.getItem('tasks_clientFilter')   || '')
   const [projectFilter,  setProjectFilter]  = useState(() => localStorage.getItem('tasks_projectFilter')  || '')
+  const [taskFilter,     setTaskFilter]     = useState(() => localStorage.getItem('tasks_taskFilter')     || '')
   const [categoryFilter, setCategoryFilter] = useState(() => localStorage.getItem('tasks_categoryFilter') || '')
 
   // execution buttons
@@ -503,10 +504,11 @@ export default function TasksPage() {
   useEffect(() => {
     localStorage.setItem('tasks_clientFilter',   clientFilter)
     localStorage.setItem('tasks_projectFilter',  projectFilter)
+    localStorage.setItem('tasks_taskFilter',     taskFilter)
     localStorage.setItem('tasks_categoryFilter', categoryFilter)
     localStorage.setItem('tasks_activeBtn',      activeBtn)
     localStorage.setItem('tasks_showMode',       showMode)
-  }, [clientFilter, projectFilter, categoryFilter, activeBtn, showMode])
+  }, [clientFilter, projectFilter, taskFilter, categoryFilter, activeBtn, showMode])
 
   // inline add rows
   const [newRows, setNewRows] = useState([])
@@ -566,6 +568,9 @@ export default function TasksPage() {
     if (projectFilter) {
       const pname = (t.project?.name || '').toLowerCase()
       if (!pname.includes(projectFilter.toLowerCase())) return false
+    }
+    if (taskFilter) {
+      if (!(t.note || '').toLowerCase().includes(taskFilter.toLowerCase())) return false
     }
     if (categoryFilter && t.id !== editingTaskId && t.project?.category != null && t.project.category !== categoryFilter) return false
     if (activeBtn === 'Hot')           { if (t.status !== 'Hot') return false }
@@ -807,6 +812,17 @@ export default function TasksPage() {
             placeholder="Project"
             value={projectFilter}
             onChange={e => { setProjectFilter(e.target.value); localStorage.setItem('tasks_projectFilter', e.target.value) }}
+            style={{
+              background: 'var(--bg2)', border: '1px solid var(--border)',
+              borderRadius: 8, padding: '5px 10px', color: 'var(--text)',
+              fontSize: 13, width: 130, outline: 'none',
+            }}
+          />
+          <input
+            type="text"
+            placeholder="Task"
+            value={taskFilter}
+            onChange={e => { setTaskFilter(e.target.value); localStorage.setItem('tasks_taskFilter', e.target.value) }}
             style={{
               background: 'var(--bg2)', border: '1px solid var(--border)',
               borderRadius: 8, padding: '5px 10px', color: 'var(--text)',
