@@ -96,7 +96,7 @@ function fmtHours(n) {
 }
 
 // Enrich entries with computed outTime, hours, billableAmt, invoiceAmt
-// outTime priority: stored end_time → next entry's start_time → null (no hours calculated).
+// outTime priority: stored end_time → next entry's start_time → '24:00' (past date) → null (today, open).
 function enrichEntries(entries) {
   const today = todayISO()
   const byDate = {}
@@ -107,7 +107,7 @@ function enrichEntries(entries) {
     sorted.forEach((entry, i) => {
       const isLast   = i === sorted.length - 1
       const isActive = isLast && entry.date === today
-      const outTime  = entry.end_time || sorted[i + 1]?.start_time || null
+      const outTime  = entry.end_time || sorted[i + 1]?.start_time || (entry.date < today ? '24:00' : null)
       const hours    = calcHoursFromTimes(entry.start_time, outTime)
       const isPrimary   = entry.project?.category === 'primary'
       const isBillable  = entry.is_billable === true || (entry.is_billable === null && isPrimary)
