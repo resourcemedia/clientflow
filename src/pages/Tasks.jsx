@@ -131,7 +131,7 @@ function QuickAddRow({ onCommit, onDiscard }) {
 }
 
 // ── TASK ROW ─────────────────────────────────────────────────────────────────
-function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onContext, isContext, onAddBelow, onDelete, onDragStart, onDragOver, onDrop, isDragging, isDragTarget, highlighted, currentCycle, onStamp, onStartEdit, onEndEdit }) {
+function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onContext, isContext, onAddBelow, onDelete, onDragStart, onDragOver, onDrop, isDragging, isDragTarget, highlighted, onCycleToggle, onStartEdit, onEndEdit }) {
   const [editField,  setEditField]  = useState(null)
   const [noteVal,    setNoteVal]    = useState(task.note || '')
   const [snoteVal,   setSnoteVal]   = useState(task.status_note || '')
@@ -200,29 +200,27 @@ function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onContext,
         <DragHandle />
       </td>
 
-      {/* cycle stamp button */}
-      <td style={{ width: 36, textAlign: 'center', padding: '0 4px', borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }}>
-        {task.project_id && (
-          <button
-            onClick={() => onStamp(task.project_id)}
-            title={`Stamp with ${currentCycle}`}
-            style={{
-              width: 26, height: 26, borderRadius: '50%', cursor: 'pointer',
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 11, fontWeight: 700, fontFamily: 'DM Mono, monospace',
-              border: task.project?.cycle_tag === currentCycle
-                ? '1.5px solid var(--green)'
-                : '1.5px solid var(--border2)',
-              background: task.project?.cycle_tag === currentCycle
-                ? 'var(--green)'
-                : 'transparent',
-              color: task.project?.cycle_tag === currentCycle
-                ? '#fff'
-                : 'var(--text3)',
-            }}
-          >
-            {task.project?.cycle_tag || '·'}
-          </button>
+      {/* cycle date tag */}
+      <td
+        onClick={() => onCycleToggle(task.id, task.cycle_date)}
+        style={{ width: 56, textAlign: 'center', padding: '0 4px', borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691', cursor: 'pointer' }}
+      >
+        {task.cycle_date ? (() => {
+          const today = todayISO()
+          const parts = task.cycle_date.split('-')
+          const label = `${parseInt(parts[1])}/${parseInt(parts[2])}`
+          return (
+            <span style={{
+              background: task.cycle_date === today ? '#22c55e' : '#ef4444',
+              color: '#fff', borderRadius: 4,
+              padding: '2px 6px', fontSize: 11, fontWeight: 600, display: 'inline-block',
+            }}>{label}</span>
+          )
+        })() : (
+          <span style={{
+            display: 'inline-block', width: 40, height: 22,
+            border: '1.5px solid var(--border2)', borderRadius: 4,
+          }} />
         )}
       </td>
 
@@ -474,7 +472,6 @@ export default function TasksPage() {
   const [projects,     setProjects]     = useState([])
   const [profiles,     setProfiles]     = useState([])
   const [loading,      setLoading]      = useState(true)
-  const [currentCycle, setCurrentCycle] = useState('A')
 
   // text filters
   const [clientFilter,   setClientFilter]   = useState(() => localStorage.getItem('tasks_clientFilter')   || '')
@@ -519,7 +516,7 @@ export default function TasksPage() {
     let isMounted = true
     async function load() {
       setLoading(true)
-      const [{ data: taskRows }, { data: projectRows }, { data: profileRows }, { data: settingsRow }] = await Promise.all([
+      const [{ data: taskRows }, { data: projectRows }, { data: profileRows }] = await Promise.all([
         supabase
           .from('tasks')
           .select(`
@@ -540,15 +537,9 @@ export default function TasksPage() {
           .from('profiles')
           .select('id, name, role')
           .order('name'),
-        supabase
-          .from('app_config')
-          .select('current_cycle')
-          .eq('id', 1)
-          .maybeSingle(),
       ])
       if (!isMounted) return
       setTasks(taskRows || [])
-      setCurrentCycle(settingsRow?.current_cycle || 'A')
       setProjects((projectRows || []).sort((a, b) => {
         const ca = a.client?.company || a.client?.alias || ''
         const cb = b.client?.company || b.client?.alias || ''
@@ -580,32 +571,6 @@ export default function TasksPage() {
     if (showMode === 'hide' && t.visible === false) return false
     return true
   })
-
-  // ── CYCLE COUNTS (text-filtered only, independent of execution button) ──────
-  const textFiltered = tasks.filter(t => {
-    if (!t.project_id) return false
-    if (clientFilter) {
-      const alias = (t.project?.client?.alias || t.project?.client?.company || '').toLowerCase()
-      if (!alias.includes(clientFilter.toLowerCase())) return false
-    }
-    if (projectFilter) {
-      const pname = (t.project?.name || '').toLowerCase()
-      if (!pname.includes(projectFilter.toLowerCase())) return false
-    }
-    return true
-  })
-  const cycleSeenIds  = new Set()
-  const cycleProjects = []
-  for (const t of textFiltered) {
-    if (!cycleSeenIds.has(t.project_id)) {
-      cycleSeenIds.add(t.project_id)
-      cycleProjects.push(t)
-    }
-  }
-  const cycleTotal     = cycleProjects.length
-  const cycleRemaining = cycleProjects.filter(
-    t => !t.project?.cycle_tag || t.project.cycle_tag !== currentCycle
-  ).length
 
   // ── SAVE ───────────────────────────────────────────────────────────────────
   async function toggleTaskVisible(taskId, currentVisible) {
@@ -648,14 +613,12 @@ export default function TasksPage() {
     return data
   }
 
-  // ── STAMP PROJECT CYCLE ────────────────────────────────────────────────────
-  async function stampProject(projectId) {
-    setTasks(ts => ts.map(t =>
-      t.project_id === projectId
-        ? { ...t, project: { ...t.project, cycle_tag: currentCycle } }
-        : t
-    ))
-    await supabase.from('projects').update({ cycle_tag: currentCycle }).eq('id', projectId)
+  // ── CYCLE DATE TOGGLE ─────────────────────────────────────────────────────
+  async function toggleCycleDate(taskId, currentCycleDate) {
+    const today = todayISO()
+    const newDate = currentCycleDate === today ? null : today
+    setTasks(ts => ts.map(t => t.id === taskId ? { ...t, cycle_date: newDate } : t))
+    await supabase.from('tasks').update({ cycle_date: newDate }).eq('id', taskId)
   }
 
   // ── DELETE ─────────────────────────────────────────────────────────────────
@@ -754,8 +717,7 @@ export default function TasksPage() {
     setHotHighlightId(null)
   }
 
-  async function handleRandomProject() {
-    // Text-filtered base set — respects client/project inputs, ignores execution button
+  function handleRandomProject() {
     const baseTasks = tasks.filter(t => {
       if (!t.project_id) return false
       if (clientFilter) {
@@ -769,65 +731,19 @@ export default function TasksPage() {
       return true
     })
 
-    // Unique project_ids where cycle_tag !== currentCycle (or null)
     const seenIds = new Set()
-    let pool = []
+    const pool = []
     for (const t of baseTasks) {
       if (!seenIds.has(t.project_id)) {
         seenIds.add(t.project_id)
-        if (!t.project?.cycle_tag || t.project.cycle_tag !== currentCycle) {
-          pool.push(t.project_id)
-        }
+        pool.push(t.project_id)
       }
     }
-
-    // Auto-advance cycle when pool is exhausted — but first verify every unique
-    // project in the visible set is actually stamped to guard against a premature advance
-    let activeCycle = currentCycle
-    let cycleAdvanced = false
-    if (pool.length === 0) {
-      // Re-derive unstamped projects directly from baseTasks as a gate
-      const gateChecked = new Set()
-      const unstampedPool = []
-      for (const t of baseTasks) {
-        if (!gateChecked.has(t.project_id)) {
-          gateChecked.add(t.project_id)
-          if (!t.project?.cycle_tag || t.project.cycle_tag !== currentCycle) {
-            unstampedPool.push(t.project_id)
-          }
-        }
-      }
-
-      if (unstampedPool.length > 0) {
-        // Some projects are not yet stamped — stay on current cycle, refill from them
-        pool = unstampedPool
-      } else {
-        // All stamped — safe to advance
-        activeCycle = activeCycle
-          ? String.fromCharCode(((activeCycle.charCodeAt(0) - 65 + 1) % 26) + 65)
-          : 'A'
-        await supabase.from('app_config').update({ current_cycle: activeCycle }).eq('id', 1)
-        setCurrentCycle(activeCycle)
-
-        // Refill from all visible projects for the new cycle
-        const seen2 = new Set()
-        pool = []
-        for (const t of baseTasks) {
-          if (!seen2.has(t.project_id)) {
-            seen2.add(t.project_id)
-            pool.push(t.project_id)
-          }
-        }
-        cycleAdvanced = true
-      }
-    }
-
     if (pool.length === 0) return
 
-    // Shuffle deck — ensures each project is shown once before repeating
     const poolSet = new Set(pool)
-    let deck = cycleAdvanced ? [] : projectDeck.filter(id => poolSet.has(id))
-    let pos  = cycleAdvanced ? 0  : projectDeckPos
+    let deck = projectDeck.filter(id => poolSet.has(id))
+    let pos  = projectDeckPos
 
     if (deck.length === 0 || pos >= deck.length) {
       deck = shuffle(pool)
@@ -926,17 +842,6 @@ export default function TasksPage() {
           </select>
         </div>
 
-        {currentCycle && (
-          <div style={{
-            padding: '4px 10px', borderRadius: 6,
-            border: '1px solid var(--border)', background: 'var(--bg2)',
-            fontSize: 12, fontWeight: 600, color: 'var(--text2)',
-            whiteSpace: 'nowrap', fontFamily: 'DM Mono, monospace',
-          }}>
-            {currentCycle} | {filtered.length} of {tasks.length}
-          </div>
-        )}
-
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <button style={execBtnStyle('All')}           onClick={handleAll}>All</button>
           <button style={execBtnStyle('RandomProject')} onClick={handleRandomProject}>Random Project Tasks</button>
@@ -1024,8 +929,7 @@ export default function TasksPage() {
                         onDragOver={e => handleDragOver(e, idx)}
                         onDrop={handleDrop}
                         highlighted={activeBtn === 'RandomHot' && task.id === hotHighlightId}
-                        currentCycle={currentCycle}
-                        onStamp={stampProject}
+                        onCycleToggle={toggleCycleDate}
                         onContext={handleContext}
                         isContext={contextTaskId === task.id}
                         onStartEdit={() => setEditingTaskId(task.id)}
