@@ -2,12 +2,13 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { GripVertical } from 'lucide-react'
 
-const CATEGORIES = ['Bank', 'Income', 'Expense']
+const CATEGORIES = ['Bank', 'Income', 'Expense', 'Debt']
 
 const CAT_COLORS = {
   Bank:    '#64c97a',
   Income:  '#b9dd67',
   Expense: '#ffb8b8',
+  Debt:    '#c4b5fd',
 }
 
 function fmt$(n) {
