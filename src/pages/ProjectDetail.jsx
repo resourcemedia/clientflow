@@ -495,7 +495,7 @@ function ProofDetailSection({ item, proof, userRole, onBack, onSave }) {
     setSubmitting(false)
   }
 
-  const isClient      = userRole === 'client' || userRole === 'client_team'
+  const isClient      = userRole === 'client_admin' || userRole === 'client_team'
   const isManager     = !isClient
   const hasProofLink  = !!(form.proof_link)
   const hasSocialMedia = !!(form.image_url || form.post_copy)

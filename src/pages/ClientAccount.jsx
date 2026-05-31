@@ -83,7 +83,7 @@ export default function ClientAccount() {
     const { data } = await supabase
       .from('profiles')
       .select('*')
-      .eq('role', 'client')
+      .eq('role', 'client_admin')
       .eq('client_id', id)
       .order('created_at', { ascending: true })
     if (data) {
@@ -161,7 +161,7 @@ export default function ClientAccount() {
     const result = await res.json()
     if (result.id) {
       const fullName = `${newAdmin.first} ${newAdmin.last}`.trim()
-      const created = { id: result.id, name: fullName, email: newAdmin.email, role: 'client', client_id: id }
+      const created = { id: result.id, name: fullName, email: newAdmin.email, role: 'client_admin', client_id: id }
       setProfiles(ps => [...ps, created])
       setProfileEdits(e => ({ ...e, [result.id]: { first: newAdmin.first, last: newAdmin.last } }))
       setNewAdmin({ first: '', last: '', email: '', password: '' })

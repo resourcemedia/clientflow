@@ -50,7 +50,7 @@ export default function Sidebar() {
   const [badges, setBadges] = useState({ projects: 0, proofs: 0, tasks: 0 })
 
   const role = profile?.role
-  const isClient = role === 'client' || role === 'client_admin' || role === 'client_team'
+  const isClient = role === 'client_admin' || role === 'client_team'
   const nav = isClient
     ? (role === 'client_team' ? CLIENT_NAV_BASE : CLIENT_ADMIN_NAV)
     : MANAGER_NAV

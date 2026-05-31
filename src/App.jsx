@@ -30,7 +30,7 @@ import ClientInvoices      from './pages/client/ClientInvoices'
 import ClientProjectsPage  from './pages/client/ClientProjects'
 import './styles.css'
 
-const CLIENT_ROLES = ['client', 'client_admin', 'client_team']
+const CLIENT_ROLES = ['client_admin', 'client_team']
 
 function ClientRoute({ children }) {
   const { user, profile, loading } = useAuth()

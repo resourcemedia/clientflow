@@ -31,14 +31,25 @@ Deno.serve(async (req) => {
       if (authError) throw authError
 
       const newUser = authData.user
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id:        newUser.id,
-        name:      `${firstName} ${lastName}`.trim(),
-        email,
-        role:      'client',
-        client_id: clientId,
-      })
-      if (profileError) throw profileError
+      try {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            name:      `${firstName} ${lastName}`.trim(),
+            email,
+            role:      'client_admin',
+            client_id: clientId,
+          })
+          .eq('id', newUser.id)
+        if (profileError) throw profileError
+      } catch (postCreateErr) {
+        try {
+          await supabase.auth.admin.deleteUser(newUser.id)
+        } catch (cleanupErr) {
+          console.error('Failed to roll back auth user after profile error:', cleanupErr)
+        }
+        throw postCreateErr
+      }
 
       return new Response(
         JSON.stringify({ id: newUser.id, email: newUser.email }),
