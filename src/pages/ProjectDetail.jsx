@@ -31,7 +31,7 @@ export default function ProjectDetailPage() {
   const [items, setItems]       = useState([])
   const [productMap, setProductMap] = useState({}) // { type: name }
   const [loading, setLoading]   = useState(true)
-  const [userRole, setUserRole] = useState('manager') // 'manager' | 'team' | 'client' | 'client_team'
+  const [userRole, setUserRole] = useState('client_admin') // 'manager' | 'client_admin' | 'client_team'
 
   // view state machine
   const [view, setView]                 = useState('items') // 'items' | 'proofs' | 'proof-detail'

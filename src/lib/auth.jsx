@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 
 const AuthContext = createContext(null)
-const DEFAULT_PROFILE = { id: null, role: 'manager', client_id: null, name: null }
+const DEFAULT_PROFILE = { id: null, role: 'client_admin', client_id: null, name: null }
 
 async function fetchProfile(userId, attempt = 1) {
   const { data, error } = await supabase
