@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
@@ -59,6 +59,54 @@ const STATUS_COLORS = {
   Collect: { bg: '#fde8e8', color: '#9c2a2a' },
   Paid:    { bg: '#e6f4e6', color: '#2a6b2a' },
   Overdue: { bg: '#fde8e8', color: '#9c2a2a' },
+}
+
+function NoteCell({ value, onSave }) {
+  const [editing, setEditing] = useState(false)
+  const [val, setVal] = useState(value ?? '')
+  const latest = useRef(value ?? '')
+
+  useEffect(() => { if (!editing) setVal(value ?? '') }, [value, editing])
+
+  useEffect(() => {
+    return () => {
+      const trimmed = latest.current.trim()
+      if (editing && trimmed !== (value ?? '')) onSave(trimmed)
+    }
+  }, [editing, value, onSave])
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={val}
+        onChange={e => { setVal(e.target.value); latest.current = e.target.value }}
+        onBlur={() => {
+          setEditing(false)
+          const trimmed = val.trim()
+          if (trimmed !== (value ?? '')) onSave(trimmed)
+        }}
+        onKeyDown={e => {
+          if (e.key === 'Enter') e.target.blur()
+          if (e.key === 'Escape') { setVal(value ?? ''); setEditing(false) }
+        }}
+        style={{
+          width: '100%', fontSize: 12, color: 'var(--text2)',
+          background: 'var(--bg3)', border: '1px solid var(--accent)',
+          borderRadius: 4, padding: '3px 6px', outline: 'none',
+        }}
+      />
+    )
+  }
+
+  return (
+    <span
+      onClick={() => { setVal(value ?? ''); setEditing(true) }}
+      style={{ cursor: 'text', display: 'block', fontSize: 12, color: value ? 'var(--text2)' : 'var(--text3)', padding: '3px 6px' }}
+    >
+      {value || 'Add note…'}
+    </span>
+  )
 }
 
 export default function BillingPage() {
@@ -313,24 +361,12 @@ export default function BillingPage() {
                           )}
                         </td>
                         <td>
-                          <input
-                            defaultValue={inv.notes || ''}
-                            placeholder="Add note..."
-                            onBlur={e => {
-                              const val = e.target.value
-                              if (val !== (inv.notes || '')) {
-                                setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, notes: val } : i))
-                                supabase.from('invoices').update({ notes: val }).eq('id', inv.id)
-                              }
+                          <NoteCell
+                            value={inv.notes || ''}
+                            onSave={val => {
+                              setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, notes: val } : i))
+                              supabase.from('invoices').update({ notes: val }).eq('id', inv.id)
                             }}
-                            style={{
-                              width: '100%', fontSize: 12, color: 'var(--text2)',
-                              background: 'transparent', border: '1px solid transparent',
-                              borderRadius: 4, padding: '3px 6px', outline: 'none',
-                              transition: 'border-color 0.15s',
-                            }}
-                            onFocus={e => { e.target.style.borderColor = 'var(--border)' }}
-                            onBlurCapture={e => { e.target.style.borderColor = 'transparent' }}
                           />
                         </td>
                         <td>
