@@ -17,6 +17,7 @@ import { CampaignsPage } from './pages/Placeholders'
 import BillingPage from './pages/Billing'
 import InvoiceWorksheet from './pages/InvoiceWorksheet'
 import InvoicePrint from './pages/InvoicePrint'
+import TasksPrint   from './pages/TasksPrint'
 import TimeboardPage from './pages/Timeboard'
 import CashFlowPage from './pages/CashFlow'
 import ClientAccount from './pages/ClientAccount'
@@ -82,6 +83,7 @@ function AppShell() {
           <Route path="/calendar"            element={<CalendarPage />} />
           <Route path="/proofs"              element={<ProofsPage />} />
           <Route path="/tasks"               element={<TasksPage />} />
+          <Route path="/tasks/print"         element={<TasksPrint />} />
           <Route path="/timeboard"           element={<TimeboardPage />} />
           <Route path="/billing"             element={<BillingPage />} />
           <Route path="/invoices/:id"          element={<InvoiceWorksheet />} />

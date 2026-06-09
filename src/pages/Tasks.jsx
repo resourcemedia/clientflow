@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Breadcrumb } from '../components/ui'
 
@@ -480,6 +480,7 @@ function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onContext,
 export default function TasksPage() {
   useEffect(() => { document.title = 'Tasks' }, [])
   const location = useLocation()
+  const navigate = useNavigate()
 
   const [tasks,        setTasks]        = useState([])
   const [projects,     setProjects]     = useState([])
@@ -919,6 +920,10 @@ export default function TasksPage() {
               }}
             >Hide</button>
           </div>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => navigate('/tasks/print', { state: { tasks: filtered, profiles } })}
+          >View</button>
           <button
             className="btn btn-primary"
             onClick={() => addNewRow(unassignedProject?.id)}

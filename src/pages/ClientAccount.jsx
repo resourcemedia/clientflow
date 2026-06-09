@@ -288,6 +288,23 @@ export default function ClientAccount() {
                         <div style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>{pwError[profile.id]}</div>
                       )}
                     </div>
+
+                    {/* Role (read-only) */}
+                    <div style={{ marginTop: 12 }}>
+                      <label style={labelStyle}>Role</label>
+                      {profile.role === 'client_admin' && (
+                        <div style={{ ...inputStyle, background: 'var(--bg2)', color: 'var(--text3)' }}>Admin</div>
+                      )}
+                      {profile.role === 'client_team' && (
+                        <div style={{ ...inputStyle, background: 'var(--bg2)', color: 'var(--text3)' }}>Team</div>
+                      )}
+                      {profile.role === 'manager' && (
+                        <div style={{ ...inputStyle, background: 'var(--bg2)', color: '#EF4444', fontWeight: 700 }}>⚠️ MANAGER (unexpected)</div>
+                      )}
+                      {profile.role !== 'client_admin' && profile.role !== 'client_team' && profile.role !== 'manager' && (
+                        <div style={{ ...inputStyle, background: 'var(--bg2)', color: '#EF4444' }}>{profile.role}</div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
