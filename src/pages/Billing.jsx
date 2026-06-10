@@ -75,19 +75,21 @@ function NoteCell({ value, onSave }) {
     }
   }, [editing, value, onSave])
 
+  const commit = () => {
+    setEditing(false)
+    const trimmed = val.trim()
+    if (trimmed !== (value ?? '')) onSave(trimmed)
+  }
+
   if (editing) {
     return (
       <input
         autoFocus
         value={val}
         onChange={e => { setVal(e.target.value); latest.current = e.target.value }}
-        onBlur={() => {
-          setEditing(false)
-          const trimmed = val.trim()
-          if (trimmed !== (value ?? '')) onSave(trimmed)
-        }}
+        onBlur={commit}
         onKeyDown={e => {
-          if (e.key === 'Enter') e.target.blur()
+          if (e.key === 'Enter') { e.preventDefault(); commit() }
           if (e.key === 'Escape') { setVal(value ?? ''); setEditing(false) }
         }}
         style={{
