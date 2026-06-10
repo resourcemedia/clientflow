@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
@@ -61,41 +61,34 @@ const STATUS_COLORS = {
   Overdue: { bg: '#fde8e8', color: '#9c2a2a' },
 }
 
-function NoteCell({ value, onSave }) {
+function EditableCell({ value, onSave, placeholder, width, mono, type = 'text', min, max }) {
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(value ?? '')
-  const latest = useRef(value ?? '')
 
   useEffect(() => { if (!editing) setVal(value ?? '') }, [value, editing])
-
-  useEffect(() => {
-    return () => {
-      const trimmed = latest.current.trim()
-      if (editing && trimmed !== (value ?? '')) onSave(trimmed)
-    }
-  }, [editing, value, onSave])
-
-  const commit = () => {
-    setEditing(false)
-    const trimmed = val.trim()
-    if (trimmed !== (value ?? '')) onSave(trimmed)
-  }
 
   if (editing) {
     return (
       <input
         autoFocus
+        type={type}
+        min={min}
+        max={max}
         value={val}
-        onChange={e => { setVal(e.target.value); latest.current = e.target.value }}
-        onBlur={commit}
+        onChange={e => setVal(e.target.value)}
+        onBlur={() => {
+          setEditing(false)
+          const trimmed = type === 'text' ? val.trim() : val
+          if (trimmed !== (value ?? '')) onSave(trimmed)
+        }}
         onKeyDown={e => {
-          if (e.key === 'Enter') { e.preventDefault(); commit() }
+          if (e.key === 'Enter') e.target.blur()
           if (e.key === 'Escape') { setVal(value ?? ''); setEditing(false) }
         }}
         style={{
-          width: '100%', fontSize: 12, color: 'var(--text2)',
-          background: 'var(--bg3)', border: '1px solid var(--accent)',
-          borderRadius: 4, padding: '3px 6px', outline: 'none',
+          width: width || '100%', background: 'var(--bg3)', border: '1px solid var(--accent)',
+          borderRadius: 4, padding: '2px 6px', fontSize: 13, outline: 'none',
+          fontFamily: mono ? 'DM Mono, monospace' : 'inherit',
         }}
       />
     )
@@ -104,9 +97,12 @@ function NoteCell({ value, onSave }) {
   return (
     <span
       onClick={() => { setVal(value ?? ''); setEditing(true) }}
-      style={{ cursor: 'text', display: 'block', fontSize: 12, color: value ? 'var(--text2)' : 'var(--text3)', padding: '3px 6px' }}
+      style={{
+        cursor: 'text', display: 'inline-block', minWidth: 32, minHeight: 20,
+        fontFamily: mono ? 'DM Mono, monospace' : 'inherit',
+      }}
     >
-      {value || 'Add note…'}
+      {value != null && value !== '' ? value : <span style={{ color: 'var(--text3)', fontSize: 12 }}>{placeholder || '—'}</span>}
     </span>
   )
 }
@@ -215,6 +211,11 @@ export default function BillingPage() {
     await supabase.from('invoice_items').delete().eq('invoice_id', inv.id)
     await supabase.from('invoices').delete().eq('id', inv.id)
     setInvoices(prev => prev.filter(i => i.id !== inv.id))
+  }
+
+  async function saveInvoiceField(id, updates) {
+    setInvoices(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i))
+    await supabase.from('invoices').update(updates).eq('id', id)
   }
 
   return (
@@ -363,12 +364,10 @@ export default function BillingPage() {
                           )}
                         </td>
                         <td>
-                          <NoteCell
+                          <EditableCell
                             value={inv.notes || ''}
-                            onSave={val => {
-                              setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, notes: val } : i))
-                              supabase.from('invoices').update({ notes: val }).eq('id', inv.id)
-                            }}
+                            onSave={v => saveInvoiceField(inv.id, { notes: v })}
+                            placeholder="Add note…"
                           />
                         </td>
                         <td>
