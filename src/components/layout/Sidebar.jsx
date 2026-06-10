@@ -13,6 +13,7 @@ const MANAGER_NAV = [
   { to: '/tasks',     label: 'Tasks',                  icon: TasksIcon,   badgeKey: 'tasks', badgeWarn: true },
   { to: '/calendar',  label: 'Calendar',               icon: CalendarIcon },
   { to: '/timeboard', label: 'Time board',             icon: ClockIcon },
+  { to: '/pace',      label: 'Pace',                   icon: PaceIcon },
   { to: '/billing',   label: 'Invoices',               icon: DollarIcon },
   { to: '/products',  label: 'Products',               icon: ProductsIcon },
   { to: '/cashflow',  label: 'Cash Flow',              icon: CashFlowIcon },
@@ -233,5 +234,11 @@ function CashFlowIcon(props) {
     <line x1="2" y1="10" x2="22" y2="10"/>
     <line x1="6" y1="15" x2="10" y2="15"/>
     <line x1="14" y1="15" x2="18" y2="15"/>
+  </svg>
+}
+function PaceIcon(props) {
+  return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+    <polyline points="17 6 23 6 23 12"/>
   </svg>
 }

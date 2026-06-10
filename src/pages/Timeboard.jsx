@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import { windowStats, computeAnnualProjection } from '../lib/projections'
+import { toLocalISO, todayISO, calcHoursFromTimes, enrichEntries } from '../lib/timeentries'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 
@@ -20,18 +22,12 @@ const TIME_SLOTS = Array.from({ length: 288 }, (_, i) => {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 })
 
+// Annual break-even target — the yearly billable you're aiming to clear.
+// Placeholder; set to your real number (later: move to app_config to edit in-app).
+const ANNUAL_BREAKEVEN = 55000
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function toLocalISO(d) {
-  return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-')
-}
-function todayISO() { return toLocalISO(new Date()) }
-
-function calcHoursFromTimes(start, end) {
-  if (!start || !end) return 0
-  const toMins = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
-  return Math.max(0, (toMins(end) - toMins(start)) / 60)
-}
 
 // Format for expanded view: no zero-pad on minutes ("9:5 am")
 function fmtSlotTime(slot) {
@@ -95,31 +91,6 @@ function fmtHours(n) {
   return Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-// Enrich entries with computed outTime, hours, billableAmt, invoiceAmt
-// outTime priority: stored end_time → next entry's start_time → '24:00' (past date) → null (today, open).
-function enrichEntries(entries) {
-  const today = todayISO()
-  const byDate = {}
-  entries.forEach(e => { if (!byDate[e.date]) byDate[e.date] = []; byDate[e.date].push(e) })
-  const result = []
-  Object.values(byDate).forEach(day => {
-    const sorted = [...day].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''))
-    sorted.forEach((entry, i) => {
-      const isLast   = i === sorted.length - 1
-      const isActive = isLast && entry.date === today
-      const outTime  = entry.end_time || sorted[i + 1]?.start_time || (entry.date < today ? '24:00' : null)
-      const hours    = calcHoursFromTimes(entry.start_time, outTime)
-      const isPrimary   = entry.project?.category === 'primary'
-      const isBillable  = entry.is_billable === true || (entry.is_billable === null && isPrimary)
-      const roundedHours = Math.round(hours * 100) / 100
-      const billableAmt = isBillable ? roundedHours * (entry.hourly_rate || 0) : 0
-      const invoiceAmt  = (isBillable && (entry.invoice_number == null || entry.invoice_number === '')) ? roundedHours * (entry.hourly_rate || 0) : 0
-      if (result.length === 0) console.log('[DEBUG enrichEntries] first entry:', { id: entry.id, is_billable: entry.is_billable, is_billable_type: typeof entry.is_billable, hourly_rate: entry.hourly_rate, hours, billableAmt, invoiceAmt, isActive })
-      result.push({ ...entry, outTime, hours, billableAmt, invoiceAmt, isActive })
-    })
-  })
-  return result
-}
 
 // ── Summary Tiles ──────────────────────────────────────────────────────────────
 
@@ -153,6 +124,35 @@ function SummaryTiles({ entries }) {
       <Tile label="Charity"    value={fmtHours(by('charity').reduce((s,e)=>s+(e.hours||0),0))}    color={CATEGORY_COLORS.charity}    />
       <Tile label="Personal"   value={fmtHours(by('personal').reduce((s,e)=>s+(e.hours||0),0))}   color={CATEGORY_COLORS.personal}   />
       <Tile label="Total"      value={fmtHours(totalHours)}                         color="#d1d5db"                    />
+    </div>
+  )
+}
+
+// ── Daily Gauge ───────────────────────────────────────────────────────────────
+
+function DailyGauge({ pace, breakeven, billable }) {
+  const ceiling = breakeven * 1.75
+  const pct   = Math.max(0, Math.min(1, ceiling > 0 ? pace / ceiling : 0))
+  const bePct = ceiling > 0 ? breakeven / ceiling : 0
+  const over  = pace >= breakeven
+  const color = over ? '#16a34a' : '#dc2626'
+  const usd = n => '$' + Math.round(n || 0).toLocaleString('en-US')
+  return (
+    <div className="card" style={{ padding: '12px 16px', marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text3)' }}>Today's Pace</span>
+        <span style={{ fontSize: 22, fontWeight: 800, fontFamily: 'DM Mono, monospace', color }}>
+          {usd(pace)}<span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text3)' }}> /yr</span>
+        </span>
+      </div>
+      <div style={{ position: 'relative', height: 14, borderRadius: 7, background: 'var(--bg3)', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: (pct * 100) + '%', background: color, transition: 'width 0.3s ease' }} />
+        <div style={{ position: 'absolute', left: (bePct * 100) + '%', top: 0, bottom: 0, width: 2, background: 'var(--text)', transform: 'translateX(-1px)' }} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: 'var(--text3)' }}>
+        <span>Billable today: <strong style={{ color: 'var(--text)' }}>{usd(billable)}</strong></span>
+        <span>Break-even: <strong style={{ color: 'var(--text)' }}>{usd(breakeven)} /yr</strong></span>
+      </div>
     </div>
   )
 }
@@ -1007,22 +1007,7 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
 // ── Annual Projection ─────────────────────────────────────────────────────────
 
 function AnnualProjection({ ytdEnriched, sevenAvg, twentyEightAvg }) {
-  const now = new Date()
-  const daysPassed = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000)
-  const totalDays = new Date(now.getFullYear(), 1, 29).getMonth() === 1 ? 366 : 365
-  const daysLeft = totalDays - daysPassed
-
-  const ytdTtl = ytdEnriched.reduce((s, e) => s + (e.billableAmt || 0), 0)
-  const A = daysPassed > 0 ? ytdTtl / daysPassed : 0
-  const B = twentyEightAvg
-  const C = sevenAvg
-
-  const D = A * totalDays
-  const E = A * daysPassed + B * daysLeft
-  const F = A * daysPassed + C * daysLeft
-  const G = A * 365
-  const H = B * 365
-  const I = C * 365
+  const { A, B, C, D, E, F, G, H, I } = computeAnnualProjection({ ytdEnriched, sevenAvg, twentyEightAvg })
 
   function fmtUSD(n) {
     return '$' + Math.round(n || 0).toLocaleString('en-US')
@@ -1131,24 +1116,9 @@ function RollingStats() {
   const enriched    = useMemo(() => enrichEntries(statsEntries), [statsEntries])
   const ytdEnriched = useMemo(() => enrichEntries(ytdEntries),   [ytdEntries])
 
-  function windowStats(days) {
-    const today = todayISO()
-    const d = new Date(today + 'T00:00:00')
-    d.setDate(d.getDate() - days)
-    const startISO = toLocalISO(d)
-    const win = enriched.filter(e => e.date >= startISO && e.date < today)
-    const billTtl = win.reduce((s, e) => s + (e.billableAmt || 0), 0)
-    const invTtl  = win.filter(e => e.invoice_number).reduce((s, e) => s + (e.billableAmt || 0), 0)
-    const hrsTtl  = billTtl / 100
-    return {
-      hrsTtl,  hrsAvg:  hrsTtl  / days,
-      billTtl, billAvg: billTtl / days,
-      invTtl,  invAvg:  invTtl  / days,
-    }
-  }
-
-  const stats7  = windowStats(7)
-  const stats28 = windowStats(28)
+  const today   = todayISO()
+  const stats7  = windowStats(enriched, 7, today)
+  const stats28 = windowStats(enriched, 28, today)
 
   return (
     <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -1284,6 +1254,11 @@ export default function TimeboardPage() {
 
   const expandedDate = dateMode === 'today' ? todayISO() : (dateStart || todayISO())
 
+  const todayBillable = useMemo(() => {
+    const t = todayISO()
+    return enrichedEntries.reduce((s, e) => (e.date === t ? s + (e.billableAmt || 0) : s), 0)
+  }, [enrichedEntries])
+
   return (
     <div className="fade-in">
       {/* ── topbar ── */}
@@ -1309,6 +1284,10 @@ export default function TimeboardPage() {
           ? <div style={{ color: 'var(--text3)', fontSize: 13, marginBottom: 16 }}>Loading…</div>
           : <SummaryTiles entries={displayRows} />
         }
+
+        {!loading && dateMode === 'today' && (
+          <DailyGauge pace={todayBillable * 365} breakeven={ANNUAL_BREAKEVEN} billable={todayBillable} />
+        )}
 
         {/* ── filter bar ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
