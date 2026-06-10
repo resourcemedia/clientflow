@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { toLocalISO, todayISO, enrichEntries } from '../lib/timeentries'
 import { windowStats, computeAnnualProjection, buildYearEndSeries, buildRunRateSeries } from '../lib/projections'
+import { usePaceTargets } from '../lib/config'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 const SELECT = '*, project:projects(id, name, project_number, category, client:clients(id, company, alias))'
@@ -14,6 +15,7 @@ function fmtTipDate(ms) { return new Date(ms).toLocaleDateString('en-US', { mont
 
 export default function PacePage() {
   useEffect(() => { document.title = 'Pace' }, [])
+  const { goal } = usePaceTargets()
   const [statsEntries, setStatsEntries] = useState([])
   const [ytdEntries,   setYtdEntries]   = useState([])
   const [loading,      setLoading]      = useState(true)
@@ -70,6 +72,7 @@ export default function PacePage() {
                 { value: '28-day pace', type: 'line', id: 'proj28',  color: '#BA7517' },
                 { value: '7-day pace',  type: 'line', id: 'proj7',   color: '#D85A30' },
               ]} />
+              <ReferenceLine y={goal} stroke="#16a34a" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: 'Goal', position: 'insideTopRight', fill: '#16a34a', fontSize: 11 }} />
               <Line type="linear" dataKey="banked"  name="Banked"      stroke="#185FA5" strokeWidth={2}   dot={false} connectNulls={false} isAnimationActive={false} />
               <Line type="linear" dataKey="ytdProj" name="YTD pace"    stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="5 4" dot={false} connectNulls={false} isAnimationActive={false} />
               <Line type="linear" dataKey="proj28"  name="28-day pace" stroke="#BA7517" strokeWidth={1.5} strokeDasharray="5 4" dot={false} connectNulls={false} isAnimationActive={false} />
