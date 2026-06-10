@@ -119,10 +119,12 @@ export default function BillingPage() {
   const [fNumber,    setFNumber]    = useState('')
   const [fAmt,       setFAmt]       = useState('')
   const [fStatus,    setFStatus]    = useState('')
+  const [scope, setScope] = useState(() => localStorage.getItem('invoiceScope') || 'open')
 
   const [editingSentId, setEditingSentId] = useState(null)
 
   useEffect(() => { load() }, [])
+  useEffect(() => { localStorage.setItem('invoiceScope', scope) }, [scope])
 
   async function load() {
     setLoading(true)
@@ -145,11 +147,13 @@ export default function BillingPage() {
         if (needle && !String(inv.amount || '').includes(needle)) return false
       }
       if (fStatus && inv.status !== fStatus) return false
+      if (scope === 'open' && inv.status === 'Paid') return false
       return true
     })
-  }, [invoices, fDateStart, fDateEnd, fClient, fNumber, fAmt, fStatus])
+  }, [invoices, fDateStart, fDateEnd, fClient, fNumber, fAmt, fStatus, scope])
 
   const total = displayed.reduce((s, i) => s + (i.amount || 0), 0)
+  const unpaidTotal = invoices.reduce((s, i) => (i.status !== 'Paid' ? s + (i.amount || 0) : s), 0)
 
   async function handleDuplicate(inv) {
     const { data: items } = await supabase
@@ -279,9 +283,31 @@ export default function BillingPage() {
               Clear
             </button>
           )}
-          <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text3)' }}>
-            {displayed.length} invoice{displayed.length !== 1 ? 's' : ''}
-          </span>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'inline-flex', border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden', height: 28 }}>
+              {['open', 'all'].map(s => (
+                <button
+                  key={s}
+                  onClick={() => setScope(s)}
+                  title={s === 'open' ? 'Show unpaid invoices only' : 'Show all invoices'}
+                  style={{
+                    padding: '0 12px', height: 28, fontSize: 12, fontWeight: 600,
+                    border: 'none', cursor: 'pointer',
+                    background: scope === s ? 'var(--text2)' : 'transparent',
+                    color: scope === s ? 'var(--bg)' : 'var(--text2)',
+                  }}
+                >
+                  {s === 'open' ? 'Open' : 'All'}
+                </button>
+              ))}
+            </div>
+            <span style={{ fontSize: 12, color: 'var(--text3)' }}>
+              Unpaid <span style={{ fontWeight: 700, color: 'var(--text)' }}>{fmt$(unpaidTotal)}</span>
+            </span>
+            <span style={{ fontSize: 12, color: 'var(--text3)' }}>
+              {displayed.length} invoice{displayed.length !== 1 ? 's' : ''}
+            </span>
+          </div>
         </div>
 
         <div className="card">
