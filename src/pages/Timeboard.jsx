@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { windowStats, computeAnnualProjection } from '../lib/projections'
 import { toLocalISO, todayISO, calcHoursFromTimes, enrichEntries } from '../lib/timeentries'
+import { usePaceTargets } from '../lib/config'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 
@@ -21,10 +22,6 @@ const TIME_SLOTS = Array.from({ length: 288 }, (_, i) => {
   const m = (i % 12) * 5
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 })
-
-// Annual break-even target — the yearly billable you're aiming to clear.
-// Placeholder; set to your real number (later: move to app_config to edit in-app).
-const ANNUAL_BREAKEVEN = 55000
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -130,28 +127,41 @@ function SummaryTiles({ entries }) {
 
 // ── Daily Gauge ───────────────────────────────────────────────────────────────
 
-function DailyGauge({ pace, breakeven, billable }) {
-  const ceiling = breakeven * 1.75
-  const pct   = Math.max(0, Math.min(1, ceiling > 0 ? pace / ceiling : 0))
-  const bePct = ceiling > 0 ? breakeven / ceiling : 0
-  const over  = pace >= breakeven
-  const color = over ? '#16a34a' : '#dc2626'
+function DailyGauge({ pace, breakEven, goal, stretch, billable }) {
   const usd = n => '$' + Math.round(n || 0).toLocaleString('en-US')
+  const ceiling = stretch > 0 ? stretch : (goal || breakEven || 1)
+  const clamp = v => Math.max(0, Math.min(1, v / ceiling))
+  const zoneColor =
+    pace >= goal      ? '#16a34a' :
+    pace >= breakEven ? '#5b9bd5' :
+                        '#dc2626'
+  const segRed   = clamp(Math.min(pace, breakEven))
+  const segBlue  = clamp(Math.min(pace, goal))    - clamp(Math.min(pace, breakEven))
+  const segGreen = clamp(Math.min(pace, stretch)) - clamp(Math.min(pace, goal))
+  const bePct    = clamp(breakEven)
+  const goalPct  = clamp(goal)
   return (
     <div className="card" style={{ padding: '12px 16px', marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
         <span style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text3)' }}>Today's Pace</span>
-        <span style={{ fontSize: 22, fontWeight: 800, fontFamily: 'DM Mono, monospace', color }}>
+        <span style={{ fontSize: 22, fontWeight: 800, fontFamily: 'DM Mono, monospace', color: zoneColor }}>
           {usd(pace)}<span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text3)' }}> /yr</span>
         </span>
       </div>
       <div style={{ position: 'relative', height: 14, borderRadius: 7, background: 'var(--bg3)', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: (pct * 100) + '%', background: color, transition: 'width 0.3s ease' }} />
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: (segRed * 100) + '%', background: '#dc2626', transition: 'width 0.3s ease' }} />
+        <div style={{ position: 'absolute', left: (segRed * 100) + '%', top: 0, bottom: 0, width: (segBlue * 100) + '%', background: '#5b9bd5', transition: 'all 0.3s ease' }} />
+        <div style={{ position: 'absolute', left: ((segRed + segBlue) * 100) + '%', top: 0, bottom: 0, width: (segGreen * 100) + '%', background: '#16a34a', transition: 'all 0.3s ease' }} />
         <div style={{ position: 'absolute', left: (bePct * 100) + '%', top: 0, bottom: 0, width: 2, background: 'var(--text)', transform: 'translateX(-1px)' }} />
+        <div style={{ position: 'absolute', left: (goalPct * 100) + '%', top: 0, bottom: 0, width: 2, background: 'var(--text)', transform: 'translateX(-1px)' }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: 'var(--text3)' }}>
         <span>Billable today: <strong style={{ color: 'var(--text)' }}>{usd(billable)}</strong></span>
-        <span>Break-even: <strong style={{ color: 'var(--text)' }}>{usd(breakeven)} /yr</strong></span>
+        <span>
+          <span style={{ marginRight: 10 }}>Break-even <strong style={{ color: 'var(--text)' }}>{usd(breakEven)}</strong></span>
+          <span style={{ marginRight: 10 }}>Goal <strong style={{ color: 'var(--text)' }}>{usd(goal)}</strong></span>
+          <span>Stretch <strong style={{ color: 'var(--text)' }}>{usd(stretch)}</strong></span>
+        </span>
       </div>
     </div>
   )
@@ -1133,6 +1143,7 @@ function RollingStats() {
 
 export default function TimeboardPage() {
   useEffect(() => { document.title = 'Time Board' }, [])
+  const paceTargets = usePaceTargets()
   const { user } = useAuth()
   const [view, setView]       = useState(() => localStorage.getItem('timeboard_view') || 'expanded')
   const [entries, setEntries] = useState([])
@@ -1286,7 +1297,7 @@ export default function TimeboardPage() {
         }
 
         {!loading && dateMode === 'today' && (
-          <DailyGauge pace={todayBillable * 365} breakeven={ANNUAL_BREAKEVEN} billable={todayBillable} />
+          <DailyGauge pace={todayBillable * 365} breakEven={paceTargets.breakEven} goal={paceTargets.goal} stretch={paceTargets.stretch} billable={todayBillable} />
         )}
 
         {/* ── filter bar ── */}
