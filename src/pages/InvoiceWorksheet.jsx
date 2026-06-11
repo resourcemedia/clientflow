@@ -29,6 +29,16 @@ function PlusIcon() {
   )
 }
 
+function GripIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+      <circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/>
+      <circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/>
+      <circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/>
+    </svg>
+  )
+}
+
 const inp = {
   padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)',
   background: 'var(--bg2)', color: 'var(--text)', fontSize: 13,
@@ -89,6 +99,8 @@ export default function InvoiceWorksheet() {
   })
 
   const [items, setItems] = useState([])
+  const [dragIdx, setDragIdx]         = useState(null)
+  const [dragOverIdx, setDragOverIdx] = useState(null)
 
   useEffect(() => { load() }, [id])
 
@@ -102,7 +114,7 @@ export default function InvoiceWorksheet() {
         .select('id,company,billing_address1,billing_address2,billing_city,billing_state,billing_zip,billing_first_name,billing_last_name')
         .order('company'),
       supabase.from('projects').select('id,project_number,name,client_id').order('name'),
-      supabase.from('invoice_items').select('*').eq('invoice_id', id).order('id'),
+      supabase.from('invoice_items').select('*').eq('invoice_id', id).order('sort_order', { ascending: true }).order('id', { ascending: true }),
     ])
     if (inv) {
       setForm({
@@ -165,6 +177,27 @@ export default function InvoiceWorksheet() {
     setItems(prev => prev.map(i => i._key === key ? { ...i, [field]: value } : i))
   }
 
+  function handleDragStart(e, idx) {
+    e.dataTransfer.effectAllowed = 'move'
+    setDragIdx(idx)
+  }
+  function handleDragOver(e, idx) {
+    e.preventDefault()
+    setDragOverIdx(idx)
+  }
+  function handleDrop(toIdx) {
+    if (dragIdx === null || dragIdx === toIdx) { setDragIdx(null); setDragOverIdx(null); return }
+    setItems(prev => {
+      const reordered = [...prev]
+      const [moved] = reordered.splice(dragIdx, 1)
+      reordered.splice(toIdx, 0, moved)
+      return reordered
+    })
+    setDragIdx(null)
+    setDragOverIdx(null)
+  }
+  function handleDragEnd() { setDragIdx(null); setDragOverIdx(null) }
+
   const total = items.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0)
 
   async function save() {
@@ -186,12 +219,13 @@ export default function InvoiceWorksheet() {
     await supabase.from('invoice_items').delete().eq('invoice_id', id)
     if (items.length > 0) {
       await supabase.from('invoice_items').insert(
-        items.map(item => ({
+        items.map((item, idx) => ({
           invoice_id:  id,
           project_id:  item.project_id  || null,
           description: item.description || '',
           date_range:  item.date_range  || '',
           amount:      parseFloat(item.amount) || 0,
+          sort_order:  idx,
         }))
       )
     }
@@ -294,6 +328,7 @@ export default function InvoiceWorksheet() {
           <div className="table-wrap">
             <table style={{ tableLayout: 'fixed', width: '100%' }}>
               <colgroup>
+                <col style={{ width: 32 }} />
                 <col style={{ width: 210 }} />
                 <col />
                 <col style={{ width: 140 }} />
@@ -302,6 +337,7 @@ export default function InvoiceWorksheet() {
               </colgroup>
               <thead>
                 <tr>
+                  <th />
                   <th>Project</th>
                   <th>Description</th>
                   <th>Date Range</th>
@@ -316,12 +352,31 @@ export default function InvoiceWorksheet() {
               <tbody>
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', padding: 28, color: 'var(--text3)', fontSize: 13 }}>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: 28, color: 'var(--text3)', fontSize: 13 }}>
                       No line items — click + to add
                     </td>
                   </tr>
-                ) : items.map(item => (
-                  <tr key={item._key}>
+                ) : items.map((item, idx) => (
+                  <tr
+                    key={item._key}
+                    onDragOver={e => handleDragOver(e, idx)}
+                    onDrop={() => handleDrop(idx)}
+                    style={{
+                      opacity: dragIdx === idx ? 0.4 : 1,
+                      outline: dragOverIdx === idx && dragIdx !== null && dragIdx !== idx ? '2px solid var(--accent)' : undefined,
+                    }}
+                  >
+                    <td style={{ textAlign: 'center' }}>
+                      <span
+                        draggable
+                        onDragStart={e => handleDragStart(e, idx)}
+                        onDragEnd={handleDragEnd}
+                        style={{ display: 'inline-flex', cursor: 'grab', color: 'var(--text3)' }}
+                        title="Drag to reorder"
+                      >
+                        <GripIcon />
+                      </span>
+                    </td>
                     <td>
                       <select
                         style={{ ...inpSm, width: '100%' }}
@@ -377,7 +432,7 @@ export default function InvoiceWorksheet() {
               </tbody>
               <tfoot>
                 <tr style={{ borderTop: '2px solid var(--border2)' }}>
-                  <td colSpan={3} style={{ padding: '10px 16px', fontSize: 12, color: 'var(--text3)', fontWeight: 500, textAlign: 'right' }}>
+                  <td colSpan={4} style={{ padding: '10px 16px', fontSize: 12, color: 'var(--text3)', fontWeight: 500, textAlign: 'right' }}>
                     Total
                   </td>
                   <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 700, color: 'var(--text)', fontSize: 13, fontFamily: 'DM Mono, monospace' }}>

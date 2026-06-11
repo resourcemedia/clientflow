@@ -37,7 +37,7 @@ export default function InvoicePrint() {
         supabase.from('invoice_items')
           .select('*, project:projects(id, project_number, name)')
           .eq('invoice_id', id)
-          .order('id'),
+          .order('sort_order', { ascending: true }).order('id', { ascending: true }),
       ])
       setInvoice(inv)
       setItems(it || [])
