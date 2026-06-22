@@ -668,7 +668,7 @@ ${groupsHtml}
 const TH = { padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--text3)', letterSpacing: '0.06em', textTransform: 'uppercase', borderBottom: '2px solid var(--border2)', whiteSpace: 'nowrap', textAlign: 'left' }
 const TD = { padding: '7px 10px', fontSize: 13, verticalAlign: 'middle', borderBottom: '1px solid var(--border)' }
 
-function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onOpenBreakdown }) {
+function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onOpenBreakdown, onEntryDelete }) {
   const [addRow, setAddRow]       = useState({ date: todayISO(), inTime: '', description: '' })
   const [addProject, setAddProject]         = useState(null)
   const [editAddProject, setEditAddProject] = useState(false)
@@ -753,6 +753,13 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
       .eq('id', entry.id).select(sel).single()
     if (data) onEntryChange(data)
     setEditingProjectId(null)
+  }
+
+  async function deleteEntry(row) {
+    if (!window.confirm('Delete this time entry? This cannot be undone.')) return
+    const { error } = await supabase.from('time_entries').delete().eq('id', row.id)
+    if (error) { console.error('Delete entry error:', error); return }
+    onEntryDelete(row.id)
   }
 
   async function handleAddSave() {
@@ -842,6 +849,7 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
               <th style={{ ...TH, width: 90, textAlign: 'center' }}>Date</th>
               <th style={{ ...TH, width: 60, textAlign: 'center' }}>Week</th>
               <th style={{ ...TH, width: 90 }}>Invoice No.</th>
+              <th style={{ ...TH, width: 40, textAlign: 'center' }}></th>
             </tr>
           </thead>
           <tbody>
@@ -933,6 +941,15 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
                       align="center"
                     />
                   </td>
+                  <td style={{ ...rowStyle, textAlign: 'center' }}>
+                    <button onClick={() => deleteEntry(row)} title="Delete entry"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text3)', display: 'inline-flex', alignItems: 'center' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                  </td>
                 </tr>
               )
             })}
@@ -991,6 +1008,7 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
                   {saving ? '…' : 'Save'}
                 </button>
               </td>
+              <td style={TD} />
             </tr>
           </tbody>
 
@@ -1003,6 +1021,7 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
               <td style={TD} />
               <td style={{ ...TD, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontWeight: 700, fontSize: 13 }}>{fmt$(totalBillable)}</td>
               <td style={{ ...TD, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontWeight: 700, fontSize: 13 }}>{fmt$(totalInvoice)}</td>
+              <td style={TD} />
               <td style={TD} />
               <td style={TD} />
               <td style={TD} />
@@ -1393,6 +1412,7 @@ export default function TimeboardPage() {
             onEntryChange={handleEntryChange}
             user={user}
             filterInvoice={filterInvoice}
+            onEntryDelete={handleEntryDelete}
           />
         )}
       </div>
