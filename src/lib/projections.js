@@ -123,3 +123,40 @@ export function buildRunRateSeries(ytdEnriched, now = new Date(), windowDays = 9
   }
   return { data, monthTicks, domain: [start.getTime(), today.getTime()] }
 }
+
+export function buildDailyHoursSeries(ytdEnriched, startISO = '', endISO = '', now = new Date()) {
+  const pad = n => String(n).padStart(2, '0')
+  const toISO = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  const parse = s => { const [y, m, dd] = s.split('-').map(Number); return new Date(y, m - 1, dd) }
+  const year = now.getFullYear()
+  const jan1 = new Date(year, 0, 1)
+  const lastDay = new Date(year, now.getMonth(), now.getDate()); lastDay.setDate(lastDay.getDate() - 1)
+
+  let start = startISO ? parse(startISO) : new Date(jan1)
+  let end   = endISO   ? parse(endISO)   : new Date(lastDay)
+  if (start < jan1)    start = new Date(jan1)
+  if (end   > lastDay) end   = new Date(lastDay)
+
+  const byDate = {}
+  ytdEnriched.forEach(e => { byDate[e.date] = (byDate[e.date] || 0) + (e.billableAmt || 0) })
+
+  const data = []
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const amt = byDate[toISO(d)] || 0
+    data.push({ t: d.getTime(), hours: Math.round(amt) / 100 })
+  }
+
+  const spanDays = data.length
+  const ticks = []
+  let tickFmt = 'month'
+  if (spanDays > 75) {
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      if (d.getDate() === 1) ticks.push(d.getTime())
+    }
+  } else {
+    tickFmt = 'day'
+    const step = Math.max(1, Math.ceil(spanDays / 10))
+    for (let i = 0; i < data.length; i += step) ticks.push(data[i].t)
+  }
+  return { data, ticks, tickFmt, domain: [start.getTime(), end.getTime()] }
+}

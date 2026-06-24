@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { toLocalISO, todayISO, enrichEntries } from '../lib/timeentries'
-import { windowStats, computeAnnualProjection, buildYearEndSeries, buildRunRateSeries } from '../lib/projections'
+import { windowStats, computeAnnualProjection, buildYearEndSeries, buildRunRateSeries, buildDailyHoursSeries } from '../lib/projections'
 import { usePaceTargets } from '../lib/config'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
@@ -12,6 +12,7 @@ function fmtUSD(n) { return '$' + Math.round(n || 0).toLocaleString('en-US') }
 function fmtAxisMonth(ms) { return new Date(ms).toLocaleDateString('en-US', { month: 'short' }) }
 function fmtK(v) { return '$' + Math.round(v / 1000) + 'k' }
 function fmtTipDate(ms) { return new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }
+function fmtAxisDay(ms) { const d = new Date(ms); return (d.getMonth() + 1) + '/' + d.getDate() }
 
 export default function PacePage() {
   useEffect(() => { document.title = 'Pace' }, [])
@@ -19,6 +20,8 @@ export default function PacePage() {
   const [statsEntries, setStatsEntries] = useState([])
   const [ytdEntries,   setYtdEntries]   = useState([])
   const [loading,      setLoading]      = useState(true)
+  const [hoursStart,   setHoursStart]   = useState('')
+  const [hoursEnd,     setHoursEnd]     = useState('')
 
   useEffect(() => {
     if (isDemo) { setLoading(false); return }
@@ -46,6 +49,7 @@ export default function PacePage() {
   const proj    = computeAnnualProjection({ ytdEnriched, sevenAvg: stats7.billAvg, twentyEightAvg: stats28.billAvg })
   const yearEnd = useMemo(() => buildYearEndSeries(ytdEnriched, proj), [ytdEnriched, proj.A, proj.B, proj.C])
   const runRate = useMemo(() => buildRunRateSeries(ytdEnriched), [ytdEnriched])
+  const dailyHours = useMemo(() => buildDailyHoursSeries(ytdEnriched, hoursStart, hoursEnd), [ytdEnriched, hoursStart, hoursEnd])
 
   const TH = { textAlign: 'right', fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)', paddingBottom: 6 }
   const TD = { textAlign: 'right', fontSize: 17, fontWeight: 700, fontFamily: 'DM Mono, monospace', color: 'var(--text)', padding: '3px 0' }
@@ -96,6 +100,30 @@ export default function PacePage() {
               <Line type="linear" dataKey="rateYtd" name="YTD pace"    stroke="#94a3b8" strokeWidth={1.5} dot={false} isAnimationActive={false} />
               <Line type="linear" dataKey="rate28"  name="28-day pace" stroke="#BA7517" strokeWidth={2}   dot={false} isAnimationActive={false} />
               <Line type="linear" dataKey="rate7"   name="7-day pace"  stroke="#D85A30" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="card" style={{ padding: 16, marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text3)' }}>Billable Hours</div>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input type="date" value={hoursStart} max={hoursEnd || undefined}
+                onChange={e => setHoursStart(e.target.value)} style={{ width: 140, fontSize: 12 }} />
+              <span style={{ color: 'var(--text3)', fontSize: 12 }}>→</span>
+              <input type="date" value={hoursEnd} min={hoursStart || undefined}
+                onChange={e => setHoursEnd(e.target.value)} style={{ width: 140, fontSize: 12 }} />
+              {(hoursStart || hoursEnd) && (
+                <button className="btn btn-sm btn-ghost" onClick={() => { setHoursStart(''); setHoursEnd('') }}>YTD</button>
+              )}
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={dailyHours.data} margin={{ top: 8, right: 24, bottom: 8, left: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis type="number" dataKey="t" scale="time" domain={dailyHours.domain} ticks={dailyHours.ticks} tickFormatter={dailyHours.tickFmt === 'day' ? fmtAxisDay : fmtAxisMonth} tick={{ fontSize: 11, fill: 'var(--text3)' }} />
+              <YAxis width={40} tick={{ fontSize: 11, fill: 'var(--text3)' }} />
+              <Tooltip labelFormatter={fmtTipDate} formatter={(v) => [v == null ? '—' : `${v} hrs`, 'Billable']} />
+              <Line type="linear" dataKey="hours" name="Billable hours" stroke="#185FA5" strokeWidth={1.5} dot={false} isAnimationActive={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
