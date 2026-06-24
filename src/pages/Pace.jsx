@@ -22,6 +22,8 @@ export default function PacePage() {
   const [loading,      setLoading]      = useState(true)
   const [hoursStart,   setHoursStart]   = useState('')
   const [hoursEnd,     setHoursEnd]     = useState('')
+  const [rateStart,    setRateStart]    = useState('')
+  const [rateEnd,      setRateEnd]      = useState('')
 
   useEffect(() => {
     if (isDemo) { setLoading(false); return }
@@ -48,7 +50,7 @@ export default function PacePage() {
   const stats28 = windowStats(enriched, 28, today)
   const proj    = computeAnnualProjection({ ytdEnriched, sevenAvg: stats7.billAvg, twentyEightAvg: stats28.billAvg })
   const yearEnd = useMemo(() => buildYearEndSeries(ytdEnriched, proj), [ytdEnriched, proj.A, proj.B, proj.C])
-  const runRate = useMemo(() => buildRunRateSeries(ytdEnriched), [ytdEnriched])
+  const runRate = useMemo(() => buildRunRateSeries(ytdEnriched, rateStart, rateEnd), [ytdEnriched, rateStart, rateEnd])
   const dailyHours = useMemo(() => buildDailyHoursSeries(ytdEnriched, hoursStart, hoursEnd), [ytdEnriched, hoursStart, hoursEnd])
 
   const TH = { textAlign: 'right', fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)', paddingBottom: 6 }
@@ -85,11 +87,23 @@ export default function PacePage() {
           </ResponsiveContainer>
         </div>
         <div className="card" style={{ padding: 16, marginBottom: 24 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text3)', marginBottom: 12 }}>Rolling 12-Month Pace</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text3)' }}>Rolling 12-Month Pace</div>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input type="date" value={rateStart} max={rateEnd || undefined}
+                onChange={e => setRateStart(e.target.value)} style={{ width: 140, fontSize: 12 }} />
+              <span style={{ color: 'var(--text3)', fontSize: 12 }}>→</span>
+              <input type="date" value={rateEnd} min={rateStart || undefined}
+                onChange={e => setRateEnd(e.target.value)} style={{ width: 140, fontSize: 12 }} />
+              {(rateStart || rateEnd) && (
+                <button className="btn btn-sm btn-ghost" onClick={() => { setRateStart(''); setRateEnd('') }}>Reset</button>
+              )}
+            </div>
+          </div>
           <ResponsiveContainer width="100%" height={320}>
             <LineChart data={runRate.data} margin={{ top: 8, right: 24, bottom: 8, left: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis type="number" dataKey="t" scale="time" domain={runRate.domain} ticks={runRate.monthTicks} tickFormatter={fmtAxisMonth} tick={{ fontSize: 11, fill: 'var(--text3)' }} />
+              <XAxis type="number" dataKey="t" scale="time" domain={runRate.domain} ticks={runRate.ticks} tickFormatter={runRate.tickFmt === 'day' ? fmtAxisDay : fmtAxisMonth} tick={{ fontSize: 11, fill: 'var(--text3)' }} />
               <YAxis tickFormatter={fmtK} width={48} domain={['auto', 'auto']} tick={{ fontSize: 11, fill: 'var(--text3)' }} />
               <Tooltip labelFormatter={fmtTipDate} formatter={(v, name) => [v == null ? '—' : fmtUSD(v), name]} />
               <Legend payload={[
