@@ -265,11 +265,13 @@ function CashFlowRow({ row, contribution, balance, onSave, onToggleActive, onTog
         {(() => {
           if (!row.checked_at) return <span style={{ color: 'var(--text3)' }}>—</span>
           const d = new Date(row.checked_at)
-          const label = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`
-          const recent = Date.now() - d.getTime() <= 30 * 24 * 60 * 60 * 1000
+          const label = `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`
+          const startOfDay = (x) => { const t = new Date(x); t.setHours(0, 0, 0, 0); return t.getTime() }
+          const ageDays = Math.floor((startOfDay(new Date()) - startOfDay(d)) / 86400000)
+          const bg = ageDays <= 0 ? '#22c55e' : ageDays < 30 ? '#3b82f6' : '#ef4444'
           return (
             <span style={{
-              background: recent ? '#22c55e' : '#ef4444',
+              background: bg,
               color: '#fff', borderRadius: 4,
               padding: '1px 5px', fontSize: 11, display: 'inline-block',
             }}>{label}</span>
