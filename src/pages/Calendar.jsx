@@ -40,6 +40,7 @@ export default function CalendarPage() {
   const [filterStatus,  setFilterStatus]  = useState('')
   const [draggedId,   setDraggedId]   = useState(null)
   const [dragOverIso, setDragOverIso] = useState(null)
+  const [view, setView] = useState('month')   // 'day' | 'week' | 'month'
   const inFlightRef = useRef(new Set())
 
   // Reschedule an item by drag-drop. Optimistic + rollback, single write, re-entrancy-guarded.
@@ -62,6 +63,45 @@ export default function CalendarPage() {
       console.error('Calendar move failed, reverted:', error)
     }
     inFlightRef.current.delete(id)                         // release
+  }
+
+  // View-aware navigation: month steps by month, week by 7 days, day by 1 day.
+  function navPrev() { setCurrent(c => view === 'day' ? addDays(c, -1) : view === 'week' ? addDays(c, -7) : subMonths(c, 1)) }
+  function navNext() { setCurrent(c => view === 'day' ? addDays(c, 1)  : view === 'week' ? addDays(c, 7)  : addMonths(c, 1)) }
+
+  // Draggable item card + day drop-target props — shared by Week and Day views.
+  // (Month view keeps its own inline copy; unify later if card styling changes.)
+  function eventCard(ev) {
+    const cat = ev.project?.category
+    const isDragging = draggedId === ev.id
+    return (
+      <div key={ev.id}
+        draggable
+        onDragStart={e => {
+          e.stopPropagation()
+          setDraggedId(ev.id)
+          e.dataTransfer.effectAllowed = 'move'
+          e.dataTransfer.setData('text/plain', ev.id)
+        }}
+        onDragEnd={() => { setDraggedId(null); setDragOverIso(null) }}
+        style={{
+          fontSize: 12, fontWeight: 500,
+          padding: '4px 8px', borderRadius: 4, marginBottom: 3,
+          borderLeft: `3px solid ${catColor(cat)}`,
+          background: 'var(--bg3)', color: 'var(--text2)',
+          cursor: 'grab',
+          opacity: isDragging ? 0.4 : 1,
+        }} title={`${ev.project?.name || ''} — ${ev.name}`}>
+        {ev.project?.name ? `${ev.project.name}: ` : ''}{ev.name}
+      </div>
+    )
+  }
+  function dropProps(dayIso) {
+    return {
+      onDragOver: e => { e.preventDefault(); if (dragOverIso !== dayIso) setDragOverIso(dayIso) },
+      onDragLeave: () => { if (dragOverIso === dayIso) setDragOverIso(null) },
+      onDrop: e => { e.preventDefault(); moveItem(draggedId, dayIso); setDraggedId(null); setDragOverIso(null) },
+    }
   }
 
   useEffect(() => {
@@ -127,6 +167,11 @@ export default function CalendarPage() {
 
   const today            = new Date()
   const selectedEvents   = selectedDay ? eventsOnDay(selectedDay) : []
+  const viewTitle = view === 'day'
+    ? format(current, 'EEE, MMM d, yyyy')
+    : view === 'week'
+      ? `${format(startOfWeek(current), 'MMM d')} – ${format(endOfWeek(current), 'MMM d, yyyy')}`
+      : format(current, 'MMMM yyyy')
 
   return (
     <div className="fade-in">
@@ -136,16 +181,31 @@ export default function CalendarPage() {
           { label: 'Calendar' },
         ]} />
 
-        {/* Month navigation */}
+        {/* View toggle */}
+        <div style={{ display: 'flex', gap: 4, marginLeft: 12 }}>
+          {[['day','D'],['week','W'],['month','M']].map(([v, label]) => (
+            <button key={v} onClick={() => setView(v)}
+              style={{
+                padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                border: '1px solid var(--border)',
+                background: view === v ? 'var(--bg4)' : 'transparent',
+                color: view === v ? 'var(--text)' : 'var(--text2)',
+              }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Date navigation (view-aware) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
-          <button className="btn btn-ghost btn-sm" onClick={() => setCurrent(m => subMonths(m, 1))}>←</button>
+          <button className="btn btn-ghost btn-sm" onClick={navPrev}>←</button>
           <span style={{
             fontSize: 14, fontWeight: 600, color: 'var(--text)',
-            minWidth: 120, textAlign: 'center',
+            minWidth: 190, textAlign: 'center',
           }}>
-            {format(current, 'MMMM yyyy')}
+            {viewTitle}
           </span>
-          <button className="btn btn-ghost btn-sm" onClick={() => setCurrent(m => addMonths(m, 1))}>→</button>
+          <button className="btn btn-ghost btn-sm" onClick={navNext}>→</button>
           <button className="btn btn-ghost btn-sm" onClick={() => setCurrent(new Date())}>Today</button>
         </div>
       </div>
@@ -191,6 +251,8 @@ export default function CalendarPage() {
       </div>
 
       <div className="page-content">
+
+        {view === 'month' && (
         <div className="card">
           {/* Day-of-week headers */}
           <div style={{
@@ -300,9 +362,60 @@ export default function CalendarPage() {
             })}
           </div>
         </div>
+        )}
+
+        {view === 'week' && (
+          <div className="card">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)' }}>
+              {Array.from({ length: 7 }, (_, k) => addDays(startOfWeek(current), k)).map((day, i) => {
+                const dayIso     = format(day, 'yyyy-MM-dd')
+                const dayEvents  = eventsOnDay(day)
+                const isToday    = isSameDay(day, today)
+                const isDragOver = dragOverIso === dayIso
+                return (
+                  <div key={i} {...dropProps(dayIso)}
+                    style={{
+                      minHeight: 340, padding: '8px 6px',
+                      borderRight: i < 6 ? '1px solid var(--border)' : 'none',
+                      background: isDragOver ? 'var(--accent-glow)' : 'var(--bg2)',
+                      outline: isDragOver ? '2px dashed var(--accent)' : 'none', outlineOffset: -2,
+                    }}>
+                    <div style={{ textAlign: 'center', marginBottom: 8, fontSize: 12, fontWeight: 600, color: isToday ? 'var(--accent)' : 'var(--text2)' }}>
+                      {format(day, 'EEE d')}
+                    </div>
+                    {dayEvents.map(ev => eventCard(ev))}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {view === 'day' && (() => {
+          const dayIso     = format(current, 'yyyy-MM-dd')
+          const dayEvents  = eventsOnDay(current)
+          const isDragOver = dragOverIso === dayIso
+          return (
+            <div className="card">
+              <div style={{ padding: '12px 16px', textAlign: 'center', fontSize: 15, fontWeight: 700, borderBottom: '1px solid var(--border)', background: 'var(--bg3)' }}>
+                {format(current, 'EEEE, MMMM d')}
+              </div>
+              <div {...dropProps(dayIso)}
+                style={{
+                  minHeight: 360, padding: '12px 16px',
+                  background: isDragOver ? 'var(--accent-glow)' : 'var(--bg2)',
+                  outline: isDragOver ? '2px dashed var(--accent)' : 'none', outlineOffset: -2,
+                }}>
+                {dayEvents.length === 0
+                  ? <div style={{ color: 'var(--text3)', fontSize: 13, textAlign: 'center', padding: 20 }}>Nothing scheduled.</div>
+                  : dayEvents.map(ev => eventCard(ev))}
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Day detail panel */}
-        {selectedDay && (
+        {view === 'month' && selectedDay && (
           <div className="card" style={{ marginTop: 16 }}>
             <div className="card-header">
               <span className="card-title">{format(selectedDay, 'EEEE, MMMM d')}</span>
