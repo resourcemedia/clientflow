@@ -33,6 +33,11 @@ export default function CalendarPage() {
   const [loading, setLoading]         = useState(true)
   const [current, setCurrent]         = useState(new Date())
   const [selectedDay, setSelectedDay] = useState(null)
+  const [filterClient,  setFilterClient]  = useState('')
+  const [filterProject, setFilterProject] = useState('')
+  const [filterItem,    setFilterItem]    = useState('')
+  const [filterTag,     setFilterTag]     = useState('')
+  const [filterStatus,  setFilterStatus]  = useState('')
 
   useEffect(() => {
     setLoading(true)
@@ -64,7 +69,31 @@ export default function CalendarPage() {
   let d = gridStart
   while (d <= gridEnd) { days.push(d); d = addDays(d, 1) }
 
-  const filtered = events
+  // Filter options derived from the loaded month (client-side, no extra queries)
+  const clientOptions  = [...new Set(events.map(e => e.project?.client?.company).filter(Boolean))].sort()
+  const projectOptions = [...new Set(events.map(e => e.project?.name).filter(Boolean))].sort()
+  const tagOptions     = [...new Set(events.flatMap(e => e.project?.tags || []).filter(Boolean))].sort()
+  const STATUS_OPTIONS = ['Open', 'Complete']
+
+  const filtered = events.filter(e => {
+    if (filterClient  && e.project?.client?.company !== filterClient) return false
+    if (filterProject && e.project?.name !== filterProject) return false
+    if (filterItem    && !(e.name || '').toLowerCase().includes(filterItem.toLowerCase())) return false
+    if (filterTag     && !(e.project?.tags || []).includes(filterTag)) return false
+    if (filterStatus  && e.status !== filterStatus) return false
+    return true
+  })
+
+  const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterStatus
+  function clearFilters() {
+    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterStatus('')
+  }
+
+  const filterCtrl = {
+    padding: '6px 12px', borderRadius: 8, fontSize: 13,
+    border: '1px solid var(--border)', background: 'var(--bg2)',
+    color: 'var(--text2)', cursor: 'pointer', outline: 'none',
+  }
 
   function eventsOnDay(day) {
     const iso = format(day, 'yyyy-MM-dd')
@@ -94,6 +123,46 @@ export default function CalendarPage() {
           <button className="btn btn-ghost btn-sm" onClick={() => setCurrent(m => addMonths(m, 1))}>→</button>
           <button className="btn btn-ghost btn-sm" onClick={() => setCurrent(new Date())}>Today</button>
         </div>
+      </div>
+
+      {/* Filter bar — attribute filters, stack as AND. Date range lives in List view. */}
+      <div style={{
+        display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
+        padding: '10px 0', marginBottom: 4,
+      }}>
+        <select value={filterClient} onChange={e => setFilterClient(e.target.value)}
+          style={{ ...filterCtrl, borderColor: filterClient ? 'var(--accent)' : 'var(--border)' }}>
+          <option value="">Client</option>
+          {clientOptions.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+
+        <select value={filterProject} onChange={e => setFilterProject(e.target.value)}
+          style={{ ...filterCtrl, borderColor: filterProject ? 'var(--accent)' : 'var(--border)' }}>
+          <option value="">Project</option>
+          {projectOptions.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+
+        <input value={filterItem} onChange={e => setFilterItem(e.target.value)} placeholder="Item"
+          style={{ ...filterCtrl, borderColor: filterItem ? 'var(--accent)' : 'var(--border)', cursor: 'text', minWidth: 120 }} />
+
+        <select value={filterTag} onChange={e => setFilterTag(e.target.value)}
+          style={{ ...filterCtrl, borderColor: filterTag ? 'var(--accent)' : 'var(--border)' }}>
+          <option value="">Tags</option>
+          {tagOptions.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+          style={{ ...filterCtrl, borderColor: filterStatus ? 'var(--accent)' : 'var(--border)' }}>
+          <option value="">Status</option>
+          {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+
+        {anyFilterActive && (
+          <button onClick={clearFilters}
+            style={{ ...filterCtrl, color: 'var(--text3)', cursor: 'pointer', border: 'none', background: 'transparent' }}>
+            Clear
+          </button>
+        )}
       </div>
 
       <div className="page-content">
