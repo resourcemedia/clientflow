@@ -7,30 +7,23 @@ import {
   addDays, addMonths, subMonths, isSameMonth, isSameDay,
 } from 'date-fns'
 
-// Covers both auto-populated channels (product_type: CO/ST/DS/OH)
-// and legacy manual channels (social/email/print/web)
-const CHANNEL_COLORS = {
-  CO:     { bg: 'var(--accent-glow)', text: 'var(--accent2)', label: 'Content'  },
-  ST:     { bg: 'var(--blue-bg)',     text: 'var(--blue)',    label: 'Setup'    },
-  DS:     { bg: 'var(--coral-bg)',    text: 'var(--coral)',   label: 'Design'   },
-  OH:     { bg: 'var(--bg4)',         text: 'var(--text3)',   label: 'Overhead' },
-  social: { bg: 'var(--accent-glow)', text: 'var(--accent2)', label: 'Social'  },
-  email:  { bg: 'var(--amber-bg)',    text: 'var(--amber)',   label: 'Email'    },
-  print:  { bg: 'var(--coral-bg)',    text: 'var(--coral)',   label: 'Print'    },
-  web:    { bg: 'var(--green-bg)',    text: 'var(--green)',   label: 'Web'      },
+// Category colors — mirror of CATEGORY_COLORS in Projects.jsx.
+// Duplicated intentionally to keep this a single-file change;
+// candidate for extraction to src/lib/categories.js later.
+const CATEGORY_COLORS = {
+  primary:    '#ffb8b8',
+  secondary:  '#4fd1b8',
+  accounting: '#63ca7a',
+  overhead:   '#b9dd67',
+  charity:    '#c6c7fe',
+  personal:   '#ebb8e5',
 }
-
-const FILTER_CHANNELS = [
-  { id: 'all', label: 'All' },
-  { id: 'CO',  label: 'Content'  },
-  { id: 'ST',  label: 'Setup'    },
-  { id: 'DS',  label: 'Design'   },
-  { id: 'OH',  label: 'Overhead' },
-]
-
-function colorFor(channel) {
-  return CHANNEL_COLORS[channel] || { bg: 'var(--bg4)', text: 'var(--text2)', label: channel || '—' }
+const CATEGORY_LABELS = {
+  primary: 'Prin', secondary: 'Sec', accounting: 'Acct',
+  overhead: 'OH', charity: 'Char', personal: 'Pers',
 }
+function catColor(category) { return CATEGORY_COLORS[category] || 'var(--bg4)' }
+function catLabel(category) { return CATEGORY_LABELS[category] || (category || '—') }
 
 export default function CalendarPage() {
   useEffect(() => { document.title = 'Calendar' }, [])
@@ -40,7 +33,6 @@ export default function CalendarPage() {
   const [loading, setLoading]         = useState(true)
   const [current, setCurrent]         = useState(new Date())
   const [selectedDay, setSelectedDay] = useState(null)
-  const [channelFilter, setChannelFilter] = useState('all')
 
   useEffect(() => {
     setLoading(true)
@@ -50,14 +42,15 @@ export default function CalendarPage() {
 
   async function loadEvents() {
     setLoading(true)
-    const rangeStart = format(startOfMonth(current), 'yyyy-MM-dd')
-    const rangeEnd   = format(endOfMonth(current),   'yyyy-MM-dd')
+    // Query the full visible grid (incl. leading/trailing days from adjacent months)
+    const rangeStart = format(startOfWeek(startOfMonth(current)), 'yyyy-MM-dd')
+    const rangeEnd   = format(endOfWeek(endOfMonth(current)),     'yyyy-MM-dd')
     const { data } = await supabase
-      .from('calendar_events')
-      .select('*, client:clients(company)')
-      .gte('event_date', rangeStart)
-      .lte('event_date', rangeEnd)
-      .order('event_date')
+      .from('project_items')
+      .select('id, name, scheduled_date, status, completed_date, project:projects(name, category, tags, client:clients(company))')
+      .gte('scheduled_date', rangeStart)
+      .lte('scheduled_date', rangeEnd)
+      .order('scheduled_date')
     setEvents(data || [])
     setLoading(false)
   }
@@ -71,13 +64,11 @@ export default function CalendarPage() {
   let d = gridStart
   while (d <= gridEnd) { days.push(d); d = addDays(d, 1) }
 
-  const filtered = channelFilter === 'all'
-    ? events
-    : events.filter(e => e.channel === channelFilter)
+  const filtered = events
 
   function eventsOnDay(day) {
     const iso = format(day, 'yyyy-MM-dd')
-    return filtered.filter(e => e.event_date === iso)
+    return filtered.filter(e => e.scheduled_date === iso)
   }
 
   const today            = new Date()
@@ -90,29 +81,6 @@ export default function CalendarPage() {
           { label: 'Dashboard', onClick: () => navigate('/') },
           { label: 'Calendar' },
         ]} />
-
-        {/* Channel filter pills */}
-        <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-          {FILTER_CHANNELS.map(ch => {
-            const col     = CHANNEL_COLORS[ch.id]
-            const isActive = channelFilter === ch.id
-            return (
-              <button
-                key={ch.id}
-                onClick={() => setChannelFilter(ch.id)}
-                style={{
-                  padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500,
-                  cursor: 'pointer', border: `1px solid ${isActive ? (col?.text || 'var(--accent)') : 'var(--border)'}`,
-                  background: isActive ? (col?.bg || 'var(--accent-glow)') : 'transparent',
-                  color: isActive ? (col?.text || 'var(--accent2)') : 'var(--text2)',
-                  transition: 'all 0.15s',
-                }}
-              >
-                {ch.label}
-              </button>
-            )
-          })}
-        </div>
 
         {/* Month navigation */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
@@ -189,15 +157,16 @@ export default function CalendarPage() {
 
                   {/* Event pills */}
                   {dayEvents.slice(0, 3).map((ev, j) => {
-                    const c = colorFor(ev.channel)
+                    const cat = ev.project?.category
                     return (
                       <div key={j} style={{
                         fontSize: 10, fontWeight: 500,
                         padding: '2px 5px', borderRadius: 4, marginBottom: 2,
-                        background: c.bg, color: c.text,
+                        borderLeft: `3px solid ${catColor(cat)}`,
+                        background: 'var(--bg3)', color: 'var(--text2)',
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }} title={ev.title}>
-                        {ev.title}
+                      }} title={`${ev.project?.name || ''} — ${ev.name}`}>
+                        {ev.project?.name ? `${ev.project.name}: ` : ''}{ev.name}
                       </div>
                     )
                   })}
@@ -236,7 +205,7 @@ export default function CalendarPage() {
                 No events scheduled for this day.
               </div>
             ) : selectedEvents.map((ev, i) => {
-              const c = colorFor(ev.channel)
+              const cat = ev.project?.category
               return (
                 <div key={i} style={{
                   display: 'flex', alignItems: 'center', gap: 14,
@@ -245,25 +214,25 @@ export default function CalendarPage() {
                 }}>
                   <div style={{
                     width: 10, height: 10, borderRadius: '50%',
-                    background: c.text, flexShrink: 0,
+                    background: catColor(cat), flexShrink: 0,
                   }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', marginBottom: 2 }}>
-                      {ev.title}
+                      {ev.name}
                     </div>
-                    {ev.client?.company && (
-                      <div style={{ fontSize: 11, color: 'var(--text3)' }}>{ev.client.company}</div>
-                    )}
+                    <div style={{ fontSize: 11, color: 'var(--text3)' }}>
+                      {ev.project?.name}{ev.project?.client?.company ? ` · ${ev.project.client.company}` : ''}
+                    </div>
                   </div>
                   <span style={{
                     fontSize: 11, fontWeight: 600,
                     padding: '2px 8px', borderRadius: 20,
-                    background: c.bg, color: c.text, flexShrink: 0,
+                    background: catColor(cat), color: 'var(--text)', flexShrink: 0,
                   }}>
-                    {c.label}
+                    {catLabel(cat)}
                   </span>
                   <span style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>
-                    {ev.status || 'scheduled'}
+                    {ev.status || 'Open'}
                   </span>
                 </div>
               )
