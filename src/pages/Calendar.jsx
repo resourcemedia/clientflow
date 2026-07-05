@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Breadcrumb } from '../components/ui'
@@ -38,6 +38,31 @@ export default function CalendarPage() {
   const [filterItem,    setFilterItem]    = useState('')
   const [filterTag,     setFilterTag]     = useState('')
   const [filterStatus,  setFilterStatus]  = useState('')
+  const [draggedId,   setDraggedId]   = useState(null)
+  const [dragOverIso, setDragOverIso] = useState(null)
+  const inFlightRef = useRef(new Set())
+
+  // Reschedule an item by drag-drop. Optimistic + rollback, single write, re-entrancy-guarded.
+  async function moveItem(id, newDateIso) {
+    if (!id || inFlightRef.current.has(id)) return       // guard: ignore concurrent fire on same item
+    const item = events.find(e => e.id === id)
+    if (!item || item.scheduled_date === newDateIso) return   // missing or no-op (same day)
+    const prevDate = item.scheduled_date
+
+    inFlightRef.current.add(id)                            // LOCK synchronously, before any await
+    setEvents(prev => prev.map(e => e.id === id ? { ...e, scheduled_date: newDateIso } : e))  // optimistic move
+
+    const { error } = await supabase
+      .from('project_items')
+      .update({ scheduled_date: newDateIso })
+      .eq('id', id)
+
+    if (error) {
+      setEvents(prev => prev.map(e => e.id === id ? { ...e, scheduled_date: prevDate } : e))  // rollback
+      console.error('Calendar move failed, reverted:', error)
+    }
+    inFlightRef.current.delete(id)                         // release
+  }
 
   useEffect(() => {
     setLoading(true)
@@ -193,18 +218,32 @@ export default function CalendarPage() {
               const hasBorderR  = (i + 1) % 7 !== 0
               const hasBorderB  = i < days.length - 7
 
+              const dayIso    = format(day, 'yyyy-MM-dd')
+              const isDragOver = dragOverIso === dayIso
               return (
                 <div
                   key={i}
                   onClick={() => setSelectedDay(isSelected ? null : day)}
+                  onDragOver={e => { e.preventDefault(); if (dragOverIso !== dayIso) setDragOverIso(dayIso) }}
+                  onDragLeave={e => { if (dragOverIso === dayIso) setDragOverIso(null) }}
+                  onDrop={e => {
+                    e.preventDefault()
+                    moveItem(draggedId, dayIso)
+                    setDraggedId(null)
+                    setDragOverIso(null)
+                  }}
                   style={{
                     minHeight: 90, padding: '8px 6px',
                     borderRight:  hasBorderR ? '1px solid var(--border)' : 'none',
                     borderBottom: hasBorderB ? '1px solid var(--border)' : 'none',
                     borderLeft:   isSelected ? '2px solid var(--accent)' : '2px solid transparent',
-                    background: isToday
+                    background: isDragOver
                       ? 'var(--accent-glow)'
-                      : isSelected ? 'var(--bg3)' : 'var(--bg2)',
+                      : isToday
+                        ? 'var(--accent-glow)'
+                        : isSelected ? 'var(--bg3)' : 'var(--bg2)',
+                    outline: isDragOver ? '2px dashed var(--accent)' : 'none',
+                    outlineOffset: -2,
                     opacity: inMonth ? 1 : 0.35,
                     cursor: 'pointer',
                     transition: 'background 0.1s',
@@ -227,14 +266,26 @@ export default function CalendarPage() {
                   {/* Event pills */}
                   {dayEvents.slice(0, 3).map((ev, j) => {
                     const cat = ev.project?.category
+                    const isDragging = draggedId === ev.id
                     return (
-                      <div key={j} style={{
-                        fontSize: 10, fontWeight: 500,
-                        padding: '2px 5px', borderRadius: 4, marginBottom: 2,
-                        borderLeft: `3px solid ${catColor(cat)}`,
-                        background: 'var(--bg3)', color: 'var(--text2)',
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }} title={`${ev.project?.name || ''} — ${ev.name}`}>
+                      <div key={j}
+                        draggable
+                        onDragStart={e => {
+                          e.stopPropagation()
+                          setDraggedId(ev.id)
+                          e.dataTransfer.effectAllowed = 'move'
+                          e.dataTransfer.setData('text/plain', ev.id)   // Firefox needs data set to initiate drag
+                        }}
+                        onDragEnd={() => { setDraggedId(null); setDragOverIso(null) }}
+                        style={{
+                          fontSize: 10, fontWeight: 500,
+                          padding: '2px 5px', borderRadius: 4, marginBottom: 2,
+                          borderLeft: `3px solid ${catColor(cat)}`,
+                          background: 'var(--bg3)', color: 'var(--text2)',
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          cursor: 'grab',
+                          opacity: isDragging ? 0.4 : 1,
+                        }} title={`${ev.project?.name || ''} — ${ev.name}`}>
                         {ev.project?.name ? `${ev.project.name}: ` : ''}{ev.name}
                       </div>
                     )
