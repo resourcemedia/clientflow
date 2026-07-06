@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { Breadcrumb } from '../components/ui'
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
+  startOfYear, endOfYear,
   addDays, addMonths, subMonths, isSameMonth, isSameDay,
 } from 'date-fns'
 
@@ -40,7 +41,9 @@ export default function CalendarPage() {
   const [filterStatus,  setFilterStatus]  = useState('')
   const [draggedId,   setDraggedId]   = useState(null)
   const [dragOverIso, setDragOverIso] = useState(null)
-  const [view, setView] = useState('month')   // 'day' | 'week' | 'month'
+  const [view, setView] = useState('month')   // 'day' | 'week' | 'month' | 'list'
+  const [dateStart, setDateStart] = useState('')   // List view range (yyyy-MM-dd)
+  const [dateEnd,   setDateEnd]   = useState('')
   const inFlightRef = useRef(new Set())
 
   // Reschedule an item by drag-drop. Optimistic + rollback, single write, re-entrancy-guarded.
@@ -108,16 +111,22 @@ export default function CalendarPage() {
     setLoading(true)
     loadEvents()
     setSelectedDay(null)
-  }, [current, location.pathname])
+  }, [current, location.pathname, view, dateStart, dateEnd])
 
   async function loadEvents() {
     setLoading(true)
-    // Query the full visible grid (incl. leading/trailing days from adjacent months)
-    const rangeStart = format(startOfWeek(startOfMonth(current)), 'yyyy-MM-dd')
-    const rangeEnd   = format(endOfWeek(endOfMonth(current)),     'yyyy-MM-dd')
+    // Grid views load the visible month; List loads the date-range inputs (defaults to this year).
+    let rangeStart, rangeEnd
+    if (view === 'list') {
+      rangeStart = dateStart || format(startOfYear(current), 'yyyy-MM-dd')
+      rangeEnd   = dateEnd   || format(endOfYear(current),   'yyyy-MM-dd')
+    } else {
+      rangeStart = format(startOfWeek(startOfMonth(current)), 'yyyy-MM-dd')
+      rangeEnd   = format(endOfWeek(endOfMonth(current)),     'yyyy-MM-dd')
+    }
     const { data } = await supabase
       .from('project_items')
-      .select('id, name, scheduled_date, status, completed_date, project:projects(name, category, tags, client:clients(company))')
+      .select('id, name, scheduled_date, status, completed_date, note, project:projects(name, category, tags, client:clients(company))')
       .gte('scheduled_date', rangeStart)
       .lte('scheduled_date', rangeEnd)
       .order('scheduled_date')
@@ -183,7 +192,7 @@ export default function CalendarPage() {
 
         {/* View toggle */}
         <div style={{ display: 'flex', gap: 4, marginLeft: 12 }}>
-          {[['day','D'],['week','W'],['month','M']].map(([v, label]) => (
+          {[['day','D'],['week','W'],['month','M'],['list','List']].map(([v, label]) => (
             <button key={v} onClick={() => setView(v)}
               style={{
                 padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
@@ -196,7 +205,8 @@ export default function CalendarPage() {
           ))}
         </div>
 
-        {/* Date navigation (view-aware) */}
+        {/* Date navigation (view-aware) — hidden in List; date inputs drive that view */}
+        {view !== 'list' && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
           <button className="btn btn-ghost btn-sm" onClick={navPrev}>←</button>
           <span style={{
@@ -208,6 +218,7 @@ export default function CalendarPage() {
           <button className="btn btn-ghost btn-sm" onClick={navNext}>→</button>
           <button className="btn btn-ghost btn-sm" onClick={() => setCurrent(new Date())}>Today</button>
         </div>
+        )}
       </div>
 
       {/* Filter bar — attribute filters, stack as AND. Date range lives in List view. */}
@@ -241,6 +252,15 @@ export default function CalendarPage() {
           <option value="">Status</option>
           {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
+
+        {view === 'list' && (
+          <>
+            <input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)}
+              style={{ ...filterCtrl, cursor: 'text' }} title="Date start" />
+            <input type="date" value={dateEnd} onChange={e => setDateEnd(e.target.value)}
+              style={{ ...filterCtrl, cursor: 'text' }} title="Date end" />
+          </>
+        )}
 
         {anyFilterActive && (
           <button onClick={clearFilters}
@@ -413,6 +433,49 @@ export default function CalendarPage() {
             </div>
           )
         })()}
+
+        {view === 'list' && (
+          <div className="card" style={{ overflow: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: 'var(--bg3)' }}>
+                  {['Date','Category','Project','Item','Tags','Status','Note'].map(h => (
+                    <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>No items in this range.</td></tr>
+                ) : filtered.map(ev => {
+                  const cat = ev.project?.category
+                  // Parse yyyy-MM-dd as LOCAL (append time) to avoid UTC day-shift.
+                  const schedFmt = ev.scheduled_date ? format(new Date(ev.scheduled_date + 'T00:00:00'), 'MMM d, yyyy') : '—'
+                  const compFmt  = ev.completed_date ? format(new Date(ev.completed_date + 'T00:00:00'), 'M/d/yy') : ''
+                  return (
+                    <tr key={ev.id} style={{ borderTop: '1px solid var(--border)' }}>
+                      <td style={{ padding: '10px 14px', color: 'var(--text2)', whiteSpace: 'nowrap' }}>{schedFmt}</td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: 12, background: catColor(cat), color: 'var(--text)' }}>{catLabel(cat)}</span>
+                      </td>
+                      <td style={{ padding: '10px 14px', color: 'var(--text2)' }}>{ev.project?.name || '—'}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--text)', fontWeight: 500 }}>{ev.name}</td>
+                      <td style={{ padding: '10px 14px' }}>
+                        {(ev.project?.tags || []).map(t => (
+                          <span key={t} style={{ padding: '2px 8px', borderRadius: 12, fontSize: 11, background: 'var(--bg4)', color: 'var(--text2)', marginRight: 4 }}>{t}</span>
+                        ))}
+                      </td>
+                      <td style={{ padding: '10px 14px', color: 'var(--text2)', whiteSpace: 'nowrap' }}>
+                        {ev.status}{ev.status === 'Complete' && compFmt ? ` · ${compFmt}` : ''}
+                      </td>
+                      <td style={{ padding: '10px 14px', color: 'var(--text3)' }}>{ev.note || ''}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Day detail panel */}
         {view === 'month' && selectedDay && (
