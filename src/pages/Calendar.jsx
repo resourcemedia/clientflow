@@ -68,6 +68,31 @@ export default function CalendarPage() {
     inFlightRef.current.delete(id)                         // release
   }
 
+  // Update item status inline (List). Flipping to Complete stamps completed_date (today,
+  // local — UTC-safe via date-fns format); back to Open clears it. Optimistic + rollback,
+  // re-entrancy-guarded (shares inFlightRef).
+  async function updateItemStatus(id, newStatus) {
+    if (!id || inFlightRef.current.has(id)) return
+    const item = events.find(e => e.id === id)
+    if (!item || item.status === newStatus) return
+    const prev = { status: item.status, completed_date: item.completed_date }
+    const newCompleted = newStatus === 'Complete' ? format(new Date(), 'yyyy-MM-dd') : null
+
+    inFlightRef.current.add(id)
+    setEvents(arr => arr.map(e => e.id === id ? { ...e, status: newStatus, completed_date: newCompleted } : e))
+
+    const { error } = await supabase
+      .from('project_items')
+      .update({ status: newStatus, completed_date: newCompleted })
+      .eq('id', id)
+
+    if (error) {
+      setEvents(arr => arr.map(e => e.id === id ? { ...e, status: prev.status, completed_date: prev.completed_date } : e))
+      console.error('Status update failed, reverted:', error)
+    }
+    inFlightRef.current.delete(id)
+  }
+
   // View-aware navigation: month steps by month, week by 7 days, day by 1 day.
   function navPrev() { setCurrent(c => view === 'day' ? addDays(c, -1) : view === 'week' ? addDays(c, -7) : subMonths(c, 1)) }
   function navNext() { setCurrent(c => view === 'day' ? addDays(c, 1)  : view === 'week' ? addDays(c, 7)  : addMonths(c, 1)) }
@@ -465,8 +490,20 @@ export default function CalendarPage() {
                           <span key={t} style={{ padding: '2px 8px', borderRadius: 12, fontSize: 11, background: 'var(--bg4)', color: 'var(--text2)', marginRight: 4 }}>{t}</span>
                         ))}
                       </td>
-                      <td style={{ padding: '10px 14px', color: 'var(--text2)', whiteSpace: 'nowrap' }}>
-                        {ev.status}{ev.status === 'Complete' && compFmt ? ` · ${compFmt}` : ''}
+                      <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                        <select value={ev.status || 'Open'} onChange={e => updateItemStatus(ev.id, e.target.value)}
+                          style={{
+                            padding: '3px 8px', borderRadius: 6, fontSize: 13, cursor: 'pointer',
+                            border: '1px solid var(--border)', background: 'var(--bg2)',
+                            color: ev.status === 'Complete' ? 'var(--green)' : 'var(--text2)',
+                            fontWeight: ev.status === 'Complete' ? 600 : 400,
+                          }}>
+                          <option value="Open">Open</option>
+                          <option value="Complete">Complete</option>
+                        </select>
+                        {ev.status === 'Complete' && compFmt && (
+                          <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text3)' }}>{compFmt}</span>
+                        )}
                       </td>
                       <td style={{ padding: '10px 14px', color: 'var(--text3)' }}>{ev.note || ''}</td>
                     </tr>
