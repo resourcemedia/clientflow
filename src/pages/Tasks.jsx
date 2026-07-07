@@ -246,7 +246,7 @@ function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onContext,
               <button
                 onClick={() => clientAlias && onClientFilter(clientAlias)}
                 disabled={!clientAlias}
-                title={isClientActive ? 'Clear client filter' : 'Show all tasks for this client'}
+                title="Show all tasks for this client"
                 style={{ width: 18, height: 18, border: 'none', background: 'none', padding: 0, flexShrink: 0, cursor: clientAlias ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <div style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, background: CATEGORY_COLORS[task.project?.category] || '#e5e7eb', outline: isClientActive ? '2px solid var(--text2)' : 'none', outlineOffset: 1 }} />
@@ -510,7 +510,7 @@ export default function TasksPage() {
   // execution buttons
   const [activeBtn, setActiveBtn] = useState(() => {
     const saved = localStorage.getItem('tasks_activeBtn')
-    return (saved === 'Hot') ? 'Hot' : 'All'
+    return (saved === 'Hot' || saved === 'ToDo') ? saved : 'All'
   })
   const [filteredProjectId, setFilteredProjectId] = useState(null)
   const [filteredTaskId,    setFilteredTaskId]    = useState(null)
@@ -784,11 +784,29 @@ export default function TasksPage() {
   }
 
   function handleClientFilter(alias) {
-    setClientFilter(prev => {
-      const next = prev === alias ? '' : alias
-      localStorage.setItem('tasks_clientFilter', next)
-      return next
-    })
+    // clean slate: clear everything, then filter by this client only
+    setProjectFilter('')
+    setTaskFilter('')
+    setCategoryFilter('')
+    setFilteredProjectId(null)
+    setFilteredTaskId(null)
+    setHotHighlightId(null)
+    setContextTaskId(null)
+    setActiveBtn('All')
+    setClientFilter(alias)
+  }
+
+  function handleTodo() {
+    // clean slate: clear everything, then filter the ToDo project across all clients
+    setClientFilter('')
+    setTaskFilter('')
+    setCategoryFilter('')
+    setFilteredProjectId(null)
+    setFilteredTaskId(null)
+    setHotHighlightId(null)
+    setContextTaskId(null)
+    setActiveBtn('ToDo')
+    setProjectFilter('ToDo')
   }
 
   function handleAll() {
@@ -845,6 +863,7 @@ export default function TasksPage() {
 
   // ── BUTTON STYLES ──────────────────────────────────────────────────────────
   const ACTIVE_COLORS = {
+    ToDo:          '#475569',
     All:           '#6b7280',
     RandomProject: '#6ab04c',
     RandomHot:     '#e05252',
@@ -919,6 +938,7 @@ export default function TasksPage() {
         </div>
 
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <button style={execBtnStyle('ToDo')}          onClick={handleTodo}>ToDo</button>
           <button style={execBtnStyle('All')}           onClick={handleAll}>All</button>
           <button style={execBtnStyle('RandomProject')} onClick={handleRandomProject}>Random Project Tasks</button>
           <button style={execBtnStyle('RandomHot')}     onClick={handleRandomHot}>Random Hot Task</button>
