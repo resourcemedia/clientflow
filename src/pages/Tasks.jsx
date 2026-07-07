@@ -139,7 +139,7 @@ function QuickAddRow({ onCommit, onDiscard }) {
 }
 
 // ── TASK ROW ─────────────────────────────────────────────────────────────────
-function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onContext, isContext, onAddBelow, onDelete, onDragStart, onDragOver, onDrop, isDragging, isDragTarget, highlighted, onCycleToggle, isSelected, onToggleSelect, onStartEdit, onEndEdit }) {
+function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onContext, isContext, onClientFilter, isClientActive, onAddBelow, onDelete, onDragStart, onDragOver, onDrop, isDragging, isDragTarget, highlighted, onCycleToggle, isSelected, onToggleSelect, onStartEdit, onEndEdit }) {
   const [editField,  setEditField]  = useState(null)
   const [noteVal,    setNoteVal]    = useState(task.note || '')
   const [snoteVal,   setSnoteVal]   = useState(task.status_note || '')
@@ -237,15 +237,29 @@ function TaskRow({ task, profiles, projects, onSave, onToggleVisible, onContext,
         </div>
       </td>
 
-      {/* alias */}
+      {/* alias + client quick-filter circle */}
       <td style={{ fontSize: 13, color: 'var(--text2)', whiteSpace: 'nowrap', paddingRight: 4, borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }}>
-        {task.project?.client?.alias || task.project?.client?.company || '—'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          {(() => {
+            const clientAlias = task.project?.client?.alias || task.project?.client?.company || ''
+            return (
+              <button
+                onClick={() => clientAlias && onClientFilter(clientAlias)}
+                disabled={!clientAlias}
+                title={isClientActive ? 'Clear client filter' : 'Show all tasks for this client'}
+                style={{ width: 18, height: 18, border: 'none', background: 'none', padding: 0, flexShrink: 0, cursor: clientAlias ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <div style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, background: CATEGORY_COLORS[task.project?.category] || '#e5e7eb', outline: isClientActive ? '2px solid var(--text2)' : 'none', outlineOffset: 1 }} />
+              </button>
+            )
+          })()}
+          <span>{task.project?.client?.alias || task.project?.client?.company || '—'}</span>
+        </div>
       </td>
 
       {/* project dropdown */}
       <td style={{ paddingLeft: 4, borderBottom: '1px solid #9dc691', borderRight: '1px solid #9dc691' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <div style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, background: CATEGORY_COLORS[task.project?.category] || '#e5e7eb' }} />
         <div style={{ position: 'relative', display: 'inline-block', maxWidth: 200, minWidth: 200 }}>
           <select
             value={task.project_id || ''}
@@ -769,6 +783,14 @@ export default function TasksPage() {
     }
   }
 
+  function handleClientFilter(alias) {
+    setClientFilter(prev => {
+      const next = prev === alias ? '' : alias
+      localStorage.setItem('tasks_clientFilter', next)
+      return next
+    })
+  }
+
   function handleAll() {
     setActiveBtn('All')
     setFilteredProjectId(null)
@@ -1025,6 +1047,8 @@ export default function TasksPage() {
                         onToggleSelect={toggleRow}
                         onContext={handleContext}
                         isContext={contextTaskId === task.id}
+                        onClientFilter={handleClientFilter}
+                        isClientActive={!!clientFilter && (task.project?.client?.alias || task.project?.client?.company) === clientFilter}
                         onStartEdit={() => setEditingTaskId(task.id)}
                         onEndEdit={() => setEditingTaskId(null)}
                       />
