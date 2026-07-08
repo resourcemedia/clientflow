@@ -93,6 +93,31 @@ export default function CalendarPage() {
     inFlightRef.current.delete(id)
   }
 
+  // Edit an item's completion date inline (List). String in/out ('yyyy-MM-dd') — no Date
+  // round-trip, so UTC-safe. Optimistic + rollback, re-entrancy-guarded (shares inFlightRef).
+  async function updateCompletedDate(id, dateStr) {
+    if (!id || inFlightRef.current.has(id)) return
+    const item = events.find(e => e.id === id)
+    if (!item) return
+    const value = dateStr || null            // empty picker clears it
+    if (item.completed_date === value) return
+    const prev = item.completed_date
+
+    inFlightRef.current.add(id)
+    setEvents(arr => arr.map(e => e.id === id ? { ...e, completed_date: value } : e))
+
+    const { error } = await supabase
+      .from('project_items')
+      .update({ completed_date: value })
+      .eq('id', id)
+
+    if (error) {
+      setEvents(arr => arr.map(e => e.id === id ? { ...e, completed_date: prev } : e))
+      console.error('Completion date update failed, reverted:', error)
+    }
+    inFlightRef.current.delete(id)
+  }
+
   // View-aware navigation: month steps by month, week by 7 days, day by 1 day.
   function navPrev() { setCurrent(c => view === 'day' ? addDays(c, -1) : view === 'week' ? addDays(c, -7) : subMonths(c, 1)) }
   function navNext() { setCurrent(c => view === 'day' ? addDays(c, 1)  : view === 'week' ? addDays(c, 7)  : addMonths(c, 1)) }
@@ -501,8 +526,15 @@ export default function CalendarPage() {
                           <option value="Open">Open</option>
                           <option value="Complete">Complete</option>
                         </select>
-                        {ev.status === 'Complete' && compFmt && (
-                          <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text3)' }}>{compFmt}</span>
+                        {ev.status === 'Complete' && (
+                          <input type="date"
+                            value={ev.completed_date || ''}
+                            onChange={e => updateCompletedDate(ev.id, e.target.value)}
+                            style={{
+                              marginLeft: 8, padding: '2px 6px', borderRadius: 6, fontSize: 12,
+                              border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text2)',
+                              cursor: 'text',
+                            }} title="Completion date — edit if you finished on a different day" />
                         )}
                       </td>
                       <td style={{ padding: '10px 14px', color: 'var(--text3)' }}>{ev.note || ''}</td>
