@@ -26,6 +26,38 @@ const CATEGORY_LABELS = {
 function catColor(category) { return CATEGORY_COLORS[category] || 'var(--bg4)' }
 function catLabel(category) { return CATEGORY_LABELS[category] || (category || '—') }
 
+// Inline multi-line editable note (List view). Ports the CashFlow EditableCell idea to a
+// textarea. Module-level so it keeps stable identity and doesn't lose focus on re-render.
+function NoteCell({ value, onSave }) {
+  const [editing, setEditing] = useState(false)
+  const [val, setVal] = useState(value ?? '')
+  useEffect(() => { setVal(value ?? '') }, [value])
+
+  if (!editing) {
+    return (
+      <div onClick={() => setEditing(true)}
+        style={{ cursor: 'text', minHeight: 20, whiteSpace: 'pre-wrap',
+                 color: value ? 'var(--text2)' : 'var(--text3)' }}>
+        {value || 'Add note…'}
+      </div>
+    )
+  }
+  return (
+    <textarea
+      autoFocus
+      value={val}
+      onChange={e => setVal(e.target.value)}
+      onBlur={() => { setEditing(false); if ((val ?? '') !== (value ?? '')) onSave(val) }}
+      rows={2}
+      style={{
+        width: '100%', minWidth: 160, fontSize: 13, fontFamily: 'inherit',
+        padding: '4px 6px', borderRadius: 6, border: '1px solid var(--accent)',
+        background: 'var(--bg2)', color: 'var(--text)', resize: 'vertical',
+      }}
+    />
+  )
+}
+
 export default function CalendarPage() {
   useEffect(() => { document.title = 'Calendar' }, [])
   const navigate  = useNavigate()
@@ -114,6 +146,31 @@ export default function CalendarPage() {
     if (error) {
       setEvents(arr => arr.map(e => e.id === id ? { ...e, completed_date: prev } : e))
       console.error('Completion date update failed, reverted:', error)
+    }
+    inFlightRef.current.delete(id)
+  }
+
+  // Save an item's note inline (List). Empty note clears to null.
+  // Optimistic + rollback, re-entrancy-guarded (shares inFlightRef).
+  async function updateNote(id, text) {
+    if (!id || inFlightRef.current.has(id)) return
+    const item = events.find(e => e.id === id)
+    if (!item) return
+    const value = text && text.trim() ? text : null
+    if ((item.note ?? null) === value) return
+    const prev = item.note
+
+    inFlightRef.current.add(id)
+    setEvents(arr => arr.map(e => e.id === id ? { ...e, note: value } : e))
+
+    const { error } = await supabase
+      .from('project_items')
+      .update({ note: value })
+      .eq('id', id)
+
+    if (error) {
+      setEvents(arr => arr.map(e => e.id === id ? { ...e, note: prev } : e))
+      console.error('Note update failed, reverted:', error)
     }
     inFlightRef.current.delete(id)
   }
@@ -537,7 +594,9 @@ export default function CalendarPage() {
                             }} title="Completion date — edit if you finished on a different day" />
                         )}
                       </td>
-                      <td style={{ padding: '10px 14px', color: 'var(--text3)' }}>{ev.note || ''}</td>
+                      <td style={{ padding: '10px 14px', minWidth: 180, verticalAlign: 'top' }}>
+                        <NoteCell value={ev.note} onSave={text => updateNote(ev.id, text)} />
+                      </td>
                     </tr>
                   )
                 })}
