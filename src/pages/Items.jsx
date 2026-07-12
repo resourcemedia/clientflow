@@ -5,6 +5,18 @@ import { StatusBadge, Breadcrumb } from '../components/ui'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 
+function todayISO() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function formatDateShort(iso) {
+  if (!iso) return '—'
+  const [y, m, d] = iso.slice(0, 10).split('-')
+  if (!y || !m || !d) return '—'
+  return `${m}/${d}/${y.slice(2)}`
+}
+
 export default function ItemsPage() {
   useEffect(() => { document.title = 'Items' }, [])
   const navigate      = useNavigate()
@@ -33,8 +45,7 @@ export default function ItemsPage() {
           project:projects(
             id, name, product_type,
             client:clients(id, company, alias)
-          ),
-          proofs(id)
+          )
         `)
         .order('sort_order', { ascending: true, nullsFirst: false })
         .order('item_number')
@@ -70,7 +81,7 @@ export default function ItemsPage() {
 
   // ── Filter ────────────────────────────────────────────────────────────
   const q = search.toLowerCase()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayISO()
 
   const filtered = items.filter(item => {
     const p = item.project
@@ -81,7 +92,7 @@ export default function ItemsPage() {
     if (q) {
       const nameMatch    = (item.name  || '').toLowerCase().includes(q)
       const projMatch    = (p?.name    || '').toLowerCase().includes(q)
-      const clientMatch  = (c?.company || c?.alias || '').toLowerCase().includes(q)
+      const clientMatch  = `${c?.company || ''} ${c?.alias || ''}`.toLowerCase().includes(q)
       if (!nameMatch && !projMatch && !clientMatch) return false
     }
     return true
@@ -190,21 +201,18 @@ export default function ItemsPage() {
                   <tr>
                     <th style={{ width: 24 }}></th>
                     <th>Client</th>
-                    <th>Product</th>
                     <th>Project</th>
                     <th>Item</th>
                     <th style={{ width: 60 }}>Order</th>
-                    <th style={{ width: 80 }}>Proofs</th>
-                    <th style={{ width: 120 }}>Scheduled</th>
+                    <th style={{ width: 100 }}>Scheduled</th>
                     <th style={{ width: 110 }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((item, idx) => {
-                    const project    = item.project
-                    const client     = project?.client
-                    const proofCount = item.proofs?.length ?? 0
-                    const isPast     = item.scheduled_date && item.scheduled_date < today
+                    const project = item.project
+                    const client  = project?.client
+                    const isPast  = item.scheduled_date && item.scheduled_date < today
 
                     return (
                       <tr
@@ -226,11 +234,7 @@ export default function ItemsPage() {
                         </td>
 
                         <td className="td-main">
-                          {client?.company || client?.alias || '—'}
-                        </td>
-
-                        <td>
-                          <StatusBadge status={project?.product_type} />
+                          {client?.alias || client?.company || '—'}
                         </td>
 
                         <td style={{ color: 'var(--text2)' }}>
@@ -256,23 +260,6 @@ export default function ItemsPage() {
                           {item.sort_order ?? '—'}
                         </td>
 
-                        <td>
-                          {proofCount > 0 ? (
-                            <button
-                              className="btn btn-ghost btn-sm"
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}
-                              onClick={() => navigate(`/proofs?item=${item.id}`)}
-                            >
-                              View
-                              <span className="nav-badge" style={{ position: 'static', minWidth: 18 }}>
-                                {proofCount}
-                              </span>
-                            </button>
-                          ) : (
-                            <span style={{ color: 'var(--text3)' }}>—</span>
-                          )}
-                        </td>
-
                         <td
                           className="text-mono"
                           style={{
@@ -281,7 +268,7 @@ export default function ItemsPage() {
                             fontWeight: isPast ? 600 : 400,
                           }}
                         >
-                          {item.scheduled_date?.slice(0, 10) || '—'}
+                          {formatDateShort(item.scheduled_date)}
                         </td>
 
                         <td>
