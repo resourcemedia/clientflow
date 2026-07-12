@@ -76,21 +76,23 @@ export default function CalendarPage() {
   const [view, setView] = useState('month')   // 'day' | 'week' | 'month' | 'list'
   const [dateStart, setDateStart] = useState('')   // List view range (yyyy-MM-dd)
   const [dateEnd,   setDateEnd]   = useState('')
+  const [scope,     setScope]     = useState('scheduled')  // List only: 'scheduled' | 'all'
   const inFlightRef = useRef(new Set())
 
   // Reschedule an item by drag-drop. Optimistic + rollback, single write, re-entrancy-guarded.
   async function moveItem(id, newDateIso) {
     if (!id || inFlightRef.current.has(id)) return       // guard: ignore concurrent fire on same item
     const item = events.find(e => e.id === id)
-    if (!item || item.scheduled_date === newDateIso) return   // missing or no-op (same day)
+    const value = newDateIso || null                        // empty picker → back to backlog
+    if (!item || item.scheduled_date === value) return      // missing or no-op (same day)
     const prevDate = item.scheduled_date
 
     inFlightRef.current.add(id)                            // LOCK synchronously, before any await
-    setEvents(prev => prev.map(e => e.id === id ? { ...e, scheduled_date: newDateIso } : e))  // optimistic move
+    setEvents(prev => prev.map(e => e.id === id ? { ...e, scheduled_date: value } : e))  // optimistic
 
     const { error } = await supabase
       .from('project_items')
-      .update({ scheduled_date: newDateIso })
+      .update({ scheduled_date: value })
       .eq('id', id)
 
     if (error) {
@@ -218,7 +220,7 @@ export default function CalendarPage() {
     setLoading(true)
     loadEvents()
     setSelectedDay(null)
-  }, [current, location.pathname, view, dateStart, dateEnd])
+  }, [current, location.pathname, view, dateStart, dateEnd, scope])
 
   async function loadEvents() {
     setLoading(true)
@@ -231,12 +233,25 @@ export default function CalendarPage() {
       rangeStart = format(startOfWeek(startOfMonth(current)), 'yyyy-MM-dd')
       rangeEnd   = format(endOfWeek(endOfMonth(current)),     'yyyy-MM-dd')
     }
-    const { data } = await supabase
+    let query = supabase
       .from('project_items')
       .select('id, name, scheduled_date, status, completed_date, note, project:projects(name, category, tags, client:clients(company))')
-      .gte('scheduled_date', rangeStart)
-      .lte('scheduled_date', rangeEnd)
-      .order('scheduled_date')
+
+    if (view === 'list' && scope === 'all') {
+      // A range comparison never matches NULL, so undated items are excluded by
+      // .gte/.lte. OR them back in. They ignore the date range by definition.
+      query = query.or(
+        `and(scheduled_date.gte.${rangeStart},scheduled_date.lte.${rangeEnd}),scheduled_date.is.null`
+      )
+    } else {
+      query = query.gte('scheduled_date', rangeStart).lte('scheduled_date', rangeEnd)
+    }
+
+    const { data, error } = await query
+      .order('scheduled_date', { ascending: true, nullsFirst: false })
+      .order('name')
+
+    if (error) console.error('calendar load error:', error)
     setEvents(data || [])
     setLoading(false)
   }
@@ -296,6 +311,23 @@ export default function CalendarPage() {
           { label: 'Dashboard', onClick: () => navigate('/') },
           { label: 'Calendar' },
         ]} />
+
+        {/* Scope toggle — List only. Grid views have no cell for an undated item. */}
+        {view === 'list' && (
+          <div style={{ display: 'flex', gap: 4, marginLeft: 12 }}>
+            {[['all','All'],['scheduled','Scheduled']].map(([s, label]) => (
+              <button key={s} onClick={() => setScope(s)}
+                style={{
+                  padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  border: '1px solid var(--border)',
+                  background: scope === s ? 'var(--bg4)' : 'transparent',
+                  color: scope === s ? 'var(--text)' : 'var(--text2)',
+                }}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* View toggle */}
         <div style={{ display: 'flex', gap: 4, marginLeft: 12 }}>
@@ -553,15 +585,27 @@ export default function CalendarPage() {
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>No items in this range.</td></tr>
+                  <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+                    {scope === 'all' ? 'No items match these filters.' : 'No items in this range.'}
+                  </td></tr>
                 ) : filtered.map(ev => {
                   const cat = ev.project?.category
-                  // Parse yyyy-MM-dd as LOCAL (append time) to avoid UTC day-shift.
-                  const schedFmt = ev.scheduled_date ? format(new Date(ev.scheduled_date + 'T00:00:00'), 'MMM d, yyyy') : '—'
                   const compFmt  = ev.completed_date ? format(new Date(ev.completed_date + 'T00:00:00'), 'M/d/yy') : ''
                   return (
                     <tr key={ev.id} style={{ borderTop: '1px solid var(--border)' }}>
-                      <td style={{ padding: '10px 14px', color: 'var(--text2)', whiteSpace: 'nowrap' }}>{schedFmt}</td>
+                      <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                        <input type="date"
+                          value={ev.scheduled_date || ''}
+                          onChange={e => moveItem(ev.id, e.target.value)}
+                          style={{
+                            padding: '3px 6px', borderRadius: 6, fontSize: 13,
+                            border: '1px solid var(--border)',
+                            background: ev.scheduled_date ? 'var(--bg2)' : 'transparent',
+                            color: ev.scheduled_date ? 'var(--text2)' : 'var(--text3)',
+                            cursor: 'text',
+                          }}
+                          title="Scheduled date — clear it to send this item back to the unscheduled backlog" />
+                      </td>
                       <td style={{ padding: '10px 14px' }}>
                         <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: 12, background: catColor(cat), color: 'var(--text)' }}>{catLabel(cat)}</span>
                       </td>
