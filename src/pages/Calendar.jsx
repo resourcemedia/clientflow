@@ -73,10 +73,15 @@ export default function CalendarPage() {
   const [filterStatus,  setFilterStatus]  = useState('')
   const [draggedId,   setDraggedId]   = useState(null)
   const [dragOverIso, setDragOverIso] = useState(null)
+  const [listDragIdx, setListDragIdx] = useState(null)   // List reorder (Priority mode)
+  const [listOverIdx, setListOverIdx] = useState(null)
+  const listDragFrom  = useRef(null)
+  const reorderingRef = useRef(false)                     // re-entrancy guard
   const [view, setView] = useState('month')   // 'day' | 'week' | 'month' | 'list'
   const [dateStart, setDateStart] = useState('')   // List view range (yyyy-MM-dd)
   const [dateEnd,   setDateEnd]   = useState('')
   const [scope,     setScope]     = useState('scheduled')  // List only: 'scheduled' | 'all'
+  const [sortBy,    setSortBy]    = useState('date')       // List only: 'date' | 'priority'
   const inFlightRef = useRef(new Set())
 
   // Reschedule an item by drag-drop. Optimistic + rollback, single write, re-entrancy-guarded.
@@ -177,6 +182,65 @@ export default function CalendarPage() {
     inFlightRef.current.delete(id)
   }
 
+  // ── List reorder (Priority mode) ────────────────────────────────────────────
+  // The visible rows occupy a set of priority slots. Reorder the rows among
+  // those SAME slots. Rows hidden by a filter keep their ranks untouched, so
+  // reordering inside a client filter cannot corrupt the master ordering.
+  async function reorderPriority(fromIdx, toIdx) {
+    if (reorderingRef.current) return
+    const rows  = [...filtered]
+    const slots = rows.map(r => r.priority_order)   // ascending; NOT NULL by constraint
+    if (slots.some(s => s == null)) {
+      console.error('Reorder aborted: null priority_order in view')
+      return
+    }
+
+    const [moved] = rows.splice(fromIdx, 1)
+    rows.splice(toIdx, 0, moved)
+
+    const changed = rows
+      .map((row, k) => ({ row, next: slots[k] }))
+      .filter(({ row, next }) => row.priority_order !== next)
+    if (!changed.length) return
+
+    reorderingRef.current = true                    // LOCK before any await
+    const prev = events
+    const byId = new Map(changed.map(({ row, next }) => [row.id, next]))
+    setEvents(arr =>
+      arr
+        .map(e => (byId.has(e.id) ? { ...e, priority_order: byId.get(e.id) } : e))
+        .sort((a, b) => a.priority_order - b.priority_order)
+    )
+
+    const results = await Promise.all(
+      changed.map(({ row, next }) =>
+        supabase.from('project_items').update({ priority_order: next }).eq('id', row.id)
+      )
+    )
+    const failed = results.find(r => r.error)
+    if (failed) {
+      console.error('Priority reorder failed, reverted:', failed.error)
+      setEvents(prev)
+    }
+    reorderingRef.current = false                   // release
+  }
+
+  function startListDrag(e, idx) {
+    e.dataTransfer.effectAllowed = 'move'
+    listDragFrom.current = idx
+    setListDragIdx(idx)
+  }
+  function overListRow(e, idx) { e.preventDefault(); setListOverIdx(idx) }
+  function endListDrag() {
+    setListDragIdx(null); setListOverIdx(null); listDragFrom.current = null
+  }
+  function dropListRow(toIdx) {
+    const fromIdx = listDragFrom.current
+    endListDrag()
+    if (fromIdx == null || fromIdx === toIdx) return
+    reorderPriority(fromIdx, toIdx)
+  }
+
   // View-aware navigation: month steps by month, week by 7 days, day by 1 day.
   function navPrev() { setCurrent(c => view === 'day' ? addDays(c, -1) : view === 'week' ? addDays(c, -7) : subMonths(c, 1)) }
   function navNext() { setCurrent(c => view === 'day' ? addDays(c, 1)  : view === 'week' ? addDays(c, 7)  : addMonths(c, 1)) }
@@ -220,7 +284,7 @@ export default function CalendarPage() {
     setLoading(true)
     loadEvents()
     setSelectedDay(null)
-  }, [current, location.pathname, view, dateStart, dateEnd, scope])
+  }, [current, location.pathname, view, dateStart, dateEnd, scope, sortBy])
 
   async function loadEvents() {
     setLoading(true)
@@ -235,7 +299,7 @@ export default function CalendarPage() {
     }
     let query = supabase
       .from('project_items')
-      .select('id, name, scheduled_date, status, completed_date, note, project:projects(name, category, tags, client:clients(company))')
+      .select('id, name, scheduled_date, status, completed_date, note, priority_order, project:projects(name, category, tags, client:clients(company))')
 
     if (view === 'list' && scope === 'all') {
       // A range comparison never matches NULL, so undated items are excluded by
@@ -247,9 +311,15 @@ export default function CalendarPage() {
       query = query.gte('scheduled_date', rangeStart).lte('scheduled_date', rangeEnd)
     }
 
-    const { data, error } = await query
-      .order('scheduled_date', { ascending: true, nullsFirst: false })
-      .order('name')
+    // Grid views always order by date. List honors the sort toggle.
+    const byPriority = view === 'list' && sortBy === 'priority'
+    const { data, error } = byPriority
+      ? await query
+          .order('priority_order', { ascending: true })
+          .order('scheduled_date', { ascending: true, nullsFirst: false })
+      : await query
+          .order('scheduled_date', { ascending: true, nullsFirst: false })
+          .order('priority_order', { ascending: true })
 
     if (error) console.error('calendar load error:', error)
     setEvents(data || [])
@@ -322,6 +392,23 @@ export default function CalendarPage() {
                   border: '1px solid var(--border)',
                   background: scope === s ? 'var(--bg4)' : 'transparent',
                   color: scope === s ? 'var(--text)' : 'var(--text2)',
+                }}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Sort toggle — List only. Drag-to-reorder is enabled in Priority mode. */}
+        {view === 'list' && (
+          <div style={{ display: 'flex', gap: 4, marginLeft: 12 }}>
+            {[['date','Date'],['priority','Priority']].map(([s, label]) => (
+              <button key={s} onClick={() => setSortBy(s)}
+                style={{
+                  padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  border: '1px solid var(--border)',
+                  background: sortBy === s ? 'var(--bg4)' : 'transparent',
+                  color: sortBy === s ? 'var(--text)' : 'var(--text2)',
                 }}>
                 {label}
               </button>
@@ -578,6 +665,7 @@ export default function CalendarPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: 'var(--bg3)' }}>
+                  <th style={{ width: 28, padding: '10px 0 10px 14px' }}></th>
                   {['Date','Category','Project','Item','Tags','Status','Note'].map(h => (
                     <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)' }}>{h}</th>
                   ))}
@@ -585,14 +673,34 @@ export default function CalendarPage() {
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+                  <tr><td colSpan={8} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
                     {scope === 'all' ? 'No items match these filters.' : 'No items in this range.'}
                   </td></tr>
-                ) : filtered.map(ev => {
-                  const cat = ev.project?.category
+                ) : filtered.map((ev, idx) => {
+                  const cat     = ev.project?.category
+                  const canDrag = sortBy === 'priority'
                   const compFmt  = ev.completed_date ? format(new Date(ev.completed_date + 'T00:00:00'), 'M/d/yy') : ''
                   return (
-                    <tr key={ev.id} style={{ borderTop: '1px solid var(--border)' }}>
+                    <tr key={ev.id}
+                      onDragOver={canDrag ? (e => overListRow(e, idx)) : undefined}
+                      onDrop={canDrag ? (() => dropListRow(idx)) : undefined}
+                      onDragEnd={canDrag ? endListDrag : undefined}
+                      style={{
+                        borderTop: listOverIdx === idx && listDragIdx !== idx
+                          ? '2px solid var(--accent)' : '1px solid var(--border)',
+                        opacity: listDragIdx === idx ? 0.4 : 1,
+                      }}>
+                      <td
+                        draggable={canDrag}
+                        onDragStart={canDrag ? (e => startListDrag(e, idx)) : undefined}
+                        title={canDrag ? 'Drag to reorder priority' : 'Switch sort to Priority to reorder'}
+                        style={{
+                          width: 28, padding: '10px 0 10px 14px', fontSize: 15, userSelect: 'none',
+                          cursor: canDrag ? 'grab' : 'default',
+                          color: canDrag ? 'var(--text3)' : 'transparent',
+                        }}>
+                        ⠿
+                      </td>
                       <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                         <input type="date"
                           value={ev.scheduled_date || ''}
