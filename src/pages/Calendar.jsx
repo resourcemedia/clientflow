@@ -75,6 +75,7 @@ export default function CalendarPage() {
   const [dragOverIso, setDragOverIso] = useState(null)
   const [listDragIdx, setListDragIdx] = useState(null)   // List reorder (Priority mode)
   const [listOverIdx, setListOverIdx] = useState(null)
+  const [cardOverId,  setCardOverId]  = useState(null)   // Day card reorder drop target
   const listDragFrom  = useRef(null)
   const reorderingRef = useRef(false)                     // re-entrancy guard
   const [view, setView] = useState('month')   // 'day' | 'week' | 'month' | 'list'
@@ -186,9 +187,12 @@ export default function CalendarPage() {
   // The visible rows occupy a set of priority slots. Reorder the rows among
   // those SAME slots. Rows hidden by a filter keep their ranks untouched, so
   // reordering inside a client filter cannot corrupt the master ordering.
-  async function reorderPriority(fromIdx, toIdx) {
+  // Permutes a SUBSET of rows among the priority slots they already occupy.
+  // Rows outside `sourceRows` keep their ranks untouched. Used by the List
+  // (all filtered rows) and by Day view (that one day's cards).
+  async function reorderPriority(sourceRows, fromIdx, toIdx) {
     if (reorderingRef.current) return
-    const rows  = [...filtered]
+    const rows  = [...sourceRows]
     const slots = rows.map(r => r.priority_order)   // ascending; NOT NULL by constraint
     if (slots.some(s => s == null)) {
       console.error('Reorder aborted: null priority_order in view')
@@ -238,7 +242,7 @@ export default function CalendarPage() {
     const fromIdx = listDragFrom.current
     endListDrag()
     if (fromIdx == null || fromIdx === toIdx) return
-    reorderPriority(fromIdx, toIdx)
+    reorderPriority(filtered, fromIdx, toIdx)
   }
 
   // View-aware navigation: month steps by month, week by 7 days, day by 1 day.
@@ -247,28 +251,95 @@ export default function CalendarPage() {
 
   // Draggable item card + day drop-target props — shared by Week and Day views.
   // (Month view keeps its own inline copy; unify later if card styling changes.)
-  function eventCard(ev) {
-    const cat = ev.project?.category
+  function eventCard(ev, full = false, rows = null) {
+    const cat        = ev.project?.category
     const isDragging = draggedId === ev.id
+    const alias      = ev.project?.client?.alias || ev.project?.client?.company || ''
+    const startDrag  = e => {
+      e.stopPropagation()
+      setDraggedId(ev.id)
+      e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('text/plain', ev.id)
+    }
+    const endDrag = () => { setDraggedId(null); setDragOverIso(null); setCardOverId(null) }
+
+    // Same-day reorder. stopPropagation keeps the day container's onDrop
+    // (moveItem → same date → no-op) from also firing.
+    const dropOnCard = e => {
+      e.preventDefault()
+      e.stopPropagation()
+      const fromIdx = rows.findIndex(r => r.id === draggedId)
+      const toIdx   = rows.findIndex(r => r.id === ev.id)
+      setCardOverId(null); setDraggedId(null); setDragOverIso(null)
+      if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return
+      reorderPriority(rows, fromIdx, toIdx)
+    }
+    const dropTargetProps = rows ? {
+      onDragOver: e => {
+        e.preventDefault(); e.stopPropagation()
+        if (draggedId && draggedId !== ev.id && cardOverId !== ev.id) setCardOverId(ev.id)
+      },
+      onDragLeave: () => setCardOverId(c => (c === ev.id ? null : c)),
+      onDrop: dropOnCard,
+    } : {}
+
+    // Compact chip — Week view.
+    if (!full) {
+      return (
+        <div key={ev.id}
+          draggable
+          onDragStart={startDrag}
+          onDragEnd={endDrag}
+          style={{
+            fontSize: 12, fontWeight: 500,
+            padding: '4px 8px', borderRadius: 4, marginBottom: 3,
+            borderLeft: `3px solid ${catColor(cat)}`,
+            background: 'var(--bg3)', color: 'var(--text2)',
+            cursor: 'grab',
+            opacity: isDragging ? 0.4 : 1,
+          }} title={`${ev.project?.name || ''} — ${ev.name}`}>
+          {ev.project?.name ? `${ev.project.name}: ` : ''}{ev.name}
+        </div>
+      )
+    }
+
+    // Full card — Day view.
     return (
       <div key={ev.id}
-        draggable
-        onDragStart={e => {
-          e.stopPropagation()
-          setDraggedId(ev.id)
-          e.dataTransfer.effectAllowed = 'move'
-          e.dataTransfer.setData('text/plain', ev.id)
-        }}
-        onDragEnd={() => { setDraggedId(null); setDragOverIso(null) }}
+        onDragEnd={endDrag}
+        {...dropTargetProps}
         style={{
-          fontSize: 12, fontWeight: 500,
-          padding: '4px 8px', borderRadius: 4, marginBottom: 3,
-          borderLeft: `3px solid ${catColor(cat)}`,
-          background: 'var(--bg3)', color: 'var(--text2)',
-          cursor: 'grab',
+          display: 'flex', alignItems: 'stretch',
+          marginBottom: 8, borderRadius: 6, overflow: 'hidden',
+          background: 'var(--bg3)',
           opacity: isDragging ? 0.4 : 1,
-        }} title={`${ev.project?.name || ''} — ${ev.name}`}>
-        {ev.project?.name ? `${ev.project.name}: ` : ''}{ev.name}
+          // inset shadow, not a border — a border would shift the layout mid-drag
+          boxShadow: cardOverId === ev.id ? 'inset 0 3px 0 0 var(--accent)' : 'none',
+        }}
+        title={`${ev.project?.name || ''} — ${ev.name}`}>
+
+        <div
+          draggable
+          onDragStart={startDrag}
+          title="Drag to reschedule"
+          style={{
+            flex: '0 0 18px', background: catColor(cat),
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'grab', userSelect: 'none',
+            fontSize: 11, color: 'rgba(0,0,0,0.35)',
+          }}>⠿</div>
+
+        <div style={{ flex: 1, minWidth: 0, padding: '8px 12px' }}>
+          <div style={{ fontSize: 12, lineHeight: 1.45, color: 'var(--text3)' }}>{alias}</div>
+          <div style={{ fontSize: 12, lineHeight: 1.45, color: 'var(--text2)' }}>{ev.project?.name}</div>
+          <div style={{ fontSize: 13, lineHeight: 1.5, fontWeight: 700, color: 'var(--text)' }}>{ev.name}</div>
+          {ev.note && (
+            <div style={{
+              fontSize: 12, lineHeight: 1.5, marginTop: 2,
+              color: 'var(--text2)', whiteSpace: 'pre-wrap',
+            }}>{ev.note}</div>
+          )}
+        </div>
       </div>
     )
   }
@@ -299,7 +370,7 @@ export default function CalendarPage() {
     }
     let query = supabase
       .from('project_items')
-      .select('id, name, scheduled_date, status, completed_date, note, priority_order, project:projects(name, category, tags, client:clients(company))')
+      .select('id, name, scheduled_date, status, completed_date, note, priority_order, project:projects(name, category, tags, client:clients(company, alias))')
 
     if (view === 'list' && scope === 'all') {
       // A range comparison never matches NULL, so undated items are excluded by
@@ -654,7 +725,7 @@ export default function CalendarPage() {
                 }}>
                 {dayEvents.length === 0
                   ? <div style={{ color: 'var(--text3)', fontSize: 13, textAlign: 'center', padding: 20 }}>Nothing scheduled.</div>
-                  : dayEvents.map(ev => eventCard(ev))}
+                  : dayEvents.map(ev => eventCard(ev, true, dayEvents))}
               </div>
             </div>
           )
