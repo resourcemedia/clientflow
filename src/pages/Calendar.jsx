@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { deleteItemCascade, getItemProofCount } from '../lib/items'
 import { CATEGORY_COLORS, CATEGORY_LABELS, catColor, catLabel } from '../lib/categories'
 import { Breadcrumb, NoteCell } from '../components/ui'
 import {
@@ -325,7 +326,7 @@ export default function CalendarPage() {
     }
     let query = supabase
       .from('project_items')
-      .select('id, name, scheduled_date, status, completed_date, note, priority_order, project:projects(name, category, tags, client:clients(company, alias))')
+      .select('id, project_id, name, scheduled_date, status, completed_date, note, priority_order, project:projects(name, category, tags, client:clients(company, alias))')
 
     if (view === 'list' && scope === 'all') {
       // A range comparison never matches NULL, so undated items are excluded by
@@ -399,6 +400,23 @@ export default function CalendarPage() {
     : view === 'week'
       ? `${format(startOfWeek(current), 'MMM d')} – ${format(endOfWeek(current), 'MMM d, yyyy')}`
       : format(current, 'MMMM yyyy')
+
+  // ── Delete ────────────────────────────────────────────────────────────
+  async function deleteItem(ev) {
+    const proofCount = await getItemProofCount(ev.id)
+    const warning = proofCount > 0
+      ? `\n\nThis will also permanently delete ${proofCount} proof${proofCount === 1 ? '' : 's'}, their comments, and any uploaded images.`
+      : ''
+    if (!window.confirm(`Delete "${ev.name}"?${warning}\n\nThis cannot be undone.`)) return
+
+    const prev = events
+    setEvents(arr => arr.filter(e => e.id !== ev.id))   // optimistic
+    const { error } = await deleteItemCascade(ev.id)
+    if (error) {
+      console.error('Delete failed, reverted:', error)
+      setEvents(prev)
+    }
+  }
 
   return (
     <div className="fade-in">
@@ -670,11 +688,12 @@ export default function CalendarPage() {
                   {['Date','Category','Project','Item','Tags','Status','Note'].map(h => (
                     <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)' }}>{h}</th>
                   ))}
+                  <th style={{ width: 44 }}></th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={8} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+                  <tr><td colSpan={9} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
                     {scope === 'all' ? 'No items match these filters.' : 'No items in this range.'}
                   </td></tr>
                 ) : filtered.map((ev, idx) => {
@@ -691,16 +710,24 @@ export default function CalendarPage() {
                           ? '2px solid var(--accent)' : '1px solid var(--border)',
                         opacity: listDragIdx === idx ? 0.4 : 1,
                       }}>
-                      <td
-                        draggable={canDrag}
-                        onDragStart={canDrag ? (e => startListDrag(e, idx)) : undefined}
-                        title={canDrag ? 'Drag to reorder priority' : 'Switch sort to Priority to reorder'}
-                        style={{
-                          width: 28, padding: '10px 0 10px 14px', fontSize: 15, userSelect: 'none',
-                          cursor: canDrag ? 'grab' : 'default',
-                          color: canDrag ? 'var(--text3)' : 'transparent',
-                        }}>
-                        ⠿
+                      {/* height:1px on the td + height:100% on the child is the standard
+                          trick to make a div fill a table row's actual height. */}
+                      <td style={{ width: 26, height: 1, padding: '4px 0 4px 12px' }}>
+                        <div
+                          draggable={canDrag}
+                          onDragStart={canDrag ? (e => startListDrag(e, idx)) : undefined}
+                          title={canDrag ? 'Drag to reorder priority' : 'Switch sort to Priority to reorder'}
+                          style={{
+                            width: 18, height: '100%', minHeight: 30,
+                            borderRadius: 4,
+                            background: catColor(cat),
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 11, userSelect: 'none',
+                            cursor: canDrag ? 'grab' : 'default',
+                            color: canDrag ? 'rgba(0,0,0,0.35)' : 'transparent',
+                          }}>
+                          ⠿
+                        </div>
                       </td>
                       <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                         <input type="date"
@@ -749,6 +776,24 @@ export default function CalendarPage() {
                       </td>
                       <td style={{ padding: '10px 14px', minWidth: 180, verticalAlign: 'top' }}>
                         <NoteCell value={ev.note} onSave={text => updateNote(ev.id, text)} />
+                      </td>
+
+                      <td style={{ width: 44, padding: '10px 14px 10px 0', textAlign: 'center' }}>
+                        <button
+                          onClick={() => deleteItem(ev)}
+                          title="Delete item"
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            padding: 4, lineHeight: 0, color: 'var(--text3)',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.color = 'var(--red)' }}
+                          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text3)' }}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" />
+                            <path d="M10 11v6M14 11v6" />
+                          </svg>
+                        </button>
                       </td>
                     </tr>
                   )

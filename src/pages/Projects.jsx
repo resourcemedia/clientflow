@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, Fragment } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { CATEGORY_COLORS } from '../lib/categories'
+import { deleteItemCascade, getItemProofCount } from '../lib/items'
 import { useAuth } from '../lib/auth'
 import { DEMO_PROJECTS, DEMO_CLIENTS, PRIORITIES, PROOF_STATUSES, INV_STATUSES, COLLECT_STATUSES } from '../lib/demo-data'
 import { StatusBadge, Modal, EmptyState, PillNav, FormGroup, fmt$, initials, NoteCell } from '../components/ui'
@@ -1450,17 +1451,16 @@ export default function ProjectsPage() {
   }
 
   async function deleteProjectItem(projectId, itemId) {
-    await supabase.from('project_items').delete().eq('id', itemId)
-    const remaining = (projectItems[projectId] || []).filter(i => i.id !== itemId)
-    const renumbered = remaining.map((item, i) => ({
-      ...item,
-      sort_order: i,
-      item_number: String(i + 1).padStart(2, '0'),
-    }))
-    setProjectItems(prev => ({ ...prev, [projectId]: renumbered }))
-    renumbered.forEach(item => {
-      supabase.from('project_items').update({ sort_order: item.sort_order, item_number: item.item_number }).eq('id', item.id).then(() => {})
-    })
+    const item = (projectItems[projectId] || []).find(i => i.id === itemId)
+    const proofCount = await getItemProofCount(itemId)
+    const warning = proofCount > 0
+      ? `\n\nThis will also permanently delete ${proofCount} proof${proofCount === 1 ? '' : 's'}, their comments, and any uploaded images.`
+      : ''
+    if (!window.confirm(`Delete "${item?.name || 'this item'}"?${warning}\n\nThis cannot be undone.`)) return
+
+    const { error, renumbered } = await deleteItemCascade(itemId)
+    if (error) { console.error('Delete failed:', error); return }
+    setProjectItems(prev => ({ ...prev, [projectId]: renumbered || [] }))
   }
 
   async function saveProjectTask(projectId, taskId, updates) {
