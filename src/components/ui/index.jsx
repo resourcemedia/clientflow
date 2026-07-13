@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react'
+
 // ── BADGE ──────────────────────────────────────────────────────────────
 export function Badge({ children, variant = 'gray' }) {
   return <span className={`badge badge-${variant}`}>{children}</span>
@@ -141,4 +143,38 @@ export function fmt$( n ) {
 export function initials(str) {
   if (!str) return '??'
   return str.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
+}
+
+// ── INLINE MULTI-LINE NOTE CELL ────────────────────────────────────────
+// Textarea sibling of EditableCell (CashFlow). Click to edit, blur to save.
+// Module-level so it keeps stable identity and doesn't lose focus on re-render.
+// Used by Calendar (List view) and Projects (Item drawer).
+export function NoteCell({ value, onSave, placeholder = 'Add note…' }) {
+  const [editing, setEditing] = useState(false)
+  const [val, setVal] = useState(value ?? '')
+  useEffect(() => { setVal(value ?? '') }, [value])
+
+  if (!editing) {
+    return (
+      <div onClick={() => setEditing(true)}
+        style={{ cursor: 'text', minHeight: 20, whiteSpace: 'pre-wrap',
+                 color: value ? 'var(--text2)' : 'var(--text3)' }}>
+        {value || placeholder}
+      </div>
+    )
+  }
+  return (
+    <textarea
+      autoFocus
+      value={val}
+      onChange={e => setVal(e.target.value)}
+      onBlur={() => { setEditing(false); if ((val ?? '') !== (value ?? '')) onSave(val) }}
+      rows={2}
+      style={{
+        width: '100%', minWidth: 160, fontSize: 13, fontFamily: 'inherit',
+        padding: '4px 6px', borderRadius: 6, border: '1px solid var(--accent)',
+        background: 'var(--bg2)', color: 'var(--text)', resize: 'vertical',
+      }}
+    />
+  )
 }

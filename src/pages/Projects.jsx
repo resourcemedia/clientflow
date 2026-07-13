@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { DEMO_PROJECTS, DEMO_CLIENTS, PRIORITIES, PROOF_STATUSES, INV_STATUSES, COLLECT_STATUSES } from '../lib/demo-data'
-import { StatusBadge, Modal, EmptyState, PillNav, FormGroup, fmt$, initials } from '../components/ui'
+import { StatusBadge, Modal, EmptyState, PillNav, FormGroup, fmt$, initials, NoteCell } from '../components/ui'
 import iconTodo      from '../assets/icon_todo.svg'
 import iconTodoEmpty from '../assets/icon_todo_empty.svg'
 import iconItem      from '../assets/icon_item.svg'
@@ -522,14 +522,15 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
             <th style={{ width: 75, background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
             <th style={{ ...thStyle, width: 200, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Item</th>
             <th style={{ ...thStyle, width: 75, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Order</th>
-            <th style={{ ...thStyle, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Scheduled</th>
+            <th style={{ ...thStyle, width: 110, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Scheduled</th>
+            <th style={{ ...thStyle, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Note</th>
             <th style={{ width: 225, background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
           </tr>
         </thead>
         <tbody>
           {items.length === 0 && addingRow === null && (
             <tr>
-              <td colSpan={6} style={{ padding: '12px 16px', color: 'var(--text3)', fontSize: 13 }}>
+              <td colSpan={7} style={{ padding: '12px 16px', color: 'var(--text3)', fontSize: 13 }}>
                 No items yet.
               </td>
             </tr>
@@ -541,8 +542,6 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
               <Fragment key={item.id}>
                 <tr
                   className="item-row"
-                  draggable
-                  onDragStart={e => handleDragStart(e, idx)}
                   onDragOver={e => handleDragOver(e, idx)}
                   onDrop={() => handleDrop(idx)}
                   onDragEnd={() => { setDragIdx(null); setDragOverIdx(null) }}
@@ -553,7 +552,11 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                     cursor: 'default',
                   }}
                 >
-                  <td style={{ padding: '7px 4px 7px 12px', width: 25, cursor: 'grab', color: 'var(--text3)', fontSize: 14, userSelect: 'none', borderBottom: '1px solid #89bac9', borderRight: '1px solid #89bac9' }}>⠿</td>
+                  <td
+                    draggable
+                    onDragStart={e => handleDragStart(e, idx)}
+                    style={{ padding: '7px 4px 7px 12px', width: 25, cursor: 'grab', color: 'var(--text3)', fontSize: 14, userSelect: 'none', borderBottom: '1px solid #89bac9', borderRight: '1px solid #89bac9' }}
+                  >⠿</td>
                   <td style={{ padding: '4px 0', borderBottom: '1px solid #89bac9', borderRight: '1px solid #89bac9', textAlign: 'center' }}>
                     <button
                       className="btn btn-ghost btn-icon"
@@ -597,6 +600,12 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                           : '—'}
                       </span>
                     )}
+                  </td>
+                  <td style={{ padding: '4px 12px', verticalAlign: 'top', borderBottom: '1px solid #89bac9', borderRight: '1px solid #89bac9' }}>
+                    <NoteCell
+                      value={item.note}
+                      onSave={v => onUpdateItem(projectId, item.id, { note: v && v.trim() ? v : null })}
+                    />
                   </td>
                   <td style={{ borderBottom: '1px solid #89bac9', padding: '7px 10px 7px 4px', whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
@@ -1414,7 +1423,7 @@ export default function ProjectsPage() {
     if (!isOpen && !loadedItemProjects.has(projectId) && !isDemo) {
       const { data } = await supabase
         .from('project_items')
-        .select('id, item_number, name, scheduled_date, status, sort_order')
+        .select('id, item_number, name, scheduled_date, status, sort_order, note')
         .eq('project_id', projectId)
         .order('sort_order', { ascending: true, nullsFirst: false })
         .order('item_number')
@@ -1429,7 +1438,7 @@ export default function ProjectsPage() {
     const { data } = await supabase
       .from('project_items')
       .insert({ ...payload, project_id: projectId, item_number: nextNumber })
-      .select('id, item_number, name, scheduled_date, status, sort_order')
+      .select('id, item_number, name, scheduled_date, status, sort_order, note')
       .single()
     if (data) setProjectItems(prev => ({ ...prev, [projectId]: [...(prev[projectId] || []), data] }))
   }
@@ -1439,7 +1448,7 @@ export default function ProjectsPage() {
       .from('project_items')
       .update(updates)
       .eq('id', itemId)
-      .select('id, item_number, name, scheduled_date, status, sort_order')
+      .select('id, item_number, name, scheduled_date, status, sort_order, note')
       .single()
     if (data) setProjectItems(prev => ({
       ...prev,
