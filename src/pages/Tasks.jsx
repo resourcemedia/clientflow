@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { CATEGORY_COLORS } from '../lib/categories'
 import { Breadcrumb } from '../components/ui'
 
 function todayISO() {
@@ -9,15 +10,6 @@ function todayISO() {
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
-}
-
-const CATEGORY_COLORS = {
-  primary:    '#ffb8b8',
-  secondary:  '#4fd1b8',
-  accounting: '#63ca7a',
-  overhead:   '#b9dd67',
-  charity:    '#c6c7fe',
-  personal:   '#ebb8e5',
 }
 
 function initials(str) {

@@ -1,30 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { CATEGORY_COLORS, CATEGORY_LABELS, catColor, catLabel } from '../lib/categories'
 import { Breadcrumb, NoteCell } from '../components/ui'
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   startOfYear, endOfYear,
   addDays, addMonths, subMonths, isSameMonth, isSameDay,
 } from 'date-fns'
-
-// Category colors — mirror of CATEGORY_COLORS in Projects.jsx.
-// Duplicated intentionally to keep this a single-file change;
-// candidate for extraction to src/lib/categories.js later.
-const CATEGORY_COLORS = {
-  primary:    '#ffb8b8',
-  secondary:  '#4fd1b8',
-  accounting: '#63ca7a',
-  overhead:   '#b9dd67',
-  charity:    '#c6c7fe',
-  personal:   '#ebb8e5',
-}
-const CATEGORY_LABELS = {
-  primary: 'Prin', secondary: 'Sec', accounting: 'Acct',
-  overhead: 'OH', charity: 'Char', personal: 'Pers',
-}
-function catColor(category) { return CATEGORY_COLORS[category] || 'var(--bg4)' }
-function catLabel(category) { return CATEGORY_LABELS[category] || (category || '—') }
 
 export default function CalendarPage() {
   useEffect(() => { document.title = 'Calendar' }, [])

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, Fragment } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { CATEGORY_COLORS } from '../lib/categories'
 import { useAuth } from '../lib/auth'
 import { DEMO_PROJECTS, DEMO_CLIENTS, PRIORITIES, PROOF_STATUSES, INV_STATUSES, COLLECT_STATUSES } from '../lib/demo-data'
 import { StatusBadge, Modal, EmptyState, PillNav, FormGroup, fmt$, initials, NoteCell } from '../components/ui'
@@ -13,14 +14,6 @@ import iconProofs from '../assets/icon_proofs.svg'
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 const PRODUCT_TYPES = ['ST', 'CO', 'DS', 'OH']
 
-const CATEGORY_COLORS = {
-  primary:    '#ffb8b8',
-  secondary:  '#4fd1b8',
-  accounting: '#63ca7a',
-  overhead:   '#b9dd67',
-  charity:    '#c6c7fe',
-  personal:   '#ebb8e5',
-}
 const CATEGORY_OPTIONS = [
   { value: 'primary',    label: 'Primary' },
   { value: 'secondary',  label: 'Secondary' },
