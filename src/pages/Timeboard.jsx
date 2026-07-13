@@ -1,20 +1,12 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { CATEGORY_COLORS } from '../lib/categories'
 import { useAuth } from '../lib/auth'
 import { windowStats, computeAnnualProjection } from '../lib/projections'
 import { toLocalISO, todayISO, calcHoursFromTimes, enrichEntries } from '../lib/timeentries'
 import { usePaceTargets } from '../lib/config'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
-
-const CATEGORY_COLORS = {
-  primary:    '#ffb8b8',
-  secondary:  '#4fd1b8',
-  accounting: '#63ca7a',
-  overhead:   '#b9dd67',
-  charity:    '#c6c7fe',
-  personal:   '#ebb8e5',
-}
 
 // 288 five-minute time slots 00:00–23:55
 const TIME_SLOTS = Array.from({ length: 288 }, (_, i) => {
