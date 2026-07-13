@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { Breadcrumb } from '../components/ui'
+import { Breadcrumb, NoteCell } from '../components/ui'
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   startOfYear, endOfYear,
@@ -25,38 +25,6 @@ const CATEGORY_LABELS = {
 }
 function catColor(category) { return CATEGORY_COLORS[category] || 'var(--bg4)' }
 function catLabel(category) { return CATEGORY_LABELS[category] || (category || '—') }
-
-// Inline multi-line editable note (List view). Ports the CashFlow EditableCell idea to a
-// textarea. Module-level so it keeps stable identity and doesn't lose focus on re-render.
-function NoteCell({ value, onSave }) {
-  const [editing, setEditing] = useState(false)
-  const [val, setVal] = useState(value ?? '')
-  useEffect(() => { setVal(value ?? '') }, [value])
-
-  if (!editing) {
-    return (
-      <div onClick={() => setEditing(true)}
-        style={{ cursor: 'text', minHeight: 20, whiteSpace: 'pre-wrap',
-                 color: value ? 'var(--text2)' : 'var(--text3)' }}>
-        {value || 'Add note…'}
-      </div>
-    )
-  }
-  return (
-    <textarea
-      autoFocus
-      value={val}
-      onChange={e => setVal(e.target.value)}
-      onBlur={() => { setEditing(false); if ((val ?? '') !== (value ?? '')) onSave(val) }}
-      rows={2}
-      style={{
-        width: '100%', minWidth: 160, fontSize: 13, fontFamily: 'inherit',
-        padding: '4px 6px', borderRadius: 6, border: '1px solid var(--accent)',
-        background: 'var(--bg2)', color: 'var(--text)', resize: 'vertical',
-      }}
-    />
-  )
-}
 
 export default function CalendarPage() {
   useEffect(() => { document.title = 'Calendar' }, [])
