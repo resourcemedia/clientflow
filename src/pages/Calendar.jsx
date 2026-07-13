@@ -202,7 +202,7 @@ export default function CalendarPage() {
 
   // Draggable item card + day drop-target props — shared by Week and Day views.
   // (Month view keeps its own inline copy; unify later if card styling changes.)
-  function eventCard(ev, full = false, rows = null) {
+  function eventCard(ev, showNote = false, rows = null) {
     const cat        = ev.project?.category
     const isDragging = draggedId === ev.id
     const alias      = ev.project?.client?.alias || ev.project?.client?.company || ''
@@ -214,15 +214,24 @@ export default function CalendarPage() {
     }
     const endDrag = () => { setDraggedId(null); setDragOverIso(null); setCardOverId(null) }
 
-    // Same-day reorder. stopPropagation keeps the day container's onDrop
-    // (moveItem → same date → no-op) from also firing.
+    // Card-on-card drop. stopPropagation keeps the day cell's onDrop from also
+    // firing, so this handler must cover BOTH cases:
+    //   same day      → reorder (priority_order)
+    //   different day → reschedule onto this card's date (scheduled_date)
+    // Without the cross-day branch, dropping onto an existing card in Week or
+    // Month would silently do nothing.
     const dropOnCard = e => {
       e.preventDefault()
       e.stopPropagation()
-      const fromIdx = rows.findIndex(r => r.id === draggedId)
+      const dragged = draggedId
+      const fromIdx = rows.findIndex(r => r.id === dragged)
       const toIdx   = rows.findIndex(r => r.id === ev.id)
       setCardOverId(null); setDraggedId(null); setDragOverIso(null)
-      if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return
+      if (fromIdx < 0) {
+        if (dragged && ev.scheduled_date) moveItem(dragged, ev.scheduled_date)
+        return
+      }
+      if (toIdx < 0 || fromIdx === toIdx) return
       reorderPriority(rows, fromIdx, toIdx)
     }
     const dropTargetProps = rows ? {
@@ -234,27 +243,7 @@ export default function CalendarPage() {
       onDrop: dropOnCard,
     } : {}
 
-    // Compact chip — Week view.
-    if (!full) {
-      return (
-        <div key={ev.id}
-          draggable
-          onDragStart={startDrag}
-          onDragEnd={endDrag}
-          style={{
-            fontSize: 12, fontWeight: 500,
-            padding: '4px 8px', borderRadius: 4, marginBottom: 3,
-            borderLeft: `3px solid ${catColor(cat)}`,
-            background: 'var(--bg3)', color: 'var(--text2)',
-            cursor: 'grab',
-            opacity: isDragging ? 0.4 : 1,
-          }} title={`${ev.project?.name || ''} — ${ev.name}`}>
-          {ev.project?.name ? `${ev.project.name}: ` : ''}{ev.name}
-        </div>
-      )
-    }
-
-    // Full card — Day view.
+    // The one card. Used by Day, Week, and Month.
     return (
       <div key={ev.id}
         onDragEnd={endDrag}
@@ -281,10 +270,25 @@ export default function CalendarPage() {
           }}>⠿</div>
 
         <div style={{ flex: 1, minWidth: 0, padding: '8px 12px' }}>
-          <div style={{ fontSize: 12, lineHeight: 1.45, color: 'var(--text3)' }}>{alias}</div>
-          <div style={{ fontSize: 12, lineHeight: 1.45, color: 'var(--text2)' }}>{ev.project?.name}</div>
-          <div style={{ fontSize: 13, lineHeight: 1.5, fontWeight: 700, color: 'var(--text)' }}>{ev.name}</div>
-          {ev.note && (
+          {alias && (
+            <div style={{
+              display: 'inline-block',
+              padding: '1px 8px', marginBottom: 3,
+              borderRadius: 4,
+              background: catColor(cat),
+              fontSize: 12, lineHeight: 1.45, fontWeight: 500,
+              color: '#000',
+            }}>{alias}</div>
+          )}
+          <div style={{
+            fontSize: 12, lineHeight: 1.45, color: 'var(--text2)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{ev.project?.name}</div>
+          <div style={{
+            fontSize: 13, lineHeight: 1.5, fontWeight: 700, color: 'var(--text)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{ev.name}</div>
+          {showNote && ev.note && (
             <div style={{
               fontSize: 12, lineHeight: 1.5, marginTop: 2,
               color: 'var(--text2)', whiteSpace: 'pre-wrap',
@@ -563,7 +567,7 @@ export default function CalendarPage() {
                     setDragOverIso(null)
                   }}
                   style={{
-                    minHeight: 90, padding: '8px 6px',
+                    minHeight: 130, padding: '8px 6px',
                     borderRight:  hasBorderR ? '1px solid var(--border)' : 'none',
                     borderBottom: hasBorderB ? '1px solid var(--border)' : 'none',
                     borderLeft:   isSelected ? '2px solid var(--accent)' : '2px solid transparent',
@@ -593,33 +597,8 @@ export default function CalendarPage() {
                     </span>
                   </div>
 
-                  {/* Event pills */}
-                  {dayEvents.slice(0, 3).map((ev, j) => {
-                    const cat = ev.project?.category
-                    const isDragging = draggedId === ev.id
-                    return (
-                      <div key={j}
-                        draggable
-                        onDragStart={e => {
-                          e.stopPropagation()
-                          setDraggedId(ev.id)
-                          e.dataTransfer.effectAllowed = 'move'
-                          e.dataTransfer.setData('text/plain', ev.id)   // Firefox needs data set to initiate drag
-                        }}
-                        onDragEnd={() => { setDraggedId(null); setDragOverIso(null) }}
-                        style={{
-                          fontSize: 10, fontWeight: 500,
-                          padding: '2px 5px', borderRadius: 4, marginBottom: 2,
-                          borderLeft: `3px solid ${catColor(cat)}`,
-                          background: 'var(--bg3)', color: 'var(--text2)',
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          cursor: 'grab',
-                          opacity: isDragging ? 0.4 : 1,
-                        }} title={`${ev.project?.name || ''} — ${ev.name}`}>
-                        {ev.project?.name ? `${ev.project.name}: ` : ''}{ev.name}
-                      </div>
-                    )
-                  })}
+                  {/* Event cards — same component as Day/Week, no note */}
+                  {dayEvents.slice(0, 3).map(ev => eventCard(ev, false, dayEvents))}
                   {dayEvents.length > 3 && (
                     <div style={{ fontSize: 10, color: 'var(--text3)', paddingLeft: 4 }}>
                       +{dayEvents.length - 3} more
@@ -651,7 +630,7 @@ export default function CalendarPage() {
                     <div style={{ textAlign: 'center', marginBottom: 8, fontSize: 12, fontWeight: 600, color: isToday ? 'var(--accent)' : 'var(--text2)' }}>
                       {format(day, 'EEE d')}
                     </div>
-                    {dayEvents.map(ev => eventCard(ev))}
+                    {dayEvents.map(ev => eventCard(ev, false, dayEvents))}
                   </div>
                 )
               })}
