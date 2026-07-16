@@ -394,6 +394,10 @@ const WEEKS_2026 = [
 function ExpandedView({ entries, projects, expandedDate, onEntryChange, onEntryDelete, user }) {
   const [editingSlot, setEditingSlot] = useState(null)
   const scrollRef = useRef(null)
+  // Re-entrancy guard: holds the slot currently mid-save so a rapid second
+  // fire (double-click / doubled event) on the same slot can't insert a
+  // duplicate before entryMap refreshes. See duplicate-entry fix.
+  const savingSlotRef = useRef(null)
 
   const dayEntries = useMemo(() => entries.filter(e => e.date === expandedDate), [entries, expandedDate])
 
@@ -469,22 +473,30 @@ function ExpandedView({ entries, projects, expandedDate, onEntryChange, onEntryD
   async function selectProject(project) {
     if (!editingSlot) return
     const slot = editingSlot
-    const existing = entryMap.get(slot)
-    const sel = '*, project:projects(id, name, project_number, category, client:clients(id, company, alias))'
-    let saved
-    if (existing) {
-      const { data } = await supabase.from('time_entries')
-        .update({ project_id: project.id, hourly_rate: project.client?.hourly_rate || 0 })
-        .eq('id', existing.id).select(sel).single()
-      saved = data
-    } else {
-      const { data } = await supabase.from('time_entries')
-        .insert({ date: expandedDate, start_time: slot + ':00', project_id: project.id, hourly_rate: project.client?.hourly_rate || 0, user_id: user?.id })
-        .select(sel).single()
-      saved = data
-    }
-    if (saved) onEntryChange(saved)
+    // Bail if this same slot is already mid-save — prevents the duplicate
+    // insert caused by a rapid second fire before entryMap refreshes.
+    if (savingSlotRef.current === slot) return
+    savingSlotRef.current = slot
     setEditingSlot(null)
+    try {
+      const existing = entryMap.get(slot)
+      const sel = '*, project:projects(id, name, project_number, category, client:clients(id, company, alias))'
+      let saved
+      if (existing) {
+        const { data } = await supabase.from('time_entries')
+          .update({ project_id: project.id, hourly_rate: project.client?.hourly_rate || 0 })
+          .eq('id', existing.id).select(sel).single()
+        saved = data
+      } else {
+        const { data } = await supabase.from('time_entries')
+          .insert({ date: expandedDate, start_time: slot + ':00', project_id: project.id, hourly_rate: project.client?.hourly_rate || 0, user_id: user?.id })
+          .select(sel).single()
+        saved = data
+      }
+      if (saved) onEntryChange(saved)
+    } finally {
+      savingSlotRef.current = null
+    }
   }
 
   async function deleteEntry(slot) {

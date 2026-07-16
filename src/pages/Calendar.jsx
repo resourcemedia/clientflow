@@ -426,6 +426,21 @@ export default function CalendarPage() {
           { label: 'Calendar' },
         ]} />
 
+        {/* View toggle */}
+        <div style={{ display: 'flex', gap: 4, marginLeft: 12 }}>
+          {[['day','Day'],['week','Week'],['month','Month'],['list','List']].map(([v, label]) => (
+            <button key={v} onClick={() => setView(v)}
+              style={{
+                padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                border: '1px solid var(--border)',
+                background: view === v ? 'var(--bg4)' : 'transparent',
+                color: view === v ? 'var(--text)' : 'var(--text2)',
+              }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
         {/* Scope toggle — List only. Grid views have no cell for an undated item. */}
         {view === 'list' && (
           <div style={{ display: 'flex', gap: 4, marginLeft: 12 }}>
@@ -459,21 +474,6 @@ export default function CalendarPage() {
             ))}
           </div>
         )}
-
-        {/* View toggle */}
-        <div style={{ display: 'flex', gap: 4, marginLeft: 12 }}>
-          {[['day','D'],['week','W'],['month','M'],['list','List']].map(([v, label]) => (
-            <button key={v} onClick={() => setView(v)}
-              style={{
-                padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                border: '1px solid var(--border)',
-                background: view === v ? 'var(--bg4)' : 'transparent',
-                color: view === v ? 'var(--text)' : 'var(--text2)',
-              }}>
-              {label}
-            </button>
-          ))}
-        </div>
 
         {/* Date navigation (view-aware) — hidden in List; date inputs drive that view */}
         {view !== 'list' && (
