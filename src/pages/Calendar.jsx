@@ -30,10 +30,10 @@ export default function CalendarPage() {
   const [cardOverId,  setCardOverId]  = useState(null)   // Day card reorder drop target
   const listDragFrom  = useRef(null)
   const reorderingRef = useRef(false)                     // re-entrancy guard
-  const [view, setView] = useState('month')   // 'day' | 'week' | 'month' | 'list'
+  const [view, setView] = useState('list')   // 'day' | 'week' | 'month' | 'list'
   const [dateStart, setDateStart] = useState('')   // List view range (yyyy-MM-dd)
   const [dateEnd,   setDateEnd]   = useState('')
-  const [scope,     setScope]     = useState('scheduled')  // List only: 'scheduled' | 'all'
+  const [scope,     setScope]     = useState('all')  // List only: 'scheduled' | 'all'
   const [sortBy,    setSortBy]    = useState('date')       // List only: 'date' | 'priority'
   const inFlightRef = useRef(new Set())
 
