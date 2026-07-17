@@ -777,7 +777,7 @@ export default function CalendarPage() {
               <thead>
                 <tr style={{ background: 'var(--bg3)' }}>
                   <th style={{ width: 28, padding: '10px 0 10px 14px' }}></th>
-                  {['Date','Client','Project','Item','Tags','Status','Note'].map(h => (
+                  {['Date','Client','Project','Item','Note','Tags','Status'].map(h => (
                     <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)' }}>{h}</th>
                   ))}
                   <th style={{ width: 44 }}></th>
@@ -853,7 +853,12 @@ export default function CalendarPage() {
                               verticalAlign: 'middle',
                             }} />
                         )}
-                        <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: 12, background: catColor(cat), color: 'var(--text)', verticalAlign: 'middle' }}>{alias || catLabel(cat)}</span>
+                        <span style={{
+                          display: 'inline-block', width: 84, boxSizing: 'border-box',
+                          padding: '3px 10px', borderRadius: 8, fontSize: 12,
+                          background: catColor(cat), color: 'var(--text)', verticalAlign: 'middle',
+                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                        }}>{alias || catLabel(cat)}</span>
                       </td>
                       <td style={{ padding: '10px 14px', color: 'var(--text2)', whiteSpace: 'nowrap' }}>
                         {projName && (
@@ -873,6 +878,9 @@ export default function CalendarPage() {
                         <span style={{ verticalAlign: 'middle' }}>{projName || '—'}</span>
                       </td>
                       <td style={{ padding: '10px 14px', color: 'var(--text)', fontWeight: 500 }}>{ev.name}</td>
+                      <td style={{ padding: '10px 14px', minWidth: 180, verticalAlign: 'top' }}>
+                        <NoteCell value={ev.note} onSave={text => updateNote(ev.id, text)} textColor="var(--text)" />
+                      </td>
                       <td style={{ padding: '10px 14px' }}>
                         {(ev.project?.tags || []).map(t => (
                           <span key={t} style={{ padding: '2px 8px', borderRadius: 12, fontSize: 11, background: 'var(--bg4)', color: 'var(--text2)', marginRight: 4 }}>{t}</span>
@@ -900,10 +908,6 @@ export default function CalendarPage() {
                             }} title="Completion date — edit if you finished on a different day" />
                         )}
                       </td>
-                      <td style={{ padding: '10px 14px', minWidth: 180, verticalAlign: 'top' }}>
-                        <NoteCell value={ev.note} onSave={text => updateNote(ev.id, text)} />
-                      </td>
-
                       <td style={{ width: 44, padding: '10px 14px 10px 0', textAlign: 'center' }}>
                         <button
                           onClick={() => deleteItem(ev)}

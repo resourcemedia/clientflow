@@ -149,7 +149,7 @@ export function initials(str) {
 // Textarea sibling of EditableCell (CashFlow). Click to edit, blur to save.
 // Module-level so it keeps stable identity and doesn't lose focus on re-render.
 // Used by Calendar (List view) and Projects (Item drawer).
-export function NoteCell({ value, onSave, placeholder = 'Add note…' }) {
+export function NoteCell({ value, onSave, placeholder = 'Add note…', textColor = 'var(--text2)' }) {
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(value ?? '')
   useEffect(() => { setVal(value ?? '') }, [value])
@@ -158,7 +158,7 @@ export function NoteCell({ value, onSave, placeholder = 'Add note…' }) {
     return (
       <div onClick={() => setEditing(true)}
         style={{ cursor: 'text', minHeight: 20, whiteSpace: 'pre-wrap',
-                 color: value ? 'var(--text2)' : 'var(--text3)' }}>
+                 color: value ? textColor : 'var(--text3)' }}>
         {value || placeholder}
       </div>
     )
