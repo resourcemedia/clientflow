@@ -22,8 +22,8 @@ export default function CalendarPage() {
   const [loading, setLoading]         = useState(true)
   const [current, setCurrent]         = useState(new Date())
   const [selectedDay, setSelectedDay] = useState(null)
-  const [filterClient,  setFilterClient]  = useState('')
-  const [filterProject, setFilterProject] = useState(TODO_PROJECT)   // ToDo hub is the landing default; Clear resets to all
+  const [filterClient,  setFilterClient]  = useState(() => localStorage.getItem('cal_filterClient') || '')
+  const [filterProject, setFilterProject] = useState(() => localStorage.getItem('cal_filterProject') ?? TODO_PROJECT)   // hub on first visit; ?? keeps a saved '' meaning "no filter"
   const [filterItem,    setFilterItem]    = useState('')
   const [filterTag,     setFilterTag]     = useState('')
   const [filterStatus,  setFilterStatus]  = useState('')
@@ -34,13 +34,22 @@ export default function CalendarPage() {
   const [cardOverId,  setCardOverId]  = useState(null)   // Day card reorder drop target
   const listDragFrom  = useRef(null)
   const reorderingRef = useRef(false)                     // re-entrancy guard
-  const [view, setView] = useState('list')   // 'day' | 'week' | 'month' | 'list'
+  const [view, setView] = useState(() => localStorage.getItem('cal_view') || 'list')   // 'day' | 'week' | 'month' | 'list'
   const [allProjects, setAllProjects] = useState([])   // full projects catalog, independent of items
   const [dateStart, setDateStart] = useState('')   // List view range (yyyy-MM-dd)
   const [dateEnd,   setDateEnd]   = useState('')
-  const [scope,     setScope]     = useState('all')  // List only: 'scheduled' | 'all'
-  const [sortBy,    setSortBy]    = useState('client')     // List only: 'client' | 'date' | 'priority'
+  const [scope,     setScope]     = useState(() => localStorage.getItem('cal_scope') || 'all')  // List only: 'scheduled' | 'all'
+  const [sortBy,    setSortBy]    = useState(() => localStorage.getItem('cal_sortBy') || 'client')     // List only: 'client' | 'date' | 'priority'
   const inFlightRef = useRef(new Set())
+
+  // Remember where the user left off — mirrors the Tasks page's saved-state pattern
+  useEffect(() => {
+    localStorage.setItem('cal_view',          view)
+    localStorage.setItem('cal_scope',         scope)
+    localStorage.setItem('cal_sortBy',        sortBy)
+    localStorage.setItem('cal_filterClient',  filterClient)
+    localStorage.setItem('cal_filterProject', filterProject)
+  }, [view, scope, sortBy, filterClient, filterProject])
 
   // Dropdowns must reflect ALL projects, including ones with no items yet —
   // deriving them from loaded items would hide empty projects entirely.
@@ -496,6 +505,26 @@ export default function CalendarPage() {
             </button>
           ))}
         </div>
+
+        {/* ToDo hub shortcut — active exactly when filters equal the hub state */}
+        {view === 'list' && (
+          <>
+            <div style={{ width: 1, height: 22, background: 'var(--border)', margin: '0 4px' }} />
+            <button
+              onClick={() => {
+                if (filterProject === TODO_PROJECT && !filterClient) { setFilterProject('') }
+                else { setFilterClient(''); setFilterProject(TODO_PROJECT) }
+              }}
+              style={{
+                padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                border: '1px solid var(--border)',
+                background: (filterProject === TODO_PROJECT && !filterClient) ? 'var(--bg4)' : 'transparent',
+                color: (filterProject === TODO_PROJECT && !filterClient) ? 'var(--text)' : 'var(--text2)',
+              }}>
+              ToDo
+            </button>
+          </>
+        )}
 
         {/* Sort toggle — List only. Drag-to-reorder is enabled in Priority mode. */}
         {view === 'list' && (
