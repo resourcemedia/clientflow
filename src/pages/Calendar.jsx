@@ -31,11 +31,24 @@ export default function CalendarPage() {
   const listDragFrom  = useRef(null)
   const reorderingRef = useRef(false)                     // re-entrancy guard
   const [view, setView] = useState('list')   // 'day' | 'week' | 'month' | 'list'
+  const [allProjects, setAllProjects] = useState([])   // full projects catalog, independent of items
   const [dateStart, setDateStart] = useState('')   // List view range (yyyy-MM-dd)
   const [dateEnd,   setDateEnd]   = useState('')
   const [scope,     setScope]     = useState('all')  // List only: 'scheduled' | 'all'
   const [sortBy,    setSortBy]    = useState('client')     // List only: 'client' | 'date' | 'priority'
   const inFlightRef = useRef(new Set())
+
+  // Dropdowns must reflect ALL projects, including ones with no items yet —
+  // deriving them from loaded items would hide empty projects entirely.
+  useEffect(() => {
+    supabase
+      .from('projects')
+      .select('id, name, category, client:clients(company, alias)')
+      .then(({ data, error }) => {
+        if (error) { console.error('projects catalog load failed:', error); return }
+        setAllProjects(data || [])
+      })
+  }, [])
 
   // Reschedule an item by drag-drop. Optimistic + rollback, single write, re-entrancy-guarded.
   async function moveItem(id, newDateIso) {
@@ -363,8 +376,14 @@ export default function CalendarPage() {
   while (d <= gridEnd) { days.push(d); d = addDays(d, 1) }
 
   // Filter options derived from the loaded month (client-side, no extra queries)
-  const clientOptions  = [...new Set(events.map(e => e.project?.client?.company).filter(Boolean))].sort()
-  const projectOptions = [...new Set(events.map(e => e.project?.name).filter(Boolean))].sort()
+  const clientOptions  = [...new Set(allProjects.map(p => p.client?.company).filter(Boolean))].sort()
+  // When a client filter is active, the Project dropdown only offers that client's projects
+  const projectOptions = [...new Set(
+    allProjects
+      .filter(p => !filterClient || p.client?.company === filterClient)
+      .map(p => p.name)
+      .filter(Boolean)
+  )].sort()
   const tagOptions     = [...new Set(events.flatMap(e => e.project?.tags || []).filter(Boolean))].sort()
   const STATUS_OPTIONS = ['Open', 'Complete']
 
@@ -529,7 +548,8 @@ export default function CalendarPage() {
         display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
         padding: '10px 0', marginBottom: 4,
       }}>
-        <select value={filterClient} onChange={e => setFilterClient(e.target.value)}
+        <select value={filterClient}
+          onChange={e => { setFilterClient(e.target.value); setFilterProject('') }}
           style={{ ...filterCtrl, borderColor: filterClient ? 'var(--accent)' : 'var(--border)' }}>
           <option value="">Client</option>
           {clientOptions.map(c => <option key={c} value={c}>{c}</option>)}
