@@ -19,7 +19,7 @@ export default function CalendarPage() {
   const [current, setCurrent]         = useState(new Date())
   const [selectedDay, setSelectedDay] = useState(null)
   const [filterClient,  setFilterClient]  = useState('')
-  const [filterProject, setFilterProject] = useState('')
+  const [filterProject, setFilterProject] = useState('ToDo')   // ToDo hub is the landing default; Clear resets to all
   const [filterItem,    setFilterItem]    = useState('')
   const [filterTag,     setFilterTag]     = useState('')
   const [filterStatus,  setFilterStatus]  = useState('')
@@ -34,7 +34,7 @@ export default function CalendarPage() {
   const [dateStart, setDateStart] = useState('')   // List view range (yyyy-MM-dd)
   const [dateEnd,   setDateEnd]   = useState('')
   const [scope,     setScope]     = useState('all')  // List only: 'scheduled' | 'all'
-  const [sortBy,    setSortBy]    = useState('date')       // List only: 'date' | 'priority'
+  const [sortBy,    setSortBy]    = useState('client')     // List only: 'client' | 'date' | 'priority'
   const inFlightRef = useRef(new Set())
 
   // Reschedule an item by drag-drop. Optimistic + rollback, single write, re-entrancy-guarded.
@@ -377,6 +377,22 @@ export default function CalendarPage() {
     return true
   })
 
+  // Client sort — the hub's default order: category, then client alias, then priority.
+  // Done client-side because category and alias live on joined tables, where
+  // server-side .order() across nested joins gets unwieldy.
+  const CATEGORY_SORT = ['primary', 'secondary', 'accounting', 'overhead', 'charity', 'personal']
+  const catRank = c => { const i = CATEGORY_SORT.indexOf(c); return i === -1 ? 999 : i }
+  const listRows = (view === 'list' && sortBy === 'client')
+    ? [...filtered].sort((a, b) => {
+        const cr = catRank(a.project?.category) - catRank(b.project?.category)
+        if (cr !== 0) return cr
+        const aa = (a.project?.client?.alias || a.project?.client?.company || '').toLowerCase()
+        const ab = (b.project?.client?.alias || b.project?.client?.company || '').toLowerCase()
+        if (aa !== ab) return aa < ab ? -1 : 1
+        return (a.priority_order ?? 0) - (b.priority_order ?? 0)
+      })
+    : filtered
+
   const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterStatus
   function clearFilters() {
     setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterStatus('')
@@ -465,7 +481,7 @@ export default function CalendarPage() {
         {/* Sort toggle — List only. Drag-to-reorder is enabled in Priority mode. */}
         {view === 'list' && (
           <div style={{ display: 'flex', gap: 4, marginLeft: 12 }}>
-            {[['date','Date'],['priority','Priority']].map(([s, label]) => (
+            {[['client','Client'],['date','Date'],['priority','Priority']].map(([s, label]) => (
               <button key={s} onClick={() => setSortBy(s)}
                 style={{
                   padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
@@ -696,11 +712,11 @@ export default function CalendarPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 ? (
+                {listRows.length === 0 ? (
                   <tr><td colSpan={9} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
                     {scope === 'all' ? 'No items match these filters.' : 'No items in this range.'}
                   </td></tr>
-                ) : filtered.map((ev, idx) => {
+                ) : listRows.map((ev, idx) => {
                   const cat     = ev.project?.category
                   const alias   = ev.project?.client?.alias || ev.project?.client?.company || ''
                   const canDrag = sortBy === 'priority'
