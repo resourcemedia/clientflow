@@ -441,6 +441,7 @@ export default function CalendarPage() {
   const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterStatus
   function clearFilters() {
     setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterStatus('')
+    setDateStart(''); setDateEnd('')
   }
 
   const filterCtrl = {
@@ -624,12 +625,10 @@ export default function CalendarPage() {
           </>
         )}
 
-        {anyFilterActive && (
-          <button onClick={clearFilters}
-            style={{ ...filterCtrl, color: 'var(--text3)', cursor: 'pointer', border: 'none', background: 'transparent' }}>
-            Clear
-          </button>
-        )}
+        <button onClick={clearFilters}
+          style={{ ...filterCtrl, color: 'var(--text3)', cursor: 'pointer', border: 'none', background: 'transparent' }}>
+          Clear
+        </button>
       </div>
 
       <div className="page-content">
