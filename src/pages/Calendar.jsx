@@ -10,6 +10,10 @@ import {
   addDays, addMonths, subMonths, isSameMonth, isSameDay,
 } from 'date-fns'
 
+// The per-client hub project. Named with a leading dash so it sorts first
+// alphabetically. If this convention changes, this is the only line to edit.
+const TODO_PROJECT = '- ToDo'
+
 export default function CalendarPage() {
   useEffect(() => { document.title = 'Calendar' }, [])
   const navigate  = useNavigate()
@@ -19,7 +23,7 @@ export default function CalendarPage() {
   const [current, setCurrent]         = useState(new Date())
   const [selectedDay, setSelectedDay] = useState(null)
   const [filterClient,  setFilterClient]  = useState('')
-  const [filterProject, setFilterProject] = useState('ToDo')   // ToDo hub is the landing default; Clear resets to all
+  const [filterProject, setFilterProject] = useState(TODO_PROJECT)   // ToDo hub is the landing default; Clear resets to all
   const [filterItem,    setFilterItem]    = useState('')
   const [filterTag,     setFilterTag]     = useState('')
   const [filterStatus,  setFilterStatus]  = useState('')
@@ -803,7 +807,7 @@ export default function CalendarPage() {
                         {company && (
                           <button
                             onClick={() => {
-                              if (filterClient === company) { setFilterClient(''); setFilterProject('ToDo') }
+                              if (filterClient === company) { setFilterClient(''); setFilterProject(TODO_PROJECT) }
                               else { setFilterClient(company); setFilterProject('') }
                             }}
                             title={filterClient === company ? 'Back to ToDo hub' : `Show all ${alias} projects`}
