@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { deleteItemCascade, getItemProofCount } from '../lib/items'
 import { CATEGORY_COLORS, CATEGORY_LABELS, catColor, catLabel } from '../lib/categories'
-import { Breadcrumb, NoteCell } from '../components/ui'
+import { Breadcrumb, NoteCell, Modal, FormGroup } from '../components/ui'
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   startOfYear, endOfYear,
@@ -36,6 +36,12 @@ export default function CalendarPage() {
   const reorderingRef = useRef(false)                     // re-entrancy guard
   const [view, setView] = useState(() => localStorage.getItem('cal_view') || 'list')   // 'day' | 'week' | 'month' | 'list'
   const [allProjects, setAllProjects] = useState([])   // full projects catalog, independent of items
+  const [clients, setClients] = useState([])           // Add Item modal options
+  const [showAddItem,   setShowAddItem]   = useState(false)
+  const [npClientId,    setNpClientId]    = useState('')
+  const [npProjectSel,  setNpProjectSel]  = useState('')   // project id, or '__new__'
+  const [npNewProjName, setNpNewProjName] = useState('')
+  const [npItemName,    setNpItemName]    = useState('')
   const [dateStart, setDateStart] = useState('')   // List view range (yyyy-MM-dd)
   const [dateEnd,   setDateEnd]   = useState('')
   const [scope,     setScope]     = useState(() => localStorage.getItem('cal_scope') || 'all')  // List only: 'scheduled' | 'all'
@@ -51,12 +57,21 @@ export default function CalendarPage() {
     localStorage.setItem('cal_filterProject', filterProject)
   }, [view, scope, sortBy, filterClient, filterProject])
 
+  // Active clients for the Add Item modal — same query the Projects page uses
+  useEffect(() => {
+    supabase.from('clients').select('id, company, alias').eq('status', 'active').order('company')
+      .then(({ data, error }) => {
+        if (error) { console.error('clients load failed:', error); return }
+        setClients(data || [])
+      })
+  }, [])
+
   // Dropdowns must reflect ALL projects, including ones with no items yet —
   // deriving them from loaded items would hide empty projects entirely.
   useEffect(() => {
     supabase
       .from('projects')
-      .select('id, name, category, client:clients(company, alias)')
+      .select('id, name, category, project_number, client_id, client:clients(company, alias)')
       .then(({ data, error }) => {
         if (error) { console.error('projects catalog load failed:', error); return }
         setAllProjects(data || [])
@@ -439,6 +454,60 @@ export default function CalendarPage() {
     : filtered
 
   const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterStatus
+  async function handleAddItem() {
+    const itemName = npItemName.trim()
+    if (!itemName || !npClientId) return
+    const creatingProject = npProjectSel === '__new__'
+    const newProjName = npNewProjName.trim()
+    if (creatingProject ? !newProjName : !npProjectSel) return
+
+    let project
+    if (creatingProject) {
+      const nums = allProjects.map(p => parseInt(p.project_number, 10)).filter(n => !isNaN(n))
+      const nextNumber = nums.length ? String(Math.max(...nums) + 1) : '1000'
+      const { data, error } = await supabase
+        .from('projects')
+        .insert({
+          name:           newProjName,
+          client_id:      npClientId,
+          project_number: nextNumber,
+          category:       'primary',
+          priority:       'Normal',
+          proof_status:   'Open',
+          inv_status:     'Open',
+          collect_status: 'Open',
+        })
+        .select('id, name, category, project_number, client_id, client:clients(company, alias)')
+        .single()
+      if (error) { console.error('project insert failed:', error); return }
+      project = data
+      setAllProjects(prev => [...prev, data])
+    } else {
+      project = allProjects.find(p => p.id === npProjectSel)
+      if (!project) return
+    }
+
+    // item_number continues the project's sequence — mirrors Projects.jsx addProjectItem.
+    // priority_order is assigned by the DB trigger; scheduled_date stays null (unscheduled).
+    const { count } = await supabase
+      .from('project_items')
+      .select('id', { count: 'exact', head: true })
+      .eq('project_id', project.id)
+    const itemNumber = String((count || 0) + 1).padStart(2, '0')
+
+    const { error: itemError } = await supabase
+      .from('project_items')
+      .insert({ project_id: project.id, item_number: itemNumber, name: itemName, status: 'Open' })
+    if (itemError) { console.error('item insert failed:', itemError); return }
+
+    setShowAddItem(false)
+    setNpItemName(''); setNpNewProjName(''); setNpProjectSel(''); setNpClientId('')
+    // Land on the project so the new item is immediately visible
+    setFilterClient(project.client?.company || '')
+    setFilterProject(project.name)
+    loadEvents()
+  }
+
   function clearFilters() {
     setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterStatus('')
     setDateStart(''); setDateEnd('')
@@ -565,6 +634,22 @@ export default function CalendarPage() {
               ))}
             </div>
           </>
+        )}
+
+        {/* Add Item — List only, far right. Opens preloaded with the current drill context. */}
+        {view === 'list' && (
+          <button className="btn btn-primary" style={{ marginLeft: 'auto' }}
+            onClick={() => {
+              const cur = clients.find(c => c.company === filterClient)
+              setNpClientId(cur?.id || '')
+              const curProj = cur && filterProject
+                ? allProjects.find(p => p.client_id === cur.id && p.name === filterProject)
+                : null
+              setNpProjectSel(curProj?.id || '')
+              setShowAddItem(true)
+            }}>
+            Add Item
+          </button>
         )}
 
         {/* Date navigation (view-aware) — hidden in List; date inputs drive that view */}
@@ -991,6 +1076,55 @@ export default function CalendarPage() {
           </div>
         )}
       </div>
+
+      {showAddItem && (
+        <Modal title="Add Item" onClose={() => setShowAddItem(false)} footer={
+          <>
+            <button className="btn btn-ghost" onClick={() => setShowAddItem(false)}>Cancel</button>
+            <button className="btn btn-primary" onClick={handleAddItem}
+              disabled={!npItemName.trim() || !npClientId
+                || (npProjectSel === '__new__' ? !npNewProjName.trim() : !npProjectSel)}>
+              Create
+            </button>
+          </>
+        }>
+          <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <FormGroup label="Client">
+              <select value={npClientId}
+                onChange={e => { setNpClientId(e.target.value); setNpProjectSel('') }}
+                style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2)', fontSize: 14 }}>
+                <option value="">Choose a client…</option>
+                {clients.map(c => <option key={c.id} value={c.id}>{c.company}</option>)}
+              </select>
+            </FormGroup>
+            <FormGroup label="Project">
+              <select value={npProjectSel} onChange={e => setNpProjectSel(e.target.value)}
+                disabled={!npClientId}
+                style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2)', fontSize: 14 }}>
+                <option value="">Choose a project…</option>
+                {allProjects
+                  .filter(p => p.client_id === npClientId)
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                <option value="__new__">+ New project…</option>
+              </select>
+            </FormGroup>
+            {npProjectSel === '__new__' && (
+              <FormGroup label="New project name">
+                <input value={npNewProjName} onChange={e => setNpNewProjName(e.target.value)}
+                  placeholder="e.g. Website Redesign" autoFocus
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2)', fontSize: 14, boxSizing: 'border-box' }} />
+              </FormGroup>
+            )}
+            <FormGroup label="Item name">
+              <input value={npItemName} onChange={e => setNpItemName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleAddItem() }}
+                placeholder="e.g. First Draft"
+                style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2)', fontSize: 14, boxSizing: 'border-box' }} />
+            </FormGroup>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }
