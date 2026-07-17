@@ -392,12 +392,16 @@ export default function CalendarPage() {
         const pa = (a.project?.name || '').toLowerCase()
         const pb = (b.project?.name || '').toLowerCase()
         if (pa !== pb) return pa < pb ? -1 : 1
-        // Date within project — undated items sink below dated ones
+        // Date within project — undated items float to the top: they may need
+        // doing first, or can be quickly tagged to today.
         if (a.scheduled_date !== b.scheduled_date) {
-          if (!a.scheduled_date) return 1
-          if (!b.scheduled_date) return -1
+          if (!a.scheduled_date) return -1
+          if (!b.scheduled_date) return 1
           return a.scheduled_date < b.scheduled_date ? -1 : 1
         }
+        const na = (a.name || '').toLowerCase()
+        const nb = (b.name || '').toLowerCase()
+        if (na !== nb) return na < nb ? -1 : 1
         return (a.priority_order ?? 0) - (b.priority_order ?? 0)
       })
     : filtered
@@ -727,8 +731,10 @@ export default function CalendarPage() {
                   </td></tr>
                 ) : listRows.map((ev, idx) => {
                   const cat     = ev.project?.category
-                  const company = ev.project?.client?.company || ''
-                  const alias   = ev.project?.client?.alias || company
+                  const company  = ev.project?.client?.company || ''
+                  const alias    = ev.project?.client?.alias || company
+                  const projName = ev.project?.name || ''
+                  const projActive = projName && filterProject === projName && filterClient === company
                   const canDrag = sortBy === 'priority'
                   const compFmt  = ev.completed_date ? format(new Date(ev.completed_date + 'T00:00:00'), 'M/d/yy') : ''
                   return (
@@ -790,7 +796,23 @@ export default function CalendarPage() {
                         )}
                         <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: 12, background: catColor(cat), color: 'var(--text)', verticalAlign: 'middle' }}>{alias || catLabel(cat)}</span>
                       </td>
-                      <td style={{ padding: '10px 14px', color: 'var(--text2)' }}>{ev.project?.name || '—'}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--text2)', whiteSpace: 'nowrap' }}>
+                        {projName && (
+                          <button
+                            onClick={() => {
+                              if (projActive) { setFilterProject('') }
+                              else { setFilterClient(company); setFilterProject(projName) }
+                            }}
+                            title={projActive ? 'Back to client list' : `Show only ${projName}`}
+                            style={{
+                              width: 14, height: 14, borderRadius: '50%', marginRight: 8,
+                              border: '1.5px solid var(--text3)', cursor: 'pointer', padding: 0,
+                              background: projActive ? 'var(--text3)' : 'transparent',
+                              verticalAlign: 'middle',
+                            }} />
+                        )}
+                        <span style={{ verticalAlign: 'middle' }}>{projName || '—'}</span>
+                      </td>
                       <td style={{ padding: '10px 14px', color: 'var(--text)', fontWeight: 500 }}>{ev.name}</td>
                       <td style={{ padding: '10px 14px' }}>
                         {(ev.project?.tags || []).map(t => (
