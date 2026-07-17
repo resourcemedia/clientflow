@@ -42,6 +42,7 @@ export default function CalendarPage() {
   const [npProjectSel,  setNpProjectSel]  = useState('')   // project id, or '__new__'
   const [npNewProjName, setNpNewProjName] = useState('')
   const [npItemName,    setNpItemName]    = useState('')
+  const [npDate,        setNpDate]        = useState('')   // optional — blank creates an unscheduled item
   const [dateStart, setDateStart] = useState('')   // List view range (yyyy-MM-dd)
   const [dateEnd,   setDateEnd]   = useState('')
   const [scope,     setScope]     = useState(() => localStorage.getItem('cal_scope') || 'all')  // List only: 'scheduled' | 'all'
@@ -497,11 +498,13 @@ export default function CalendarPage() {
 
     const { error: itemError } = await supabase
       .from('project_items')
-      .insert({ project_id: project.id, item_number: itemNumber, name: itemName, status: 'Open' })
+      .insert({ project_id: project.id, item_number: itemNumber, name: itemName, status: 'Open', scheduled_date: npDate || null })
     if (itemError) { console.error('item insert failed:', itemError); return }
 
-    setShowAddItem(false)
-    setNpItemName(''); setNpNewProjName(''); setNpProjectSel(''); setNpClientId('')
+    // Inset stays open for rapid entry — item name clears, everything else is sticky.
+    // After creating a new project, the select switches to it for subsequent saves.
+    setNpItemName('')
+    if (creatingProject) { setNpProjectSel(project.id); setNpNewProjName('') }
     // Land on the project so the new item is immediately visible
     setFilterClient(project.client?.company || '')
     setFilterProject(project.name)
@@ -715,6 +718,49 @@ export default function CalendarPage() {
           Clear
         </button>
       </div>
+
+      {/* Add Item inset — a horizontal pre-row above the table */}
+      {view === 'list' && showAddItem && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+          margin: '12px 28px 0', padding: '12px 16px',
+          background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12,
+        }}
+          onKeyDown={e => { if (e.key === 'Escape') setShowAddItem(false) }}>
+          <input type="date" value={npDate} onChange={e => setNpDate(e.target.value)}
+            style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', fontSize: 13 }} />
+          <select value={npClientId}
+            onChange={e => { setNpClientId(e.target.value); setNpProjectSel('') }}
+            style={{ flex: '1 1 160px', minWidth: 140, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', fontSize: 13 }}>
+            <option value="">Client</option>
+            {clients.map(c => <option key={c.id} value={c.id}>{c.company}</option>)}
+          </select>
+          <select value={npProjectSel} onChange={e => setNpProjectSel(e.target.value)}
+            disabled={!npClientId}
+            style={{ flex: '1 1 160px', minWidth: 140, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', fontSize: 13 }}>
+            <option value="">Project Name</option>
+            {allProjects
+              .filter(p => p.client_id === npClientId)
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            <option value="__new__">+ New project…</option>
+          </select>
+          {npProjectSel === '__new__' && (
+            <input value={npNewProjName} onChange={e => setNpNewProjName(e.target.value)}
+              placeholder="New project name" autoFocus
+              style={{ flex: '1 1 160px', minWidth: 140, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', fontSize: 13, boxSizing: 'border-box' }} />
+          )}
+          <input value={npItemName} onChange={e => setNpItemName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleAddItem() }}
+            placeholder="Item" autoFocus
+            style={{ flex: '2 1 200px', minWidth: 160, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', fontSize: 13, boxSizing: 'border-box' }} />
+          <button className="btn btn-primary" onClick={handleAddItem}
+            disabled={!npItemName.trim() || !npClientId
+              || (npProjectSel === '__new__' ? !npNewProjName.trim() : !npProjectSel)}>
+            Save
+          </button>
+        </div>
+      )}
 
       <div className="page-content">
 
@@ -1077,54 +1123,6 @@ export default function CalendarPage() {
         )}
       </div>
 
-      {showAddItem && (
-        <Modal title="Add Item" onClose={() => setShowAddItem(false)} footer={
-          <>
-            <button className="btn btn-ghost" onClick={() => setShowAddItem(false)}>Cancel</button>
-            <button className="btn btn-primary" onClick={handleAddItem}
-              disabled={!npItemName.trim() || !npClientId
-                || (npProjectSel === '__new__' ? !npNewProjName.trim() : !npProjectSel)}>
-              Create
-            </button>
-          </>
-        }>
-          <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <FormGroup label="Client">
-              <select value={npClientId}
-                onChange={e => { setNpClientId(e.target.value); setNpProjectSel('') }}
-                style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2)', fontSize: 14 }}>
-                <option value="">Choose a client…</option>
-                {clients.map(c => <option key={c.id} value={c.id}>{c.company}</option>)}
-              </select>
-            </FormGroup>
-            <FormGroup label="Project">
-              <select value={npProjectSel} onChange={e => setNpProjectSel(e.target.value)}
-                disabled={!npClientId}
-                style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2)', fontSize: 14 }}>
-                <option value="">Choose a project…</option>
-                {allProjects
-                  .filter(p => p.client_id === npClientId)
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                <option value="__new__">+ New project…</option>
-              </select>
-            </FormGroup>
-            {npProjectSel === '__new__' && (
-              <FormGroup label="New project name">
-                <input value={npNewProjName} onChange={e => setNpNewProjName(e.target.value)}
-                  placeholder="e.g. Website Redesign" autoFocus
-                  style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2)', fontSize: 14, boxSizing: 'border-box' }} />
-              </FormGroup>
-            )}
-            <FormGroup label="Item name">
-              <input value={npItemName} onChange={e => setNpItemName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleAddItem() }}
-                placeholder="e.g. First Draft"
-                style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2)', fontSize: 14, boxSizing: 'border-box' }} />
-            </FormGroup>
-          </div>
-        </Modal>
-      )}
     </div>
   )
 }
