@@ -497,38 +497,44 @@ export default function CalendarPage() {
           ))}
         </div>
 
-        {/* Scope toggle — List only. Grid views have no cell for an undated item. */}
-        {view === 'list' && (
-          <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
-            {[['all','All'],['scheduled','Scheduled']].map(([s, label]) => (
-              <button key={s} onClick={() => setScope(s)}
-                style={{
-                  padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                  border: '1px solid var(--border)',
-                  background: scope === s ? 'var(--bg4)' : 'transparent',
-                  color: scope === s ? 'var(--text)' : 'var(--text2)',
-                }}>
-                {label}
-              </button>
-            ))}
-          </div>
-        )}
-
         {/* Sort toggle — List only. Drag-to-reorder is enabled in Priority mode. */}
         {view === 'list' && (
-          <div style={{ display: 'flex', gap: 4, marginLeft: 12 }}>
-            {[['client','Client'],['date','Date'],['priority','Priority']].map(([s, label]) => (
-              <button key={s} onClick={() => setSortBy(s)}
-                style={{
-                  padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                  border: '1px solid var(--border)',
-                  background: sortBy === s ? 'var(--bg4)' : 'transparent',
-                  color: sortBy === s ? 'var(--text)' : 'var(--text2)',
-                }}>
-                {label}
-              </button>
-            ))}
-          </div>
+          <>
+            <div style={{ width: 1, height: 22, background: 'var(--border)', margin: '0 4px' }} />
+            <div style={{ display: 'flex', gap: 4 }}>
+              {[['priority','Priority'],['date','Date'],['client','Client']].map(([s, label]) => (
+                <button key={s} onClick={() => setSortBy(s)}
+                  style={{
+                    padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    border: '1px solid var(--border)',
+                    background: sortBy === s ? 'var(--bg4)' : 'transparent',
+                    color: sortBy === s ? 'var(--text)' : 'var(--text2)',
+                  }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Scope toggle — List only. Grid views have no cell for an undated item. */}
+        {view === 'list' && (
+          <>
+            <div style={{ width: 1, height: 22, background: 'var(--border)', margin: '0 4px' }} />
+            <div style={{ display: 'flex', gap: 4 }}>
+              {[['all','All'],['scheduled','Scheduled']].map(([s, label]) => (
+                <button key={s} onClick={() => setScope(s)}
+                  style={{
+                    padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    border: '1px solid var(--border)',
+                    background: scope === s ? 'var(--bg4)' : 'transparent',
+                    color: scope === s ? 'var(--text)' : 'var(--text2)',
+                  }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </>
         )}
 
         {/* Date navigation (view-aware) — hidden in List; date inputs drive that view */}
