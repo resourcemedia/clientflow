@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { deleteItemCascade, getItemProofCount } from '../lib/items'
 import { CATEGORY_COLORS, CATEGORY_LABELS, catColor, catLabel } from '../lib/categories'
-import { Breadcrumb, NoteCell, Modal, FormGroup } from '../components/ui'
+import { Breadcrumb, NoteCell, Modal, FormGroup, EditableCell } from '../components/ui'
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   startOfYear, endOfYear,
@@ -148,6 +148,30 @@ export default function CalendarPage() {
     if (error) {
       setEvents(arr => arr.map(e => e.id === id ? { ...e, completed_date: prev } : e))
       console.error('Completion date update failed, reverted:', error)
+    }
+    inFlightRef.current.delete(id)
+  }
+
+  // Rename an item inline (List). Blank names are ignored — a name is required.
+  // Optimistic + rollback, re-entrancy-guarded (shares inFlightRef).
+  async function updateItemName(id, text) {
+    if (!id || inFlightRef.current.has(id)) return
+    const item = events.find(e => e.id === id)
+    if (!item) return
+    const value = text && text.trim() ? text.trim() : null
+    if (!value || (item.name ?? '') === value) return
+    const prev = item.name
+
+    inFlightRef.current.add(id)
+    setEvents(arr => arr.map(e => e.id === id ? { ...e, name: value } : e))
+
+    const { error } = await supabase
+      .from('project_items')
+      .update({ name: value })
+      .eq('id', id)
+    if (error) {
+      console.error('item rename failed:', error)
+      setEvents(arr => arr.map(e => e.id === id ? { ...e, name: prev } : e))
     }
     inFlightRef.current.delete(id)
   }
@@ -1007,7 +1031,9 @@ export default function CalendarPage() {
                         )}
                         <span style={{ verticalAlign: 'middle' }}>{projName || '—'}</span>
                       </td>
-                      <td style={{ padding: '10px 14px', color: 'var(--text)', fontWeight: 500 }}>{ev.name}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--text)', fontWeight: 500 }}>
+                        <EditableCell value={ev.name} onSave={text => updateItemName(ev.id, text)} />
+                      </td>
                       <td style={{ padding: '10px 14px', minWidth: 180, verticalAlign: 'top' }}>
                         <NoteCell value={ev.note} onSave={text => updateNote(ev.id, text)} textColor="var(--text)" />
                       </td>

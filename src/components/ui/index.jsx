@@ -149,6 +149,55 @@ export function initials(str) {
 // Textarea sibling of EditableCell (CashFlow). Click to edit, blur to save.
 // Module-level so it keeps stable identity and doesn't lose focus on re-render.
 // Used by Calendar (List view) and Projects (Item drawer).
+// ── EDITABLE CELL ──────────────────────────────────────────────────────
+// Promoted from CashFlow.jsx (verbatim). Click to edit; Enter/blur saves,
+// Escape reverts. CashFlow still uses its local copy for now.
+export function EditableCell({ value, onSave, placeholder, width, mono, type = 'text', min, max }) {
+  const [editing, setEditing] = useState(false)
+  const [val, setVal] = useState(value ?? '')
+
+  useEffect(() => { if (!editing) setVal(value ?? '') }, [value, editing])
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        type={type}
+        min={min}
+        max={max}
+        value={val}
+        onChange={e => setVal(e.target.value)}
+        onBlur={() => {
+          setEditing(false)
+          const trimmed = type === 'text' ? val.trim() : val
+          if (trimmed !== (value ?? '')) onSave(trimmed)
+        }}
+        onKeyDown={e => {
+          if (e.key === 'Enter') e.target.blur()
+          if (e.key === 'Escape') { setVal(value ?? ''); setEditing(false) }
+        }}
+        style={{
+          width: width || '100%', background: 'var(--bg3)', border: '1px solid var(--accent)',
+          borderRadius: 4, padding: '2px 6px', fontSize: 13, outline: 'none',
+          fontFamily: mono ? 'DM Mono, monospace' : 'inherit',
+        }}
+      />
+    )
+  }
+
+  return (
+    <span
+      onClick={() => { setVal(value ?? ''); setEditing(true) }}
+      style={{
+        cursor: 'text', display: 'inline-block', minWidth: 32, minHeight: 20,
+        fontFamily: mono ? 'DM Mono, monospace' : 'inherit',
+      }}
+    >
+      {value != null && value !== '' ? value : <span style={{ color: 'var(--text3)', fontSize: 12 }}>{placeholder || '—'}</span>}
+    </span>
+  )
+}
+
 export function NoteCell({ value, onSave, placeholder = 'Add note…', textColor = 'var(--text2)' }) {
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(value ?? '')
