@@ -421,14 +421,18 @@ export default function CalendarPage() {
   return (
     <div className="fade-in">
       <div className="topbar">
-        <Breadcrumb segments={[
-          { label: 'Dashboard', onClick: () => navigate('/') },
-          { label: 'Calendar' },
-        ]} />
+        {/* Plain wrapper: .breadcrumb's flex:1 only applies as a direct child of the
+            flex topbar, so this div keeps the title compact and the toggles flush left */}
+        <div>
+          <Breadcrumb segments={[
+            { label: 'Dashboard', onClick: () => navigate('/') },
+            { label: 'Calendar' },
+          ]} />
+        </div>
 
         {/* View toggle */}
         <div style={{ display: 'flex', gap: 4, marginLeft: 12 }}>
-          {[['day','Day'],['week','Week'],['month','Month'],['list','List']].map(([v, label]) => (
+          {[['list','List'],['day','Day'],['week','Week'],['month','Month']].map(([v, label]) => (
             <button key={v} onClick={() => setView(v)}
               style={{
                 padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
@@ -443,7 +447,7 @@ export default function CalendarPage() {
 
         {/* Scope toggle — List only. Grid views have no cell for an undated item. */}
         {view === 'list' && (
-          <div style={{ display: 'flex', gap: 4, marginLeft: 12 }}>
+          <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
             {[['all','All'],['scheduled','Scheduled']].map(([s, label]) => (
               <button key={s} onClick={() => setScope(s)}
                 style={{
