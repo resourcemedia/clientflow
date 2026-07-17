@@ -685,7 +685,7 @@ export default function CalendarPage() {
               <thead>
                 <tr style={{ background: 'var(--bg3)' }}>
                   <th style={{ width: 28, padding: '10px 0 10px 14px' }}></th>
-                  {['Date','Category','Project','Item','Tags','Status','Note'].map(h => (
+                  {['Date','Client','Project','Item','Tags','Status','Note'].map(h => (
                     <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)' }}>{h}</th>
                   ))}
                   <th style={{ width: 44 }}></th>
@@ -698,6 +698,7 @@ export default function CalendarPage() {
                   </td></tr>
                 ) : filtered.map((ev, idx) => {
                   const cat     = ev.project?.category
+                  const alias   = ev.project?.client?.alias || ev.project?.client?.company || ''
                   const canDrag = sortBy === 'priority'
                   const compFmt  = ev.completed_date ? format(new Date(ev.completed_date + 'T00:00:00'), 'M/d/yy') : ''
                   return (
@@ -743,7 +744,7 @@ export default function CalendarPage() {
                           title="Scheduled date — clear it to send this item back to the unscheduled backlog" />
                       </td>
                       <td style={{ padding: '10px 14px' }}>
-                        <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: 12, background: catColor(cat), color: 'var(--text)' }}>{catLabel(cat)}</span>
+                        <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: 12, background: catColor(cat), color: 'var(--text)' }}>{alias || catLabel(cat)}</span>
                       </td>
                       <td style={{ padding: '10px 14px', color: 'var(--text2)' }}>{ev.project?.name || '—'}</td>
                       <td style={{ padding: '10px 14px', color: 'var(--text)', fontWeight: 500 }}>{ev.name}</td>
