@@ -832,8 +832,8 @@ export default function CalendarPage() {
                           style={{
                             padding: '3px 6px', borderRadius: 6, fontSize: 13,
                             border: '1px solid var(--border)',
-                            background: ev.scheduled_date ? 'var(--bg2)' : 'transparent',
-                            color: ev.scheduled_date ? 'var(--text2)' : 'var(--text3)',
+                            background: ev.scheduled_date ? 'var(--bg4)' : 'transparent',
+                            color: ev.scheduled_date ? 'var(--text)' : 'var(--text3)',
                             cursor: 'text',
                           }}
                           title="Scheduled date — clear it to send this item back to the unscheduled backlog" />
