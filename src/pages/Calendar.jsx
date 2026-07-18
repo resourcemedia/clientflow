@@ -698,7 +698,7 @@ export default function CalendarPage() {
       {/* Filter bar — attribute filters, stack as AND. Date range lives in List view. */}
       <div style={{
         display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
-        padding: '10px 0', marginBottom: 4,
+        padding: '10px 28px', marginBottom: 4,
       }}>
         <select value={filterClient}
           onChange={e => { setFilterClient(e.target.value); setFilterProject('') }}
