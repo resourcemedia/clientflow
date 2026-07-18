@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { deleteItemCascade, getItemProofCount } from '../lib/items'
 import { CATEGORY_COLORS, CATEGORY_LABELS, catColor, catLabel, catColorDark } from '../lib/categories'
-import { Breadcrumb, NoteCell, Modal, FormGroup, EditableCell } from '../components/ui'
+import { Breadcrumb, NoteCell, Modal, FormGroup, EditableCell, TagCell } from '../components/ui'
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   startOfYear, endOfYear,
@@ -27,6 +27,7 @@ export default function CalendarPage() {
   const [filterItem,    setFilterItem]    = useState('')
   const [filterTag,     setFilterTag]     = useState('')
   const [filterStatus,  setFilterStatus]  = useState(() => localStorage.getItem('cal_status') || '')
+  const [filterType,    setFilterType]    = useState(() => localStorage.getItem('cal_type') || '')
   const [draggedId,   setDraggedId]   = useState(null)
   const [dragOverIso, setDragOverIso] = useState(null)
   const [listDragIdx, setListDragIdx] = useState(null)   // List reorder (Priority mode)
@@ -57,7 +58,8 @@ export default function CalendarPage() {
     localStorage.setItem('cal_filterClient',  filterClient)
     localStorage.setItem('cal_filterProject', filterProject)
     localStorage.setItem('cal_status',        filterStatus)
-  }, [view, scope, sortBy, filterClient, filterProject, filterStatus])
+    localStorage.setItem('cal_type',          filterType)
+  }, [view, scope, sortBy, filterClient, filterProject, filterStatus, filterType])
 
   // Active clients for the Add Item modal — same query the Projects page uses
   useEffect(() => {
@@ -198,6 +200,54 @@ export default function CalendarPage() {
     if (error) {
       setEvents(arr => arr.map(e => e.id === id ? { ...e, note: prev } : e))
       console.error('Note update failed, reverted:', error)
+    }
+    inFlightRef.current.delete(id)
+  }
+
+  const ITEM_TYPES = ['Task', 'Milestone', 'Goal']
+
+  // Item type (Task | Milestone | Goal) — same optimistic + rollback +
+  // re-entrancy pattern as updateNote.
+  async function updateItemType(id, newType) {
+    if (!id || inFlightRef.current.has(id)) return
+    const item = events.find(e => e.id === id)
+    if (!item || (item.item_type || 'Task') === newType) return
+    const prev = item.item_type
+
+    inFlightRef.current.add(id)
+    setEvents(arr => arr.map(e => e.id === id ? { ...e, item_type: newType } : e))
+
+    const { error } = await supabase
+      .from('project_items')
+      .update({ item_type: newType })
+      .eq('id', id)
+
+    if (error) {
+      setEvents(arr => arr.map(e => e.id === id ? { ...e, item_type: prev } : e))
+      console.error('Type update failed, reverted:', error)
+    }
+    inFlightRef.current.delete(id)
+  }
+
+  // Item tags — TagCell hands back the full new array on every add/remove.
+  async function updateItemTags(id, newTags) {
+    if (!id || inFlightRef.current.has(id)) return
+    const item = events.find(e => e.id === id)
+    if (!item) return
+    const prev = item.tags
+    if (JSON.stringify(prev || []) === JSON.stringify(newTags)) return
+
+    inFlightRef.current.add(id)
+    setEvents(arr => arr.map(e => e.id === id ? { ...e, tags: newTags } : e))
+
+    const { error } = await supabase
+      .from('project_items')
+      .update({ tags: newTags })
+      .eq('id', id)
+
+    if (error) {
+      setEvents(arr => arr.map(e => e.id === id ? { ...e, tags: prev } : e))
+      console.error('Tags update failed, reverted:', error)
     }
     inFlightRef.current.delete(id)
   }
@@ -404,7 +454,7 @@ export default function CalendarPage() {
     }
     let query = supabase
       .from('project_items')
-      .select('id, project_id, name, scheduled_date, status, completed_date, note, priority_order, project:projects(name, category, tags, client:clients(company, alias))')
+      .select('id, project_id, name, scheduled_date, status, completed_date, note, priority_order, item_type, tags, project:projects(name, category, client:clients(company, alias))')
 
     if (view === 'list' && scope === 'all') {
       // A range comparison never matches NULL, so undated items are excluded by
@@ -449,14 +499,15 @@ export default function CalendarPage() {
       .map(p => p.name)
       .filter(Boolean)
   )].sort()
-  const tagOptions     = [...new Set(events.flatMap(e => e.project?.tags || []).filter(Boolean))].sort()
+  const tagOptions     = [...new Set(events.flatMap(e => e.tags || []).filter(Boolean))].sort()
 
   const filtered = events.filter(e => {
     if (filterClient  && e.project?.client?.company !== filterClient) return false
     if (filterProject && e.project?.name !== filterProject) return false
     if (filterItem    && !(e.name || '').toLowerCase().includes(filterItem.toLowerCase())) return false
-    if (filterTag     && !(e.project?.tags || []).includes(filterTag)) return false
+    if (filterTag     && !(e.tags || []).includes(filterTag)) return false
     if (filterStatus  && e.status !== filterStatus) return false
+    if (filterType    && (e.item_type || 'Task') !== filterType) return false
     return true
   })
 
@@ -489,7 +540,7 @@ export default function CalendarPage() {
       })
     : filtered
 
-  const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterStatus
+  const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterStatus || filterType
   async function handleAddItem() {
     const itemName = npItemName.trim()
     if (!itemName || !npClientId) return
@@ -547,7 +598,7 @@ export default function CalendarPage() {
   }
 
   function clearFilters() {
-    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterStatus('')
+    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterStatus(''); setFilterType('')
     setDateStart(''); setDateEnd('')
   }
 
@@ -685,6 +736,23 @@ export default function CalendarPage() {
                 border: '1px solid var(--border)',
                 background: filterStatus === s ? 'var(--bg4)' : 'transparent',
                 color: filterStatus === s ? 'var(--text)' : 'var(--text2)',
+              }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Type toggle — all views. Tasks are actions; Milestones and Goals are
+            destinations. Filtering to Goals shows the backward-planning skeleton. */}
+        <div style={{ width: 1, height: 22, background: 'var(--border)', margin: '0 4px' }} />
+        <div style={{ display: 'flex', gap: 4 }}>
+          {[['','All'],['Task','Tasks'],['Milestone','Milestones'],['Goal','Goals']].map(([t, label]) => (
+            <button key={label} onClick={() => setFilterType(t)}
+              style={{
+                padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                border: '1px solid var(--border)',
+                background: filterType === t ? 'var(--bg4)' : 'transparent',
+                color: filterType === t ? 'var(--text)' : 'var(--text2)',
               }}>
               {label}
             </button>
@@ -953,7 +1021,7 @@ export default function CalendarPage() {
               <thead>
                 <tr style={{ background: 'var(--bg3)' }}>
                   <th style={{ width: 28, padding: '10px 0 10px 14px' }}></th>
-                  {['Date','Client','Project','Item','Note','Tags','Status'].map(h => (
+                  {['Date','Client','Project','Item','Note','Type','Tags','Status'].map(h => (
                     <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)' }}>{h}</th>
                   ))}
                   <th style={{ width: 44 }}></th>
@@ -961,7 +1029,7 @@ export default function CalendarPage() {
               </thead>
               <tbody>
                 {listRows.length === 0 ? (
-                  <tr><td colSpan={9} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+                  <tr><td colSpan={10} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
                     {scope === 'all' ? 'No items match these filters.' : 'No items in this range.'}
                   </td></tr>
                 ) : listRows.map((ev, idx) => {
@@ -1061,10 +1129,21 @@ export default function CalendarPage() {
                       <td style={{ padding: '10px 14px', minWidth: 180, verticalAlign: 'top' }}>
                         <NoteCell value={ev.note} onSave={text => updateNote(ev.id, text)} textColor="var(--text)" />
                       </td>
-                      <td style={{ padding: '10px 14px' }}>
-                        {(ev.project?.tags || []).map(t => (
-                          <span key={t} style={{ padding: '2px 8px', borderRadius: 12, fontSize: 11, background: 'var(--bg4)', color: 'var(--text2)', marginRight: 4 }}>{t}</span>
-                        ))}
+                      <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                        <select value={ev.item_type || 'Task'} onChange={e => updateItemType(ev.id, e.target.value)}
+                          title="Item type"
+                          style={{
+                            padding: '3px 8px', borderRadius: 6, fontSize: 13, cursor: 'pointer',
+                            border: '1px solid transparent', background: 'transparent',
+                            color: 'var(--text2)',
+                          }}
+                          onFocus={e => { e.target.style.border = '1px solid var(--accent)'; e.target.style.background = 'var(--bg2)' }}
+                          onBlur={e => { e.target.style.border = '1px solid transparent'; e.target.style.background = 'transparent' }}>
+                          {ITEM_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </td>
+                      <td style={{ padding: '10px 14px', minWidth: 120 }}>
+                        <TagCell tags={ev.tags || []} suggestions={tagOptions} onSave={tags => updateItemTags(ev.id, tags)} />
                       </td>
                       <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                         <button

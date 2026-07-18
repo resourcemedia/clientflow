@@ -227,3 +227,68 @@ export function NoteCell({ value, onSave, placeholder = 'Add note…', textColor
     />
   )
 }
+
+// ── TAG CELL ───────────────────────────────────────────────────────────
+// Inline tag editor. Displays tags as chips; click to edit — chips gain an
+// × to remove, plus a text input (Enter adds, datalist suggests from
+// `suggestions`, Escape/blur closes). onSave receives the full new array.
+export function TagCell({ tags = [], onSave, suggestions = [], placeholder = 'Add tag…' }) {
+  const [editing, setEditing] = useState(false)
+  const [input, setInput] = useState('')
+  const [listId] = useState(() => `tagcell-${Math.random().toString(36).slice(2, 9)}`)
+
+  function addTag() {
+    const t = input.trim()
+    setInput('')
+    if (!t || tags.includes(t)) return
+    onSave([...tags, t])
+  }
+  function removeTag(t) { onSave(tags.filter(x => x !== t)) }
+
+  if (!editing) {
+    return (
+      <div onClick={() => setEditing(true)}
+        style={{ cursor: 'pointer', minHeight: 20, display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}
+        title="Click to edit tags">
+        {tags.length === 0 && <span style={{ color: 'var(--text3)', fontSize: 12 }}>{placeholder}</span>}
+        {tags.map(t => (
+          <span key={t} style={{ padding: '2px 8px', borderRadius: 12, fontSize: 11, background: 'var(--bg4)', color: 'var(--text2)' }}>{t}</span>
+        ))}
+      </div>
+    )
+  }
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+      {tags.map(t => (
+        <span key={t} style={{
+          padding: '2px 4px 2px 8px', borderRadius: 12, fontSize: 11,
+          background: 'var(--bg4)', color: 'var(--text2)',
+          display: 'inline-flex', alignItems: 'center', gap: 3,
+        }}>
+          {t}
+          <button onClick={() => removeTag(t)} title={`Remove ${t}`}
+            style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, fontSize: 12, lineHeight: 1, color: 'var(--text3)' }}>×</button>
+        </span>
+      ))}
+      <input
+        autoFocus
+        list={listId}
+        value={input}
+        onChange={e => setInput(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === 'Enter') addTag()
+          if (e.key === 'Escape') { setInput(''); setEditing(false) }
+        }}
+        onBlur={() => { addTag(); setEditing(false) }}
+        placeholder={placeholder}
+        style={{
+          width: 90, fontSize: 12, padding: '2px 6px', borderRadius: 6,
+          border: '1px solid var(--accent)', background: 'var(--bg2)',
+          color: 'var(--text)', outline: 'none',
+        }} />
+      <datalist id={listId}>
+        {suggestions.filter(t => !tags.includes(t)).map(t => <option key={t} value={t} />)}
+      </datalist>
+    </div>
+  )
+}
