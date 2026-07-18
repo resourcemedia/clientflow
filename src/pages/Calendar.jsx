@@ -27,7 +27,7 @@ export default function CalendarPage() {
   const [filterItem,    setFilterItem]    = useState('')
   const [filterTag,     setFilterTag]     = useState('')
   const [filterStatus,  setFilterStatus]  = useState(() => localStorage.getItem('cal_status') || '')
-  const [filterType,    setFilterType]    = useState(() => localStorage.getItem('cal_type') || '')
+  const [filterTypes,   setFilterTypes]   = useState(() => (localStorage.getItem('cal_types') || '').split(',').filter(Boolean))
   const [draggedId,   setDraggedId]   = useState(null)
   const [dragOverIso, setDragOverIso] = useState(null)
   const [listDragIdx, setListDragIdx] = useState(null)   // List reorder (Priority mode)
@@ -58,8 +58,8 @@ export default function CalendarPage() {
     localStorage.setItem('cal_filterClient',  filterClient)
     localStorage.setItem('cal_filterProject', filterProject)
     localStorage.setItem('cal_status',        filterStatus)
-    localStorage.setItem('cal_type',          filterType)
-  }, [view, scope, sortBy, filterClient, filterProject, filterStatus, filterType])
+    localStorage.setItem('cal_types',         filterTypes.join(','))
+  }, [view, scope, sortBy, filterClient, filterProject, filterStatus, filterTypes])
 
   // Active clients for the Add Item modal — same query the Projects page uses
   useEffect(() => {
@@ -507,7 +507,7 @@ export default function CalendarPage() {
     if (filterItem    && !(e.name || '').toLowerCase().includes(filterItem.toLowerCase())) return false
     if (filterTag     && !(e.tags || []).includes(filterTag)) return false
     if (filterStatus  && e.status !== filterStatus) return false
-    if (filterType    && (e.item_type || 'Task') !== filterType) return false
+    if (filterTypes.length && !filterTypes.includes(e.item_type || 'Task')) return false
     return true
   })
 
@@ -540,7 +540,7 @@ export default function CalendarPage() {
       })
     : filtered
 
-  const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterStatus || filterType
+  const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterStatus || filterTypes.length > 0
   async function handleAddItem() {
     const itemName = npItemName.trim()
     if (!itemName || !npClientId) return
@@ -598,7 +598,7 @@ export default function CalendarPage() {
   }
 
   function clearFilters() {
-    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterStatus(''); setFilterType('')
+    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterStatus(''); setFilterTypes([])
     setDateStart(''); setDateEnd('')
   }
 
@@ -742,21 +742,25 @@ export default function CalendarPage() {
           ))}
         </div>
 
-        {/* Type toggle — all views. Tasks are actions; Milestones and Goals are
-            destinations. Filtering to Goals shows the backward-planning skeleton. */}
+        {/* Type toggle — all views. Multi-select: each button toggles independently;
+            none active = show all types. Milestones+Goals = the planning skeleton. */}
         <div style={{ width: 1, height: 22, background: 'var(--border)', margin: '0 4px' }} />
         <div style={{ display: 'flex', gap: 4 }}>
-          {[['','All'],['Task','Tasks'],['Milestone','Milestones'],['Goal','Goals']].map(([t, label]) => (
-            <button key={label} onClick={() => setFilterType(t)}
-              style={{
-                padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                border: '1px solid var(--border)',
-                background: filterType === t ? 'var(--bg4)' : 'transparent',
-                color: filterType === t ? 'var(--text)' : 'var(--text2)',
-              }}>
-              {label}
-            </button>
-          ))}
+          {[['Task','Tasks'],['Milestone','Milestones'],['Goal','Goals']].map(([t, label]) => {
+            const active = filterTypes.includes(t)
+            return (
+              <button key={label}
+                onClick={() => setFilterTypes(cur => cur.includes(t) ? cur.filter(x => x !== t) : [...cur, t])}
+                style={{
+                  padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  border: '1px solid var(--border)',
+                  background: active ? 'var(--bg4)' : 'transparent',
+                  color: active ? 'var(--text)' : 'var(--text2)',
+                }}>
+                {label}
+              </button>
+            )
+          })}
         </div>
 
         {/* Add Item — List only, far right. Opens preloaded with the current drill context. */}
