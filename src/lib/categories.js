@@ -19,3 +19,18 @@ export const CATEGORY_LABELS = {
 
 export function catColor(category) { return CATEGORY_COLORS[category] || 'var(--bg4)' }
 export function catLabel(category) { return CATEGORY_LABELS[category] || (category || '—') }
+
+// Darker tint of a category color — used for the filled "complete" toggle dot
+// on Calendar item cards. Computed (RGB × 0.72) from CATEGORY_COLORS so the
+// base palette stays the single source of truth.
+function darkenHex(hex, factor = 0.72) {
+  const n = parseInt(hex.slice(1), 16)
+  const r = Math.round(((n >> 16) & 255) * factor)
+  const g = Math.round(((n >> 8) & 255) * factor)
+  const b = Math.round((n & 255) * factor)
+  return `rgb(${r}, ${g}, ${b})`
+}
+export function catColorDark(category) {
+  const base = CATEGORY_COLORS[category]
+  return base ? darkenHex(base) : 'rgba(0,0,0,0.35)'
+}

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { deleteItemCascade, getItemProofCount } from '../lib/items'
-import { CATEGORY_COLORS, CATEGORY_LABELS, catColor, catLabel } from '../lib/categories'
+import { CATEGORY_COLORS, CATEGORY_LABELS, catColor, catLabel, catColorDark } from '../lib/categories'
 import { Breadcrumb, NoteCell, Modal, FormGroup, EditableCell } from '../components/ui'
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
@@ -271,6 +271,7 @@ export default function CalendarPage() {
   // (Month view keeps its own inline copy; unify later if card styling changes.)
   function eventCard(ev, showNote = false, rows = null) {
     const cat        = ev.project?.category
+    const done       = ev.status === 'Complete'
     const isDragging = draggedId === ev.id
     const alias      = ev.project?.client?.alias || ev.project?.client?.company || ''
     const startDrag  = e => {
@@ -318,7 +319,7 @@ export default function CalendarPage() {
         style={{
           display: 'flex', alignItems: 'stretch',
           marginBottom: 8, borderRadius: 6, overflow: 'hidden',
-          background: 'var(--bg3)',
+          background: done ? catColor(cat) : 'var(--bg3)',
           opacity: isDragging ? 0.4 : 1,
           // inset shadow, not a border — a border would shift the layout mid-drag
           boxShadow: cardOverId === ev.id ? 'inset 0 3px 0 0 var(--accent)' : 'none',
@@ -336,13 +337,23 @@ export default function CalendarPage() {
             fontSize: 11, color: 'rgba(0,0,0,0.35)',
           }}>⠿</div>
 
-        <div style={{ flex: 1, minWidth: 0, padding: '8px 12px' }}>
+        <div style={{ flex: 1, minWidth: 0, padding: '8px 30px 8px 12px', position: 'relative' }}>
+          <button
+            onClick={e => { e.stopPropagation(); updateItemStatus(ev.id, done ? 'Open' : 'Complete') }}
+            title={done ? 'Mark open' : 'Mark complete'}
+            style={{
+              position: 'absolute', top: 8, right: 8,
+              width: 16, height: 16, borderRadius: '50%',
+              padding: 0, cursor: 'pointer',
+              border: done ? 'none' : '1.5px solid rgba(0,0,0,0.22)',
+              background: done ? catColorDark(cat) : 'transparent',
+            }} />
           {alias && (
             <div style={{
               display: 'inline-block',
               padding: '1px 8px', marginBottom: 3,
               borderRadius: 4,
-              background: catColor(cat),
+              background: done ? 'var(--bg3)' : catColor(cat),
               fontSize: 12, lineHeight: 1.45, fontWeight: 500,
               color: '#000',
             }}>{alias}</div>
