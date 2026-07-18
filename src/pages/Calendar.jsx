@@ -26,7 +26,7 @@ export default function CalendarPage() {
   const [filterProject, setFilterProject] = useState(() => localStorage.getItem('cal_filterProject') ?? TODO_PROJECT)   // hub on first visit; ?? keeps a saved '' meaning "no filter"
   const [filterItem,    setFilterItem]    = useState('')
   const [filterTag,     setFilterTag]     = useState('')
-  const [filterStatus,  setFilterStatus]  = useState('')
+  const [filterStatus,  setFilterStatus]  = useState(() => localStorage.getItem('cal_status') || '')
   const [draggedId,   setDraggedId]   = useState(null)
   const [dragOverIso, setDragOverIso] = useState(null)
   const [listDragIdx, setListDragIdx] = useState(null)   // List reorder (Priority mode)
@@ -56,7 +56,8 @@ export default function CalendarPage() {
     localStorage.setItem('cal_sortBy',        sortBy)
     localStorage.setItem('cal_filterClient',  filterClient)
     localStorage.setItem('cal_filterProject', filterProject)
-  }, [view, scope, sortBy, filterClient, filterProject])
+    localStorage.setItem('cal_status',        filterStatus)
+  }, [view, scope, sortBy, filterClient, filterProject, filterStatus])
 
   // Active clients for the Add Item modal — same query the Projects page uses
   useEffect(() => {
@@ -449,7 +450,6 @@ export default function CalendarPage() {
       .filter(Boolean)
   )].sort()
   const tagOptions     = [...new Set(events.flatMap(e => e.project?.tags || []).filter(Boolean))].sort()
-  const STATUS_OPTIONS = ['Open', 'Complete']
 
   const filtered = events.filter(e => {
     if (filterClient  && e.project?.client?.company !== filterClient) return false
@@ -674,6 +674,23 @@ export default function CalendarPage() {
           </>
         )}
 
+        {/* Status toggle — all views. Drives the same filterStatus the filter logic
+            already uses, so clearFilters and anyFilterActive work untouched. */}
+        <div style={{ width: 1, height: 22, background: 'var(--border)', margin: '0 4px' }} />
+        <div style={{ display: 'flex', gap: 4 }}>
+          {[['','All'],['Open','Open'],['Complete','Complete']].map(([s, label]) => (
+            <button key={label} onClick={() => setFilterStatus(s)}
+              style={{
+                padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                border: '1px solid var(--border)',
+                background: filterStatus === s ? 'var(--bg4)' : 'transparent',
+                color: filterStatus === s ? 'var(--text)' : 'var(--text2)',
+              }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
         {/* Add Item — List only, far right. Opens preloaded with the current drill context. */}
         {view === 'list' && (
           <button className="btn btn-primary" style={{ marginLeft: 'auto' }}
@@ -731,12 +748,6 @@ export default function CalendarPage() {
           style={{ ...filterCtrl, borderColor: filterTag ? 'var(--accent)' : 'var(--border)' }}>
           <option value="">Tags</option>
           {tagOptions.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
-
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          style={{ ...filterCtrl, borderColor: filterStatus ? 'var(--accent)' : 'var(--border)' }}>
-          <option value="">Status</option>
-          {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
 
         {view === 'list' && (
@@ -955,6 +966,7 @@ export default function CalendarPage() {
                   </td></tr>
                 ) : listRows.map((ev, idx) => {
                   const cat     = ev.project?.category
+                  const done    = ev.status === 'Complete'
                   const company  = ev.project?.client?.company || ''
                   const alias    = ev.project?.client?.alias || company
                   const projName = ev.project?.name || ''
@@ -970,6 +982,7 @@ export default function CalendarPage() {
                         borderTop: listOverIdx === idx && listDragIdx !== idx
                           ? '2px solid var(--accent)' : '1px solid var(--border)',
                         opacity: listDragIdx === idx ? 0.4 : 1,
+                        background: done ? catColor(cat) : 'transparent',
                       }}>
                       {/* height:1px on the td + height:100% on the child is the standard
                           trick to make a div fill a table row's actual height. */}
@@ -1021,7 +1034,7 @@ export default function CalendarPage() {
                         <span style={{
                           display: 'inline-block', width: 84, boxSizing: 'border-box',
                           padding: '3px 10px', borderRadius: 8, fontSize: 12,
-                          background: catColor(cat), color: 'var(--text)', verticalAlign: 'middle',
+                          background: done ? 'var(--bg3)' : catColor(cat), color: 'var(--text)', verticalAlign: 'middle',
                           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                         }}>{alias || catLabel(cat)}</span>
                       </td>
@@ -1054,16 +1067,20 @@ export default function CalendarPage() {
                         ))}
                       </td>
                       <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
-                        <select value={ev.status || 'Open'} onChange={e => updateItemStatus(ev.id, e.target.value)}
+                        <button
+                          onClick={() => updateItemStatus(ev.id, done ? 'Open' : 'Complete')}
+                          title={done ? 'Mark open' : 'Mark complete'}
                           style={{
-                            padding: '3px 8px', borderRadius: 6, fontSize: 13, cursor: 'pointer',
-                            border: '1px solid var(--border)', background: 'var(--bg2)',
-                            color: ev.status === 'Complete' ? 'var(--green)' : 'var(--text2)',
-                            fontWeight: ev.status === 'Complete' ? 600 : 400,
-                          }}>
-                          <option value="Open">Open</option>
-                          <option value="Complete">Complete</option>
-                        </select>
+                            width: 16, height: 16, borderRadius: '50%', padding: 0,
+                            cursor: 'pointer', verticalAlign: 'middle', marginRight: 8,
+                            border: done ? 'none' : '1.5px solid rgba(0,0,0,0.22)',
+                            background: done ? catColorDark(cat) : 'transparent',
+                          }} />
+                        <span style={{
+                          fontSize: 13, verticalAlign: 'middle',
+                          color: done ? 'var(--text)' : 'var(--text2)',
+                          fontWeight: done ? 600 : 400,
+                        }}>{done ? 'Complete' : 'Open'}</span>
                         {ev.status === 'Complete' && (
                           <input type="date"
                             value={ev.completed_date || ''}
