@@ -381,14 +381,14 @@ export default function ClientTasks() {
           .order('name'),
         supabase
           .from('app_config')
-          .select('current_cycle')
-          .eq('id', 1)
+          .select('value')
+          .eq('key', 'current_cycle')
           .maybeSingle(),
       ])
 
       if (!isMounted) return
       setTasks(taskRows || [])
-      setCurrentCycle(settingsRow?.current_cycle || 'A')
+      setCurrentCycle(settingsRow?.value || 'A')
       setProjects((projectRows || []).sort((a, b) => {
         const ca = a.client?.company || a.client?.alias || ''
         const cb = b.client?.company || b.client?.alias || ''
@@ -580,7 +580,7 @@ export default function ClientTasks() {
       activeCycle = activeCycle
         ? String.fromCharCode(((activeCycle.charCodeAt(0) - 65 + 1) % 26) + 65)
         : 'A'
-      await supabase.from('app_config').update({ current_cycle: activeCycle }).eq('id', 1)
+      await supabase.from('app_config').update({ value: activeCycle }).eq('key', 'current_cycle')
       setCurrentCycle(activeCycle)
 
       const seen2 = new Set()

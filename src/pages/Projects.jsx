@@ -1334,14 +1334,14 @@ export default function ProjectsPage() {
           supabase.from('clients').select('id, company, alias').eq('status','active').order('company'),
           supabase.from('products').select('id, type, name').order('order_num', { nullsFirst: false }),
           supabase.from('profiles').select('id, name').order('name'),
-          supabase.from('app_config').select('current_cycle').eq('id', 1).maybeSingle(),
+          supabase.from('app_config').select('value').eq('key', 'current_cycle').maybeSingle(),
         ])
         if (!isMounted) return
         const projectList = p || []
         setProjects(projectList)
         setClients(c || [])
         setProfiles(profs || [])
-        setCurrentCycle(settingsRow?.current_cycle || 'A')
+        setCurrentCycle(settingsRow?.value || 'A')
         const map = {}
         ;(prods || []).forEach(prod => { if (prod.type) map[prod.type] = prod.name })
         setProductMap(map)
