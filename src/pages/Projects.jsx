@@ -1322,6 +1322,55 @@ export default function ProjectsPage() {
     localStorage.setItem('cf_open_proofs',   JSON.stringify(expandedProofRows))
   }, [viewMode, clientFilter, expandedRows, expandedItemRows, expandedProofRows])
 
+  // Hydrate drawers restored open from localStorage. Fetches normally run only on
+  // the closed->open toggle transition, so drawers that mount already-open never load.
+  useEffect(() => {
+    if (isDemo) return
+    let cancelled = false
+    async function hydrate() {
+      const taskIds  = Object.keys(expandedRows).filter(id => expandedRows[id])
+      const itemIds  = Object.keys(expandedItemRows).filter(id => expandedItemRows[id])
+      const proofIds = Object.keys(expandedProofRows).filter(id => expandedProofRows[id])
+      await Promise.all([
+        ...taskIds.map(async projectId => {
+          const { data } = await supabase
+            .from('tasks')
+            .select('*, updater:profiles!tasks_updated_by_fkey(name)')
+            .eq('project_id', projectId)
+            .order('sort_order')
+            .order('created_at')
+          if (cancelled) return
+          setProjectTasks(prev => ({ ...prev, [projectId]: data || [] }))
+          setLoadedProjects(prev => new Set([...prev, projectId]))
+        }),
+        ...itemIds.map(async projectId => {
+          const { data } = await supabase
+            .from('project_items')
+            .select('id, item_number, name, scheduled_date, status, sort_order, note')
+            .eq('project_id', projectId)
+            .order('sort_order', { ascending: true, nullsFirst: false })
+            .order('item_number')
+          if (cancelled) return
+          setProjectItems(prev => ({ ...prev, [projectId]: data || [] }))
+          setLoadedItemProjects(prev => new Set([...prev, projectId]))
+        }),
+        ...proofIds.map(async itemId => {
+          const { data } = await supabase
+            .from('proofs')
+            .select('*')
+            .eq('item_id', itemId)
+            .order('version', { ascending: true })
+          if (cancelled) return
+          setItemProofs(prev => ({ ...prev, [itemId]: data || [] }))
+          setLoadedProofItems(prev => new Set([...prev, itemId]))
+        }),
+      ])
+    }
+    hydrate()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     let isMounted = true
     async function fetchData() {
