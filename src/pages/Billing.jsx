@@ -393,8 +393,8 @@ export default function BillingPage() {
                         </td>
                         <td
                           style={{ textAlign: 'center', cursor: 'pointer' }}
-                          onClick={() => saveInvoiceField(inv.id, { checked_at: new Date().toISOString() })}
-                          title="Mark as checked"
+                          onClick={(e) => saveInvoiceField(inv.id, { checked_at: e.shiftKey ? null : new Date().toISOString() })}
+                          title="Click to check · Shift-click to clear"
                         >
                           {(() => {
                             if (!inv.checked_at) return <span style={{ color: 'var(--text3)' }}>—</span>
