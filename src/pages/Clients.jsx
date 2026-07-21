@@ -337,6 +337,13 @@ function ClientModal({ client, onClose, onSaved }) {
     status:            client?.status            || 'active',
     transition_status: client?.transition_status || '',
     notes:             client?.notes             || '',
+    billing_address1:   client?.billing_address1   || '',
+    billing_address2:   client?.billing_address2   || '',
+    billing_city:       client?.billing_city       || '',
+    billing_state:      client?.billing_state      || '',
+    billing_zip:        client?.billing_zip        || '',
+    billing_first_name: client?.billing_first_name || '',
+    billing_last_name:  client?.billing_last_name  || '',
   })
   const [saving, setSaving] = useState(false)
 
@@ -411,6 +418,27 @@ function ClientModal({ client, onClose, onSaved }) {
         </FormGroup>
         <FormGroup label="Transition status">
           <input value={form.transition_status} onChange={set('transition_status')} placeholder="e.g. In Progress" />
+        </FormGroup>
+        <FormGroup label="Billing address 1" full>
+          <input value={form.billing_address1} onChange={set('billing_address1')} placeholder="Street address" />
+        </FormGroup>
+        <FormGroup label="Billing address 2" full>
+          <input value={form.billing_address2} onChange={set('billing_address2')} placeholder="Suite, unit, etc." />
+        </FormGroup>
+        <FormGroup label="City">
+          <input value={form.billing_city} onChange={set('billing_city')} />
+        </FormGroup>
+        <FormGroup label="State">
+          <input value={form.billing_state} onChange={set('billing_state')} />
+        </FormGroup>
+        <FormGroup label="Zip">
+          <input value={form.billing_zip} onChange={set('billing_zip')} />
+        </FormGroup>
+        <FormGroup label="Contact first name">
+          <input value={form.billing_first_name} onChange={set('billing_first_name')} />
+        </FormGroup>
+        <FormGroup label="Contact last name">
+          <input value={form.billing_last_name} onChange={set('billing_last_name')} />
         </FormGroup>
         <FormGroup label="Notes" full>
           <textarea value={form.notes} onChange={set('notes')} placeholder="Internal notes…" rows={3} />

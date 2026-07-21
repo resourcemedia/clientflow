@@ -323,6 +323,7 @@ export default function BillingPage() {
                   <col style={{ width: 100 }} />
                   <col style={{ width: 80 }} />
                   <col style={{ width: 80 }} />
+                  <col style={{ width: 60 }} />
                   <col />
                   <col style={{ width: 96 }} />
                 </colgroup>
@@ -334,13 +335,14 @@ export default function BillingPage() {
                     <th style={{ textAlign: 'right' }}>Amount</th>
                     <th>Status</th>
                     <th>Sent</th>
+                    <th style={{ textAlign: 'center' }}>Chk</th>
                     <th>Note</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {displayed.length === 0 ? (
-                    <tr><td colSpan={8} style={{ textAlign: 'center', padding: 32, color: 'var(--text3)' }}>No invoices found</td></tr>
+                    <tr><td colSpan={9} style={{ textAlign: 'center', padding: 32, color: 'var(--text3)' }}>No invoices found</td></tr>
                   ) : displayed.map(inv => {
                     const sc = STATUS_COLORS[inv.status] || {}
                     return (
@@ -389,6 +391,27 @@ export default function BillingPage() {
                             fmtDate(inv.sent_date)
                           )}
                         </td>
+                        <td
+                          style={{ textAlign: 'center', cursor: 'pointer' }}
+                          onClick={() => saveInvoiceField(inv.id, { checked_at: new Date().toISOString() })}
+                          title="Mark as checked"
+                        >
+                          {(() => {
+                            if (!inv.checked_at) return <span style={{ color: 'var(--text3)' }}>—</span>
+                            const d = new Date(inv.checked_at)
+                            const label = `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`
+                            const startOfDay = (x) => { const t = new Date(x); t.setHours(0, 0, 0, 0); return t.getTime() }
+                            const ageDays = Math.floor((startOfDay(new Date()) - startOfDay(d)) / 86400000)
+                            const bg = ageDays <= 0 ? '#22c55e' : ageDays < 30 ? '#3b82f6' : '#ef4444'
+                            return (
+                              <span style={{
+                                background: bg,
+                                color: '#fff', borderRadius: 4,
+                                padding: '1px 5px', fontSize: 11, display: 'inline-block',
+                              }}>{label}</span>
+                            )
+                          })()}
+                        </td>
                         <td>
                           <EditableCell
                             value={inv.notes || ''}
@@ -433,7 +456,7 @@ export default function BillingPage() {
                     <td className="text-mono" style={{ textAlign: 'right', fontWeight: 700, color: 'var(--text)', fontSize: 13 }}>
                       {fmt$(total)}
                     </td>
-                    <td colSpan={4}></td>
+                    <td colSpan={5}></td>
                   </tr>
                 </tfoot>
               </table>
