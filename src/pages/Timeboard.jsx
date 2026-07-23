@@ -667,6 +667,57 @@ ${groupsHtml}
   w.document.close()
 }
 
+// ── Client Totals ──────────────────────────────────────────────────────────────
+// Per-client snapshot of whatever is currently in view. Paired with the
+// To Invoice filter it answers "what does each client owe me this run?"
+function openClientTotals(rows) {
+  if (!rows || rows.length === 0) return
+  const w = window.open('', '_blank', 'width=760,height=700')
+  if (!w) return
+
+  const map = {}
+  rows.forEach(r => {
+    const name = r.project?.client?.company || r.project?.client?.alias || 'Unassigned'
+    if (!map[name]) map[name] = { hours: 0, amt: 0 }
+    map[name].hours += r.hours
+    map[name].amt   += r.billableAmt
+  })
+
+  const names = Object.keys(map).sort((a, b) => a.localeCompare(b))
+  const totalHours = names.reduce((s, n) => s + map[n].hours, 0)
+  const totalAmt   = names.reduce((s, n) => s + map[n].amt,   0)
+
+  const rowsHtml = names.map(n => `<tr class="detail">
+    <td>${n}</td>
+    <td class="num">${map[n].hours.toFixed(2)}</td>
+    <td class="num">${map[n].amt.toFixed(2)}</td>
+  </tr>`).join('\n')
+
+  w.document.write(`<!DOCTYPE html><html><head><title>Client Invoice List</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Arial,sans-serif;font-size:12px;padding:32px 36px;color:#222;max-width:640px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  button{margin-bottom:20px;padding:5px 14px;cursor:pointer;font-size:12px}
+  h1{font-size:20px;font-weight:700;margin:0 0 20px;padding-bottom:10px;border-bottom:1px solid #cccccc}
+  table{width:100%;border-collapse:collapse}
+  td{padding:8px 6px 8px 0;font-size:13px;vertical-align:middle}
+  td.num{text-align:right;font-family:Helvetica,Arial,sans-serif;width:90px}
+  td.lbl{text-align:right;font-weight:700}
+  .detail td{border-bottom:0.5px solid #cccccc}
+  .grand td{font-weight:700;border-top:1px solid #cccccc;padding-top:9px;font-size:13px}
+  @media print{button{display:none}}
+</style></head><body>
+<button onclick="window.print()">Print / Save PDF</button>
+<h1>Client Invoice List</h1>
+<table><tbody>
+${rowsHtml}
+</tbody><tfoot>
+  <tr class="grand"><td class="lbl">TOTAL</td><td class="num">${totalHours.toFixed(2)}</td><td class="num">${totalAmt.toFixed(2)}</td></tr>
+</tfoot></table>
+</body></html>`)
+  w.document.close()
+}
+
 // ── Collapsed View ─────────────────────────────────────────────────────────────
 
 const TH = { padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--text3)', letterSpacing: '0.06em', textTransform: 'uppercase', borderBottom: '2px solid var(--border2)', whiteSpace: 'nowrap', textAlign: 'left' }
@@ -1365,6 +1416,13 @@ export default function TimeboardPage() {
               className={`btn btn-sm ${filterToInvoice ? 'btn-primary' : 'btn-ghost'}`}
               onClick={() => setFilterToInvoice(v => !v)}
             >To Invoice</button>
+            {filterToInvoice && (
+              <button className="btn btn-ghost btn-sm"
+                onClick={() => openClientTotals(displayRows)}
+              >
+                Client Totals
+              </button>
+            )}
             <input value={filterInvoiceDate} onChange={e => setFilterInvoiceDate(e.target.value)}
               placeholder="Date" style={{ width: 90, fontSize: 12 }}
             />
