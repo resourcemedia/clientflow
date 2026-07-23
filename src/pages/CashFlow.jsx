@@ -489,6 +489,8 @@ export default function CashFlowPage() {
     return { filteredIncome, filteredExpense, filteredBalance, filteredDebt, filteredAsset }
   }, [displayRows])
 
+  const filteredBottomLine = filteredAsset - filteredDebt + filteredIncome - filteredExpense
+
   const { rowContributions, rowBalances } = useMemo(() => {
     let running = 0
     const rowContributions = {}
@@ -843,7 +845,12 @@ export default function CashFlowPage() {
                     }}>
                       {fmt$(filteredBalance)}
                     </td>
-                    <td colSpan={4} style={TD} />
+                    <td colSpan={4} style={{
+                      ...TD, textAlign: 'right', fontFamily: 'DM Mono, monospace', fontWeight: 700, fontSize: 13,
+                      color: filteredBottomLine < 0 ? '#ef4444' : 'var(--text)',
+                    }}>
+                      {fmt$(filteredBottomLine)}
+                    </td>
                   </tr>
                 </tbody>
               </table>
