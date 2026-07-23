@@ -204,6 +204,29 @@ export default function CalendarPage() {
     inFlightRef.current.delete(id)
   }
 
+  // Chk stamp — click sets today, shift-click clears. Same optimistic +
+  // rollback + re-entrancy pattern as updateNote.
+  async function updateChecked(id, value) {
+    if (!id || inFlightRef.current.has(id)) return
+    const item = events.find(e => e.id === id)
+    if (!item) return
+    const prev = item.checked_at ?? null
+
+    inFlightRef.current.add(id)
+    setEvents(arr => arr.map(e => e.id === id ? { ...e, checked_at: value } : e))
+
+    const { error } = await supabase
+      .from('project_items')
+      .update({ checked_at: value })
+      .eq('id', id)
+
+    if (error) {
+      setEvents(arr => arr.map(e => e.id === id ? { ...e, checked_at: prev } : e))
+      console.error('Chk update failed, reverted:', error)
+    }
+    inFlightRef.current.delete(id)
+  }
+
   const ITEM_TYPES = ['Task', 'Milestone', 'Goal']
 
   // Item type (Task | Milestone | Goal) — same optimistic + rollback +
@@ -454,7 +477,7 @@ export default function CalendarPage() {
     }
     let query = supabase
       .from('project_items')
-      .select('id, project_id, name, scheduled_date, status, completed_date, note, priority_order, item_type, tags, project:projects(name, category, client:clients(company, alias))')
+      .select('id, project_id, name, scheduled_date, status, completed_date, note, priority_order, item_type, tags, checked_at, project:projects(name, category, client:clients(company, alias))')
 
     if (view === 'list' && scope === 'all') {
       // A range comparison never matches NULL, so undated items are excluded by
@@ -1025,7 +1048,7 @@ export default function CalendarPage() {
               <thead>
                 <tr style={{ background: 'var(--bg3)' }}>
                   <th style={{ width: 28, padding: '10px 0 10px 14px' }}></th>
-                  {['Date','Client','Project','Item','Note','Type','Tags','Status'].map(h => (
+                  {['Date','Client','Project','Item','Chk','Note','Type','Tags','Status'].map(h => (
                     <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)' }}>{h}</th>
                   ))}
                   <th style={{ width: 44 }}></th>
@@ -1033,7 +1056,7 @@ export default function CalendarPage() {
               </thead>
               <tbody>
                 {listRows.length === 0 ? (
-                  <tr><td colSpan={10} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+                  <tr><td colSpan={11} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
                     {scope === 'all' ? 'No items match these filters.' : 'No items in this range.'}
                   </td></tr>
                 ) : listRows.map((ev, idx) => {
@@ -1129,6 +1152,27 @@ export default function CalendarPage() {
                       </td>
                       <td style={{ padding: '10px 14px', color: 'var(--text)', fontWeight: 500 }}>
                         <EditableCell value={ev.name} onSave={text => updateItemName(ev.id, text)} />
+                      </td>
+                      <td
+                        style={{ padding: '10px 14px', width: 60, textAlign: 'center', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                        onClick={(e) => updateChecked(ev.id, e.shiftKey ? null : new Date().toISOString())}
+                        title="Click to check · Shift-click to clear"
+                      >
+                        {(() => {
+                          if (!ev.checked_at) return <span style={{ color: 'var(--text3)' }}>—</span>
+                          const d = new Date(ev.checked_at)
+                          const label = `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`
+                          const startOfDay = (x) => { const t = new Date(x); t.setHours(0, 0, 0, 0); return t.getTime() }
+                          const ageDays = Math.floor((startOfDay(new Date()) - startOfDay(d)) / 86400000)
+                          const bg = ageDays <= 0 ? '#22c55e' : ageDays < 30 ? '#3b82f6' : '#ef4444'
+                          return (
+                            <span style={{
+                              background: bg,
+                              color: '#fff', borderRadius: 4,
+                              padding: '1px 5px', fontSize: 11, display: 'inline-block',
+                            }}>{label}</span>
+                          )
+                        })()}
                       </td>
                       <td style={{ padding: '10px 14px', minWidth: 180, verticalAlign: 'top' }}>
                         <NoteCell value={ev.note} onSave={text => updateNote(ev.id, text)} textColor="var(--text)" />
