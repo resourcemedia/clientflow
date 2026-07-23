@@ -174,7 +174,7 @@ export default function InvoicePrint() {
                 <tr key={item.id}>
                   <td style={cell()}>{item.project?.project_number || ''}</td>
                   <td style={cell()}>{item.project?.name || ''}</td>
-                  <td style={cell()}>{item.description || ''}</td>
+                  <td style={cell({ whiteSpace: 'pre-wrap' })}>{item.description || ''}</td>
                   <td style={cell()}>{item.date_range || ''}</td>
                   <td style={cell({ textAlign: 'right', borderRight: 'none' })}>
                     {item.amount != null ? fmtAmt(item.amount) : ''}

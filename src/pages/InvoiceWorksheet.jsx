@@ -392,8 +392,12 @@ export default function InvoiceWorksheet() {
                       </select>
                     </td>
                     <td>
-                      <input
-                        style={{ ...inpSm, width: '100%' }}
+                      <textarea
+                        rows={2}
+                        style={{
+                          ...inpSm, width: '100%', height: 'auto', minHeight: 28,
+                          resize: 'vertical', lineHeight: 1.4, fontFamily: 'inherit',
+                        }}
                         value={item.description}
                         onChange={e => updateItem(item._key, 'description', e.target.value)}
                         placeholder="Description"
