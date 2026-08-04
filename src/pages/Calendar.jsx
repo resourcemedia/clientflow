@@ -1,122 +1,18 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { Breadcrumb } from '../components/ui'
+import { deleteItemCascade, getItemProofCount } from '../lib/items'
+import { CATEGORY_COLORS, CATEGORY_LABELS, catColor, catLabel, catColorDark } from '../lib/categories'
+import { Breadcrumb, NoteCell, Modal, FormGroup, EditableCell, TagCell } from '../components/ui'
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   startOfYear, endOfYear,
   addDays, addMonths, subMonths, isSameMonth, isSameDay,
 } from 'date-fns'
 
-// Category colors — mirror of CATEGORY_COLORS in Projects.jsx.
-// Duplicated intentionally to keep this a single-file change;
-// candidate for extraction to src/lib/categories.js later.
-const CATEGORY_COLORS = {
-  primary:    '#ffb8b8',
-  secondary:  '#4fd1b8',
-  accounting: '#63ca7a',
-  overhead:   '#b9dd67',
-  charity:    '#c6c7fe',
-  personal:   '#ebb8e5',
-}
-const CATEGORY_LABELS = {
-  primary: 'Prin', secondary: 'Sec', accounting: 'Acct',
-  overhead: 'OH', charity: 'Char', personal: 'Pers',
-}
-function catColor(category) { return CATEGORY_COLORS[category] || 'var(--bg4)' }
-function catLabel(category) { return CATEGORY_LABELS[category] || (category || '—') }
-
-// Find-or-create tag picker (List). Existing chips are removable; the input suggests
-// existing tags (filter-as-you-type) and offers Create only for genuinely new text
-// (case-insensitive → no near-duplicate drift). Module-level for stable focus.
-function TagPicker({ tags, allTags, onAdd, onRemove }) {
-  const [adding, setAdding] = useState(false)
-  const [text, setText] = useState('')
-  const existing = tags || []
-  const q = text.trim().toLowerCase()
-  const suggestions = (allTags || []).filter(t => !existing.includes(t) && t.toLowerCase().includes(q))
-  const exactExists = (allTags || []).some(t => t.toLowerCase() === q) || existing.some(t => t.toLowerCase() === q)
-  const canCreate = q.length > 0 && !exactExists
-
-  function commit(tag) {
-    const clean = (tag || '').trim()
-    if (clean && !existing.some(t => t.toLowerCase() === clean.toLowerCase())) onAdd(clean)
-    setText(''); setAdding(false)
-  }
-
-  return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
-      {existing.map(t => (
-        <span key={t} style={{ padding: '2px 8px', borderRadius: 12, fontSize: 11, background: 'var(--bg4)', color: 'var(--text2)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-          {t}
-          <span onClick={() => onRemove(t)} style={{ cursor: 'pointer', color: 'var(--text3)', fontWeight: 700 }} title="Remove tag">×</span>
-        </span>
-      ))}
-      {!adding ? (
-        <span onClick={() => setAdding(true)}
-          style={{ cursor: 'pointer', fontSize: 11, color: 'var(--text3)', padding: '2px 8px', borderRadius: 12, border: '1px dashed var(--border)' }}>+ Tag</span>
-      ) : (
-        <div style={{ position: 'relative' }}>
-          <input autoFocus value={text}
-            onChange={e => setText(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') commit(text)
-              if (e.key === 'Escape') { setText(''); setAdding(false) }
-            }}
-            onBlur={() => setTimeout(() => { setText(''); setAdding(false) }, 150)}
-            placeholder="Find or create…"
-            style={{ fontSize: 11, padding: '3px 6px', borderRadius: 6, border: '1px solid var(--accent)', background: 'var(--bg2)', color: 'var(--text)', width: 130 }} />
-          {(suggestions.length > 0 || canCreate) && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 2, background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 6, minWidth: 150, zIndex: 30, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', overflow: 'hidden' }}>
-              {suggestions.map(t => (
-                <div key={t} onMouseDown={() => commit(t)}
-                  style={{ padding: '6px 10px', fontSize: 12, cursor: 'pointer', color: 'var(--text2)' }}>{t}</div>
-              ))}
-              {canCreate && (
-                <div onMouseDown={() => commit(text)}
-                  style={{ padding: '6px 10px', fontSize: 12, cursor: 'pointer', color: 'var(--accent)', borderTop: suggestions.length ? '1px solid var(--border)' : 'none' }}>
-                  + Create "{text.trim()}"
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Inline multi-line editable note (List view). Ports the CashFlow EditableCell idea to a
-// textarea. Module-level so it keeps stable identity and doesn't lose focus on re-render.
-function NoteCell({ value, onSave }) {
-  const [editing, setEditing] = useState(false)
-  const [val, setVal] = useState(value ?? '')
-  useEffect(() => { setVal(value ?? '') }, [value])
-
-  if (!editing) {
-    return (
-      <div onClick={() => setEditing(true)}
-        style={{ cursor: 'text', minHeight: 20, whiteSpace: 'pre-wrap',
-                 color: value ? 'var(--text2)' : 'var(--text3)' }}>
-        {value || 'Add note…'}
-      </div>
-    )
-  }
-  return (
-    <textarea
-      autoFocus
-      value={val}
-      onChange={e => setVal(e.target.value)}
-      onBlur={() => { setEditing(false); if ((val ?? '') !== (value ?? '')) onSave(val) }}
-      rows={2}
-      style={{
-        width: '100%', minWidth: 160, fontSize: 13, fontFamily: 'inherit',
-        padding: '4px 6px', borderRadius: 6, border: '1px solid var(--accent)',
-        background: 'var(--bg2)', color: 'var(--text)', resize: 'vertical',
-      }}
-    />
-  )
-}
+// The per-client hub project. Named with a leading dash so it sorts first
+// alphabetically. If this convention changes, this is the only line to edit.
+const TODO_PROJECT = '- ToDo'
 
 export default function CalendarPage() {
   useEffect(() => { document.title = 'Calendar' }, [])
@@ -126,31 +22,80 @@ export default function CalendarPage() {
   const [loading, setLoading]         = useState(true)
   const [current, setCurrent]         = useState(new Date())
   const [selectedDay, setSelectedDay] = useState(null)
-  const [filterClient,  setFilterClient]  = useState('')
-  const [filterProject, setFilterProject] = useState('')
+  const [filterClient,  setFilterClient]  = useState(() => localStorage.getItem('cal_filterClient') || '')
+  const [filterProject, setFilterProject] = useState(() => localStorage.getItem('cal_filterProject') ?? TODO_PROJECT)   // hub on first visit; ?? keeps a saved '' meaning "no filter"
   const [filterItem,    setFilterItem]    = useState('')
   const [filterTag,     setFilterTag]     = useState('')
-  const [filterStatus,  setFilterStatus]  = useState('')
+  const [filterStatus,  setFilterStatus]  = useState(() => localStorage.getItem('cal_status') || '')
+  const [filterTypes,   setFilterTypes]   = useState(() => (localStorage.getItem('cal_types') || '').split(',').filter(Boolean))
   const [draggedId,   setDraggedId]   = useState(null)
   const [dragOverIso, setDragOverIso] = useState(null)
-  const [view, setView] = useState('month')   // 'day' | 'week' | 'month' | 'list'
+  const [listDragIdx, setListDragIdx] = useState(null)   // List reorder (Priority mode)
+  const [listOverIdx, setListOverIdx] = useState(null)
+  const [cardOverId,  setCardOverId]  = useState(null)   // Day card reorder drop target
+  const listDragFrom  = useRef(null)
+  const reorderingRef = useRef(false)                     // re-entrancy guard
+  const [view, setView] = useState(() => localStorage.getItem('cal_view') || 'list')   // 'day' | 'week' | 'month' | 'list'
+  const [allProjects, setAllProjects] = useState([])   // full projects catalog, independent of items
+  const [clients, setClients] = useState([])           // Add Item modal options
+  const [showAddItem,   setShowAddItem]   = useState(false)
+  const [npClientId,    setNpClientId]    = useState('')
+  const [npProjectSel,  setNpProjectSel]  = useState('')   // project id, or '__new__'
+  const [npNewProjName, setNpNewProjName] = useState('')
+  const [npItemName,    setNpItemName]    = useState('')
+  const [npDate,        setNpDate]        = useState('')   // optional — blank creates an unscheduled item
   const [dateStart, setDateStart] = useState('')   // List view range (yyyy-MM-dd)
   const [dateEnd,   setDateEnd]   = useState('')
+  const [scope,     setScope]     = useState(() => localStorage.getItem('cal_scope') || 'all')  // List only: 'scheduled' | 'all'
+  const [sortBy,    setSortBy]    = useState(() => localStorage.getItem('cal_sortBy') || 'client')     // List only: 'client' | 'date' | 'priority'
   const inFlightRef = useRef(new Set())
+
+  // Remember where the user left off — mirrors the Tasks page's saved-state pattern
+  useEffect(() => {
+    localStorage.setItem('cal_view',          view)
+    localStorage.setItem('cal_scope',         scope)
+    localStorage.setItem('cal_sortBy',        sortBy)
+    localStorage.setItem('cal_filterClient',  filterClient)
+    localStorage.setItem('cal_filterProject', filterProject)
+    localStorage.setItem('cal_status',        filterStatus)
+    localStorage.setItem('cal_types',         filterTypes.join(','))
+  }, [view, scope, sortBy, filterClient, filterProject, filterStatus, filterTypes])
+
+  // Active clients for the Add Item modal — same query the Projects page uses
+  useEffect(() => {
+    supabase.from('clients').select('id, company, alias').eq('status', 'active').order('company')
+      .then(({ data, error }) => {
+        if (error) { console.error('clients load failed:', error); return }
+        setClients(data || [])
+      })
+  }, [])
+
+  // Dropdowns must reflect ALL projects, including ones with no items yet —
+  // deriving them from loaded items would hide empty projects entirely.
+  useEffect(() => {
+    supabase
+      .from('projects')
+      .select('id, name, category, project_number, client_id, client:clients(company, alias)')
+      .then(({ data, error }) => {
+        if (error) { console.error('projects catalog load failed:', error); return }
+        setAllProjects(data || [])
+      })
+  }, [])
 
   // Reschedule an item by drag-drop. Optimistic + rollback, single write, re-entrancy-guarded.
   async function moveItem(id, newDateIso) {
     if (!id || inFlightRef.current.has(id)) return       // guard: ignore concurrent fire on same item
     const item = events.find(e => e.id === id)
-    if (!item || item.scheduled_date === newDateIso) return   // missing or no-op (same day)
+    const value = newDateIso || null                        // empty picker → back to backlog
+    if (!item || item.scheduled_date === value) return      // missing or no-op (same day)
     const prevDate = item.scheduled_date
 
     inFlightRef.current.add(id)                            // LOCK synchronously, before any await
-    setEvents(prev => prev.map(e => e.id === id ? { ...e, scheduled_date: newDateIso } : e))  // optimistic move
+    setEvents(prev => prev.map(e => e.id === id ? { ...e, scheduled_date: value } : e))  // optimistic
 
     const { error } = await supabase
       .from('project_items')
-      .update({ scheduled_date: newDateIso })
+      .update({ scheduled_date: value })
       .eq('id', id)
 
     if (error) {
@@ -210,6 +155,30 @@ export default function CalendarPage() {
     inFlightRef.current.delete(id)
   }
 
+  // Rename an item inline (List). Blank names are ignored — a name is required.
+  // Optimistic + rollback, re-entrancy-guarded (shares inFlightRef).
+  async function updateItemName(id, text) {
+    if (!id || inFlightRef.current.has(id)) return
+    const item = events.find(e => e.id === id)
+    if (!item) return
+    const value = text && text.trim() ? text.trim() : null
+    if (!value || (item.name ?? '') === value) return
+    const prev = item.name
+
+    inFlightRef.current.add(id)
+    setEvents(arr => arr.map(e => e.id === id ? { ...e, name: value } : e))
+
+    const { error } = await supabase
+      .from('project_items')
+      .update({ name: value })
+      .eq('id', id)
+    if (error) {
+      console.error('item rename failed:', error)
+      setEvents(arr => arr.map(e => e.id === id ? { ...e, name: prev } : e))
+    }
+    inFlightRef.current.delete(id)
+  }
+
   // Save an item's note inline (List). Empty note clears to null.
   // Optimistic + rollback, re-entrancy-guarded (shares inFlightRef).
   async function updateNote(id, text) {
@@ -235,26 +204,137 @@ export default function CalendarPage() {
     inFlightRef.current.delete(id)
   }
 
-  // Write a project's tags (List). Tags are project-level, so this updates EVERY loaded
-  // item sharing project_id. Optimistic + rollback, guarded on the PROJECT id.
-  async function setProjectTags(projectId, newTags) {
-    if (!projectId || inFlightRef.current.has(projectId)) return
-    const sample = events.find(e => e.project_id === projectId)
-    const prev = sample?.project?.tags || []
+  // Chk stamp — click sets today, shift-click clears. Same optimistic +
+  // rollback + re-entrancy pattern as updateNote.
+  async function updateChecked(id, value) {
+    if (!id || inFlightRef.current.has(id)) return
+    const item = events.find(e => e.id === id)
+    if (!item) return
+    const prev = item.checked_at ?? null
 
-    inFlightRef.current.add(projectId)
-    setEvents(arr => arr.map(e => e.project_id === projectId ? { ...e, project: { ...e.project, tags: newTags } } : e))
+    inFlightRef.current.add(id)
+    setEvents(arr => arr.map(e => e.id === id ? { ...e, checked_at: value } : e))
 
     const { error } = await supabase
-      .from('projects')
-      .update({ tags: newTags })
-      .eq('id', projectId)
+      .from('project_items')
+      .update({ checked_at: value })
+      .eq('id', id)
 
     if (error) {
-      setEvents(arr => arr.map(e => e.project_id === projectId ? { ...e, project: { ...e.project, tags: prev } } : e))
-      console.error('Tag update failed, reverted:', error)
+      setEvents(arr => arr.map(e => e.id === id ? { ...e, checked_at: prev } : e))
+      console.error('Chk update failed, reverted:', error)
     }
-    inFlightRef.current.delete(projectId)
+    inFlightRef.current.delete(id)
+  }
+
+  const ITEM_TYPES = ['Task', 'Milestone', 'Goal']
+
+  // Item type (Task | Milestone | Goal) — same optimistic + rollback +
+  // re-entrancy pattern as updateNote.
+  async function updateItemType(id, newType) {
+    if (!id || inFlightRef.current.has(id)) return
+    const item = events.find(e => e.id === id)
+    if (!item || (item.item_type || 'Task') === newType) return
+    const prev = item.item_type
+
+    inFlightRef.current.add(id)
+    setEvents(arr => arr.map(e => e.id === id ? { ...e, item_type: newType } : e))
+
+    const { error } = await supabase
+      .from('project_items')
+      .update({ item_type: newType })
+      .eq('id', id)
+
+    if (error) {
+      setEvents(arr => arr.map(e => e.id === id ? { ...e, item_type: prev } : e))
+      console.error('Type update failed, reverted:', error)
+    }
+    inFlightRef.current.delete(id)
+  }
+
+  // Item tags — TagCell hands back the full new array on every add/remove.
+  async function updateItemTags(id, newTags) {
+    if (!id || inFlightRef.current.has(id)) return
+    const item = events.find(e => e.id === id)
+    if (!item) return
+    const prev = item.tags
+    if (JSON.stringify(prev || []) === JSON.stringify(newTags)) return
+
+    inFlightRef.current.add(id)
+    setEvents(arr => arr.map(e => e.id === id ? { ...e, tags: newTags } : e))
+
+    const { error } = await supabase
+      .from('project_items')
+      .update({ tags: newTags })
+      .eq('id', id)
+
+    if (error) {
+      setEvents(arr => arr.map(e => e.id === id ? { ...e, tags: prev } : e))
+      console.error('Tags update failed, reverted:', error)
+    }
+    inFlightRef.current.delete(id)
+  }
+
+  // ── List reorder (Priority mode) ────────────────────────────────────────────
+  // The visible rows occupy a set of priority slots. Reorder the rows among
+  // those SAME slots. Rows hidden by a filter keep their ranks untouched, so
+  // reordering inside a client filter cannot corrupt the master ordering.
+  // Permutes a SUBSET of rows among the priority slots they already occupy.
+  // Rows outside `sourceRows` keep their ranks untouched. Used by the List
+  // (all filtered rows) and by Day view (that one day's cards).
+  async function reorderPriority(sourceRows, fromIdx, toIdx) {
+    if (reorderingRef.current) return
+    const rows  = [...sourceRows]
+    const slots = rows.map(r => r.priority_order)   // ascending; NOT NULL by constraint
+    if (slots.some(s => s == null)) {
+      console.error('Reorder aborted: null priority_order in view')
+      return
+    }
+
+    const [moved] = rows.splice(fromIdx, 1)
+    rows.splice(toIdx, 0, moved)
+
+    const changed = rows
+      .map((row, k) => ({ row, next: slots[k] }))
+      .filter(({ row, next }) => row.priority_order !== next)
+    if (!changed.length) return
+
+    reorderingRef.current = true                    // LOCK before any await
+    const prev = events
+    const byId = new Map(changed.map(({ row, next }) => [row.id, next]))
+    setEvents(arr =>
+      arr
+        .map(e => (byId.has(e.id) ? { ...e, priority_order: byId.get(e.id) } : e))
+        .sort((a, b) => a.priority_order - b.priority_order)
+    )
+
+    const results = await Promise.all(
+      changed.map(({ row, next }) =>
+        supabase.from('project_items').update({ priority_order: next }).eq('id', row.id)
+      )
+    )
+    const failed = results.find(r => r.error)
+    if (failed) {
+      console.error('Priority reorder failed, reverted:', failed.error)
+      setEvents(prev)
+    }
+    reorderingRef.current = false                   // release
+  }
+
+  function startListDrag(e, idx) {
+    e.dataTransfer.effectAllowed = 'move'
+    listDragFrom.current = idx
+    setListDragIdx(idx)
+  }
+  function overListRow(e, idx) { e.preventDefault(); setListOverIdx(idx) }
+  function endListDrag() {
+    setListDragIdx(null); setListOverIdx(null); listDragFrom.current = null
+  }
+  function dropListRow(toIdx) {
+    const fromIdx = listDragFrom.current
+    endListDrag()
+    if (fromIdx == null || fromIdx === toIdx) return
+    reorderPriority(filtered, fromIdx, toIdx)
   }
 
   // View-aware navigation: month steps by month, week by 7 days, day by 1 day.
@@ -263,28 +343,110 @@ export default function CalendarPage() {
 
   // Draggable item card + day drop-target props — shared by Week and Day views.
   // (Month view keeps its own inline copy; unify later if card styling changes.)
-  function eventCard(ev) {
-    const cat = ev.project?.category
+  function eventCard(ev, showNote = false, rows = null) {
+    const cat        = ev.project?.category
+    const done       = ev.status === 'Complete'
     const isDragging = draggedId === ev.id
+    const alias      = ev.project?.client?.alias || ev.project?.client?.company || ''
+    const startDrag  = e => {
+      e.stopPropagation()
+      setDraggedId(ev.id)
+      e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('text/plain', ev.id)
+    }
+    const endDrag = () => { setDraggedId(null); setDragOverIso(null); setCardOverId(null) }
+
+    // Card-on-card drop. stopPropagation keeps the day cell's onDrop from also
+    // firing, so this handler must cover BOTH cases:
+    //   same day      → reorder (priority_order)
+    //   different day → reschedule onto this card's date (scheduled_date)
+    // Without the cross-day branch, dropping onto an existing card in Week or
+    // Month would silently do nothing.
+    const dropOnCard = e => {
+      e.preventDefault()
+      e.stopPropagation()
+      const dragged = draggedId
+      const fromIdx = rows.findIndex(r => r.id === dragged)
+      const toIdx   = rows.findIndex(r => r.id === ev.id)
+      setCardOverId(null); setDraggedId(null); setDragOverIso(null)
+      if (fromIdx < 0) {
+        if (dragged && ev.scheduled_date) moveItem(dragged, ev.scheduled_date)
+        return
+      }
+      if (toIdx < 0 || fromIdx === toIdx) return
+      reorderPriority(rows, fromIdx, toIdx)
+    }
+    const dropTargetProps = rows ? {
+      onDragOver: e => {
+        e.preventDefault(); e.stopPropagation()
+        if (draggedId && draggedId !== ev.id && cardOverId !== ev.id) setCardOverId(ev.id)
+      },
+      onDragLeave: () => setCardOverId(c => (c === ev.id ? null : c)),
+      onDrop: dropOnCard,
+    } : {}
+
+    // The one card. Used by Day, Week, and Month.
     return (
       <div key={ev.id}
-        draggable
-        onDragStart={e => {
-          e.stopPropagation()
-          setDraggedId(ev.id)
-          e.dataTransfer.effectAllowed = 'move'
-          e.dataTransfer.setData('text/plain', ev.id)
-        }}
-        onDragEnd={() => { setDraggedId(null); setDragOverIso(null) }}
+        onDragEnd={endDrag}
+        {...dropTargetProps}
         style={{
-          fontSize: 12, fontWeight: 500,
-          padding: '4px 8px', borderRadius: 4, marginBottom: 3,
-          borderLeft: `3px solid ${catColor(cat)}`,
-          background: 'var(--bg3)', color: 'var(--text2)',
-          cursor: 'grab',
+          display: 'flex', alignItems: 'stretch',
+          marginBottom: 8, borderRadius: 6, overflow: 'hidden',
+          background: done ? catColor(cat) : 'var(--bg3)',
           opacity: isDragging ? 0.4 : 1,
-        }} title={`${ev.project?.name || ''} — ${ev.name}`}>
-        {ev.project?.name ? `${ev.project.name}: ` : ''}{ev.name}
+          // inset shadow, not a border — a border would shift the layout mid-drag
+          boxShadow: cardOverId === ev.id ? 'inset 0 3px 0 0 var(--accent)' : 'none',
+        }}
+        title={`${ev.project?.name || ''} — ${ev.name}`}>
+
+        <div
+          draggable
+          onDragStart={startDrag}
+          title="Drag to reschedule"
+          style={{
+            flex: '0 0 18px', background: catColor(cat),
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'grab', userSelect: 'none',
+            fontSize: 11, color: 'rgba(0,0,0,0.35)',
+          }}>⠿</div>
+
+        <div style={{ flex: 1, minWidth: 0, padding: '8px 30px 8px 12px', position: 'relative' }}>
+          <button
+            onClick={e => { e.stopPropagation(); updateItemStatus(ev.id, done ? 'Open' : 'Complete') }}
+            title={done ? 'Mark open' : 'Mark complete'}
+            style={{
+              position: 'absolute', top: 8, right: 8,
+              width: 16, height: 16, borderRadius: '50%',
+              padding: 0, cursor: 'pointer',
+              border: done ? 'none' : '1.5px solid rgba(0,0,0,0.22)',
+              background: done ? catColorDark(cat) : 'transparent',
+            }} />
+          {alias && (
+            <div style={{
+              display: 'inline-block',
+              padding: '1px 8px', marginBottom: 3,
+              borderRadius: 4,
+              background: done ? 'var(--bg3)' : catColor(cat),
+              fontSize: 12, lineHeight: 1.45, fontWeight: 500,
+              color: '#000',
+            }}>{alias}</div>
+          )}
+          <div style={{
+            fontSize: 12, lineHeight: 1.45, color: 'var(--text2)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{ev.project?.name}</div>
+          <div style={{
+            fontSize: 13, lineHeight: 1.5, fontWeight: 700, color: 'var(--text)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{ev.name}</div>
+          {showNote && ev.note && (
+            <div style={{
+              fontSize: 12, lineHeight: 1.5, marginTop: 2,
+              color: 'var(--text2)', whiteSpace: 'pre-wrap',
+            }}>{ev.note}</div>
+          )}
+        </div>
       </div>
     )
   }
@@ -300,7 +462,7 @@ export default function CalendarPage() {
     setLoading(true)
     loadEvents()
     setSelectedDay(null)
-  }, [current, location.pathname, view, dateStart, dateEnd])
+  }, [current, location.pathname, view, dateStart, dateEnd, scope, sortBy])
 
   async function loadEvents() {
     setLoading(true)
@@ -313,12 +475,31 @@ export default function CalendarPage() {
       rangeStart = format(startOfWeek(startOfMonth(current)), 'yyyy-MM-dd')
       rangeEnd   = format(endOfWeek(endOfMonth(current)),     'yyyy-MM-dd')
     }
-    const { data } = await supabase
+    let query = supabase
       .from('project_items')
-      .select('id, project_id, name, scheduled_date, status, completed_date, note, project:projects(name, category, tags, client:clients(company))')
-      .gte('scheduled_date', rangeStart)
-      .lte('scheduled_date', rangeEnd)
-      .order('scheduled_date')
+      .select('id, project_id, name, scheduled_date, status, completed_date, note, priority_order, item_type, tags, checked_at, project:projects(name, category, client:clients(company, alias))')
+
+    if (view === 'list' && scope === 'all') {
+      // A range comparison never matches NULL, so undated items are excluded by
+      // .gte/.lte. OR them back in. They ignore the date range by definition.
+      query = query.or(
+        `and(scheduled_date.gte.${rangeStart},scheduled_date.lte.${rangeEnd}),scheduled_date.is.null`
+      )
+    } else {
+      query = query.gte('scheduled_date', rangeStart).lte('scheduled_date', rangeEnd)
+    }
+
+    // Grid views always order by date. List honors the sort toggle.
+    const byPriority = view === 'list' && sortBy === 'priority'
+    const { data, error } = byPriority
+      ? await query
+          .order('priority_order', { ascending: true })
+          .order('scheduled_date', { ascending: true, nullsFirst: false })
+      : await query
+          .order('scheduled_date', { ascending: true, nullsFirst: false })
+          .order('priority_order', { ascending: true })
+
+    if (error) console.error('calendar load error:', error)
     setEvents(data || [])
     setLoading(false)
   }
@@ -333,23 +514,115 @@ export default function CalendarPage() {
   while (d <= gridEnd) { days.push(d); d = addDays(d, 1) }
 
   // Filter options derived from the loaded month (client-side, no extra queries)
-  const clientOptions  = [...new Set(events.map(e => e.project?.client?.company).filter(Boolean))].sort()
-  const projectOptions = [...new Set(events.map(e => e.project?.name).filter(Boolean))].sort()
-  const tagOptions     = [...new Set(events.flatMap(e => e.project?.tags || []).filter(Boolean))].sort()
-  const STATUS_OPTIONS = ['Open', 'Complete']
+  const clientOptions  = [...new Set(allProjects.map(p => p.client?.company).filter(Boolean))].sort()
+  // When a client filter is active, the Project dropdown only offers that client's projects
+  const projectOptions = [...new Set(
+    allProjects
+      .filter(p => !filterClient || p.client?.company === filterClient)
+      .map(p => p.name)
+      .filter(Boolean)
+  )].sort()
+  const tagOptions     = [...new Set(events.flatMap(e => e.tags || []).filter(Boolean))].sort()
 
   const filtered = events.filter(e => {
     if (filterClient  && e.project?.client?.company !== filterClient) return false
     if (filterProject && e.project?.name !== filterProject) return false
     if (filterItem    && !(e.name || '').toLowerCase().includes(filterItem.toLowerCase())) return false
-    if (filterTag     && !(e.project?.tags || []).includes(filterTag)) return false
+    if (filterTag     && !(e.tags || []).includes(filterTag)) return false
     if (filterStatus  && e.status !== filterStatus) return false
+    if (filterTypes.length && !filterTypes.includes(e.item_type || 'Task')) return false
     return true
   })
 
-  const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterStatus
+  // Client sort — the hub's default order: category, then client alias, then priority.
+  // Done client-side because category and alias live on joined tables, where
+  // server-side .order() across nested joins gets unwieldy.
+  const CATEGORY_SORT = ['primary', 'secondary', 'accounting', 'overhead', 'charity', 'personal']
+  const catRank = c => { const i = CATEGORY_SORT.indexOf(c); return i === -1 ? 999 : i }
+  const listRows = (view === 'list' && sortBy === 'client')
+    ? [...filtered].sort((a, b) => {
+        const cr = catRank(a.project?.category) - catRank(b.project?.category)
+        if (cr !== 0) return cr
+        const aa = (a.project?.client?.alias || a.project?.client?.company || '').toLowerCase()
+        const ab = (b.project?.client?.alias || b.project?.client?.company || '').toLowerCase()
+        if (aa !== ab) return aa < ab ? -1 : 1
+        const pa = (a.project?.name || '').toLowerCase()
+        const pb = (b.project?.name || '').toLowerCase()
+        if (pa !== pb) return pa < pb ? -1 : 1
+        // Date within project — undated items float to the top: they may need
+        // doing first, or can be quickly tagged to today.
+        if (a.scheduled_date !== b.scheduled_date) {
+          if (!a.scheduled_date) return -1
+          if (!b.scheduled_date) return 1
+          return a.scheduled_date < b.scheduled_date ? -1 : 1
+        }
+        const na = (a.name || '').toLowerCase()
+        const nb = (b.name || '').toLowerCase()
+        if (na !== nb) return na < nb ? -1 : 1
+        return (a.priority_order ?? 0) - (b.priority_order ?? 0)
+      })
+    : filtered
+
+  const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterStatus || filterTypes.length > 0
+  async function handleAddItem() {
+    const itemName = npItemName.trim()
+    if (!itemName || !npClientId) return
+    const creatingProject = npProjectSel === '__new__'
+    const newProjName = npNewProjName.trim()
+    if (creatingProject ? !newProjName : !npProjectSel) return
+
+    let project
+    if (creatingProject) {
+      const nums = allProjects.map(p => parseInt(p.project_number, 10)).filter(n => !isNaN(n))
+      const nextNumber = nums.length ? String(Math.max(...nums) + 1) : '1000'
+      const { data, error } = await supabase
+        .from('projects')
+        .insert({
+          name:           newProjName,
+          client_id:      npClientId,
+          project_number: nextNumber,
+          category:       'primary',
+          priority:       'Normal',
+          proof_status:   'Open',
+          inv_status:     'Open',
+          collect_status: 'Open',
+        })
+        .select('id, name, category, project_number, client_id, client:clients(company, alias)')
+        .single()
+      if (error) { console.error('project insert failed:', error); return }
+      project = data
+      setAllProjects(prev => [...prev, data])
+    } else {
+      project = allProjects.find(p => p.id === npProjectSel)
+      if (!project) return
+    }
+
+    // item_number continues the project's sequence — mirrors Projects.jsx addProjectItem.
+    // priority_order is assigned by the DB trigger; scheduled_date stays null (unscheduled).
+    const { count } = await supabase
+      .from('project_items')
+      .select('id', { count: 'exact', head: true })
+      .eq('project_id', project.id)
+    const itemNumber = String((count || 0) + 1).padStart(2, '0')
+
+    const { error: itemError } = await supabase
+      .from('project_items')
+      .insert({ project_id: project.id, item_number: itemNumber, name: itemName, status: 'Open', scheduled_date: npDate || null })
+    if (itemError) { console.error('item insert failed:', itemError); return }
+
+    // Inset stays open for rapid entry — item name clears, everything else is sticky.
+    // After creating a new project, the select switches to it for subsequent saves.
+    setNpItemName('')
+    if (creatingProject) { setNpProjectSel(project.id); setNpNewProjName('') }
+    // Land on the project so the new item is immediately visible
+    setFilterClient(project.client?.company || '')
+    setFilterProject(project.name)
+    loadEvents()
+  }
+
   function clearFilters() {
-    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterStatus('')
+    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterStatus(''); setFilterTypes([])
+    setDateStart(''); setDateEnd('')
   }
 
   const filterCtrl = {
@@ -371,17 +644,38 @@ export default function CalendarPage() {
       ? `${format(startOfWeek(current), 'MMM d')} – ${format(endOfWeek(current), 'MMM d, yyyy')}`
       : format(current, 'MMMM yyyy')
 
+  // ── Delete ────────────────────────────────────────────────────────────
+  async function deleteItem(ev) {
+    const proofCount = await getItemProofCount(ev.id)
+    const warning = proofCount > 0
+      ? `\n\nThis will also permanently delete ${proofCount} proof${proofCount === 1 ? '' : 's'}, their comments, and any uploaded images.`
+      : ''
+    if (!window.confirm(`Delete "${ev.name}"?${warning}\n\nThis cannot be undone.`)) return
+
+    const prev = events
+    setEvents(arr => arr.filter(e => e.id !== ev.id))   // optimistic
+    const { error } = await deleteItemCascade(ev.id)
+    if (error) {
+      console.error('Delete failed, reverted:', error)
+      setEvents(prev)
+    }
+  }
+
   return (
     <div className="fade-in">
       <div className="topbar">
-        <Breadcrumb segments={[
-          { label: 'Dashboard', onClick: () => navigate('/') },
-          { label: 'Calendar' },
-        ]} />
+        {/* Plain wrapper: .breadcrumb's flex:1 only applies as a direct child of the
+            flex topbar, so this div keeps the title compact and the toggles flush left */}
+        <div>
+          <Breadcrumb segments={[
+            { label: 'Dashboard', onClick: () => navigate('/') },
+            { label: 'Calendar' },
+          ]} />
+        </div>
 
         {/* View toggle */}
         <div style={{ display: 'flex', gap: 4, marginLeft: 12 }}>
-          {[['day','D'],['week','W'],['month','M'],['list','List']].map(([v, label]) => (
+          {[['list','List'],['day','Day'],['week','Week'],['month','Month']].map(([v, label]) => (
             <button key={v} onClick={() => setView(v)}
               style={{
                 padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
@@ -393,6 +687,120 @@ export default function CalendarPage() {
             </button>
           ))}
         </div>
+
+        {/* ToDo hub shortcut — active exactly when filters equal the hub state */}
+        {view === 'list' && (
+          <>
+            <div style={{ width: 1, height: 22, background: 'var(--border)', margin: '0 4px' }} />
+            <button
+              onClick={() => {
+                if (filterProject === TODO_PROJECT && !filterClient) { setFilterProject('') }
+                else { setFilterClient(''); setFilterProject(TODO_PROJECT) }
+              }}
+              style={{
+                padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                border: '1px solid var(--border)',
+                background: (filterProject === TODO_PROJECT && !filterClient) ? 'var(--bg4)' : 'transparent',
+                color: (filterProject === TODO_PROJECT && !filterClient) ? 'var(--text)' : 'var(--text2)',
+              }}>
+              ToDo
+            </button>
+          </>
+        )}
+
+        {/* Sort toggle — List only. Drag-to-reorder is enabled in Priority mode. */}
+        {view === 'list' && (
+          <>
+            <div style={{ width: 1, height: 22, background: 'var(--border)', margin: '0 4px' }} />
+            <div style={{ display: 'flex', gap: 4 }}>
+              {[['priority','Priority'],['date','Date'],['client','Client']].map(([s, label]) => (
+                <button key={s} onClick={() => setSortBy(s)}
+                  style={{
+                    padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    border: '1px solid var(--border)',
+                    background: sortBy === s ? 'var(--bg4)' : 'transparent',
+                    color: sortBy === s ? 'var(--text)' : 'var(--text2)',
+                  }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Scope toggle — List only. Grid views have no cell for an undated item. */}
+        {view === 'list' && (
+          <>
+            <div style={{ width: 1, height: 22, background: 'var(--border)', margin: '0 4px' }} />
+            <div style={{ display: 'flex', gap: 4 }}>
+              {[['all','All'],['scheduled','Scheduled']].map(([s, label]) => (
+                <button key={s} onClick={() => setScope(s)}
+                  style={{
+                    padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    border: '1px solid var(--border)',
+                    background: scope === s ? 'var(--bg4)' : 'transparent',
+                    color: scope === s ? 'var(--text)' : 'var(--text2)',
+                  }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Status toggle — all views. Drives the same filterStatus the filter logic
+            already uses, so clearFilters and anyFilterActive work untouched. */}
+        <div style={{ width: 1, height: 22, background: 'var(--border)', margin: '0 4px' }} />
+        <div style={{ display: 'flex', gap: 4 }}>
+          {[['','All'],['Open','Open'],['Complete','Complete']].map(([s, label]) => (
+            <button key={label} onClick={() => setFilterStatus(s)}
+              style={{
+                padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                border: '1px solid var(--border)',
+                background: filterStatus === s ? 'var(--bg4)' : 'transparent',
+                color: filterStatus === s ? 'var(--text)' : 'var(--text2)',
+              }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Type toggle — all views. Multi-select: each button toggles independently;
+            none active = show all types. Milestones+Goals = the planning skeleton. */}
+        <div style={{ width: 1, height: 22, background: 'var(--border)', margin: '0 4px' }} />
+        <div style={{ display: 'flex', gap: 4 }}>
+          {[['Task','Tasks'],['Milestone','Milestones'],['Goal','Goals']].map(([t, label]) => {
+            const active = filterTypes.includes(t)
+            return (
+              <button key={label}
+                onClick={() => setFilterTypes(cur => cur.includes(t) ? cur.filter(x => x !== t) : [...cur, t])}
+                style={{
+                  padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  border: '1px solid var(--border)',
+                  background: active ? 'var(--bg4)' : 'transparent',
+                  color: active ? 'var(--text)' : 'var(--text2)',
+                }}>
+                {label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Add Item — List only, far right. Opens preloaded with the current drill context. */}
+        {view === 'list' && (
+          <button className="btn btn-primary" style={{ marginLeft: 'auto' }}
+            onClick={() => {
+              const cur = clients.find(c => c.company === filterClient)
+              setNpClientId(cur?.id || '')
+              const curProj = cur && filterProject
+                ? allProjects.find(p => p.client_id === cur.id && p.name === filterProject)
+                : null
+              setNpProjectSel(curProj?.id || '')
+              setShowAddItem(true)
+            }}>
+            Add Item
+          </button>
+        )}
 
         {/* Date navigation (view-aware) — hidden in List; date inputs drive that view */}
         {view !== 'list' && (
@@ -413,9 +821,10 @@ export default function CalendarPage() {
       {/* Filter bar — attribute filters, stack as AND. Date range lives in List view. */}
       <div style={{
         display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
-        padding: '10px 0', marginBottom: 4,
+        padding: '10px 28px', marginBottom: 4,
       }}>
-        <select value={filterClient} onChange={e => setFilterClient(e.target.value)}
+        <select value={filterClient}
+          onChange={e => { setFilterClient(e.target.value); setFilterProject('') }}
           style={{ ...filterCtrl, borderColor: filterClient ? 'var(--accent)' : 'var(--border)' }}>
           <option value="">Client</option>
           {clientOptions.map(c => <option key={c} value={c}>{c}</option>)}
@@ -436,12 +845,6 @@ export default function CalendarPage() {
           {tagOptions.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
 
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          style={{ ...filterCtrl, borderColor: filterStatus ? 'var(--accent)' : 'var(--border)' }}>
-          <option value="">Status</option>
-          {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-
         {view === 'list' && (
           <>
             <input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)}
@@ -451,13 +854,54 @@ export default function CalendarPage() {
           </>
         )}
 
-        {anyFilterActive && (
-          <button onClick={clearFilters}
-            style={{ ...filterCtrl, color: 'var(--text3)', cursor: 'pointer', border: 'none', background: 'transparent' }}>
-            Clear
-          </button>
-        )}
+        <button onClick={clearFilters}
+          style={{ ...filterCtrl, color: 'var(--text3)', cursor: 'pointer', border: 'none', background: 'transparent' }}>
+          Clear
+        </button>
       </div>
+
+      {/* Add Item inset — a horizontal pre-row above the table */}
+      {view === 'list' && showAddItem && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+          margin: '12px 28px 0', padding: '12px 16px',
+          background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12,
+        }}
+          onKeyDown={e => { if (e.key === 'Escape') setShowAddItem(false) }}>
+          <input type="date" value={npDate} onChange={e => setNpDate(e.target.value)}
+            style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', fontSize: 13 }} />
+          <select value={npClientId}
+            onChange={e => { setNpClientId(e.target.value); setNpProjectSel('') }}
+            style={{ flex: '1 1 160px', minWidth: 140, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', fontSize: 13 }}>
+            <option value="">Client</option>
+            {clients.map(c => <option key={c.id} value={c.id}>{c.company}</option>)}
+          </select>
+          <select value={npProjectSel} onChange={e => setNpProjectSel(e.target.value)}
+            disabled={!npClientId}
+            style={{ flex: '1 1 160px', minWidth: 140, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', fontSize: 13 }}>
+            <option value="">Project Name</option>
+            {allProjects
+              .filter(p => p.client_id === npClientId)
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            <option value="__new__">+ New project…</option>
+          </select>
+          {npProjectSel === '__new__' && (
+            <input value={npNewProjName} onChange={e => setNpNewProjName(e.target.value)}
+              placeholder="New project name" autoFocus
+              style={{ flex: '1 1 160px', minWidth: 140, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', fontSize: 13, boxSizing: 'border-box' }} />
+          )}
+          <input value={npItemName} onChange={e => setNpItemName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleAddItem() }}
+            placeholder="Item" autoFocus
+            style={{ flex: '2 1 200px', minWidth: 160, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', fontSize: 13, boxSizing: 'border-box' }} />
+          <button className="btn btn-primary" onClick={handleAddItem}
+            disabled={!npItemName.trim() || !npClientId
+              || (npProjectSel === '__new__' ? !npNewProjName.trim() : !npProjectSel)}>
+            Save
+          </button>
+        </div>
+      )}
 
       <div className="page-content">
 
@@ -504,7 +948,7 @@ export default function CalendarPage() {
                     setDragOverIso(null)
                   }}
                   style={{
-                    minHeight: 90, padding: '8px 6px',
+                    minHeight: 130, padding: '8px 6px',
                     borderRight:  hasBorderR ? '1px solid var(--border)' : 'none',
                     borderBottom: hasBorderB ? '1px solid var(--border)' : 'none',
                     borderLeft:   isSelected ? '2px solid var(--accent)' : '2px solid transparent',
@@ -534,33 +978,8 @@ export default function CalendarPage() {
                     </span>
                   </div>
 
-                  {/* Event pills */}
-                  {dayEvents.slice(0, 3).map((ev, j) => {
-                    const cat = ev.project?.category
-                    const isDragging = draggedId === ev.id
-                    return (
-                      <div key={j}
-                        draggable
-                        onDragStart={e => {
-                          e.stopPropagation()
-                          setDraggedId(ev.id)
-                          e.dataTransfer.effectAllowed = 'move'
-                          e.dataTransfer.setData('text/plain', ev.id)   // Firefox needs data set to initiate drag
-                        }}
-                        onDragEnd={() => { setDraggedId(null); setDragOverIso(null) }}
-                        style={{
-                          fontSize: 10, fontWeight: 500,
-                          padding: '2px 5px', borderRadius: 4, marginBottom: 2,
-                          borderLeft: `3px solid ${catColor(cat)}`,
-                          background: 'var(--bg3)', color: 'var(--text2)',
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          cursor: 'grab',
-                          opacity: isDragging ? 0.4 : 1,
-                        }} title={`${ev.project?.name || ''} — ${ev.name}`}>
-                        {ev.project?.name ? `${ev.project.name}: ` : ''}{ev.name}
-                      </div>
-                    )
-                  })}
+                  {/* Event cards — same component as Day/Week, no note */}
+                  {dayEvents.slice(0, 3).map(ev => eventCard(ev, false, dayEvents))}
                   {dayEvents.length > 3 && (
                     <div style={{ fontSize: 10, color: 'var(--text3)', paddingLeft: 4 }}>
                       +{dayEvents.length - 3} more
@@ -592,7 +1011,7 @@ export default function CalendarPage() {
                     <div style={{ textAlign: 'center', marginBottom: 8, fontSize: 12, fontWeight: 600, color: isToday ? 'var(--accent)' : 'var(--text2)' }}>
                       {format(day, 'EEE d')}
                     </div>
-                    {dayEvents.map(ev => eventCard(ev))}
+                    {dayEvents.map(ev => eventCard(ev, false, dayEvents))}
                   </div>
                 )
               })}
@@ -617,7 +1036,7 @@ export default function CalendarPage() {
                 }}>
                 {dayEvents.length === 0
                   ? <div style={{ color: 'var(--text3)', fontSize: 13, textAlign: 'center', padding: 20 }}>Nothing scheduled.</div>
-                  : dayEvents.map(ev => eventCard(ev))}
+                  : dayEvents.map(ev => eventCard(ev, true, dayEvents))}
               </div>
             </div>
           )
@@ -628,46 +1047,167 @@ export default function CalendarPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: 'var(--bg3)' }}>
-                  {['Date','Category','Project','Item','Tags','Status','Note'].map(h => (
+                  <th style={{ width: 28, padding: '10px 0 10px 14px' }}></th>
+                  {['Date','Client','Project','Item','Chk','Note','Type','Tags','Status'].map(h => (
                     <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)' }}>{h}</th>
                   ))}
+                  <th style={{ width: 44 }}></th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 ? (
-                  <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>No items in this range.</td></tr>
-                ) : filtered.map(ev => {
-                  const cat = ev.project?.category
-                  // Parse yyyy-MM-dd as LOCAL (append time) to avoid UTC day-shift.
-                  const schedFmt = ev.scheduled_date ? format(new Date(ev.scheduled_date + 'T00:00:00'), 'MMM d, yyyy') : '—'
+                {listRows.length === 0 ? (
+                  <tr><td colSpan={11} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+                    {scope === 'all' ? 'No items match these filters.' : 'No items in this range.'}
+                  </td></tr>
+                ) : listRows.map((ev, idx) => {
+                  const cat     = ev.project?.category
+                  const done    = ev.status === 'Complete'
+                  const company  = ev.project?.client?.company || ''
+                  const alias    = ev.project?.client?.alias || company
+                  const projName = ev.project?.name || ''
+                  const projActive = projName && filterProject === projName && filterClient === company
+                  const canDrag = sortBy === 'priority'
                   const compFmt  = ev.completed_date ? format(new Date(ev.completed_date + 'T00:00:00'), 'M/d/yy') : ''
                   return (
-                    <tr key={ev.id} style={{ borderTop: '1px solid var(--border)' }}>
-                      <td style={{ padding: '10px 14px', color: 'var(--text2)', whiteSpace: 'nowrap' }}>{schedFmt}</td>
-                      <td style={{ padding: '10px 14px' }}>
-                        <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: 12, background: catColor(cat), color: 'var(--text)' }}>{catLabel(cat)}</span>
-                      </td>
-                      <td style={{ padding: '10px 14px', color: 'var(--text2)' }}>{ev.project?.name || '—'}</td>
-                      <td style={{ padding: '10px 14px', color: 'var(--text)', fontWeight: 500 }}>{ev.name}</td>
-                      <td style={{ padding: '10px 14px', minWidth: 160, verticalAlign: 'top' }}>
-                        <TagPicker
-                          tags={ev.project?.tags || []}
-                          allTags={tagOptions}
-                          onAdd={tag => setProjectTags(ev.project_id, [...(ev.project?.tags || []), tag])}
-                          onRemove={tag => setProjectTags(ev.project_id, (ev.project?.tags || []).filter(t => t !== tag))}
-                        />
+                    <tr key={ev.id}
+                      onDragOver={canDrag ? (e => overListRow(e, idx)) : undefined}
+                      onDrop={canDrag ? (() => dropListRow(idx)) : undefined}
+                      onDragEnd={canDrag ? endListDrag : undefined}
+                      style={{
+                        borderTop: listOverIdx === idx && listDragIdx !== idx
+                          ? '2px solid var(--accent)' : '1px solid var(--border)',
+                        opacity: listDragIdx === idx ? 0.4 : 1,
+                        background: done ? catColor(cat) : 'transparent',
+                      }}>
+                      {/* height:1px on the td + height:100% on the child is the standard
+                          trick to make a div fill a table row's actual height. */}
+                      <td style={{ width: 26, height: 1, padding: '4px 0 4px 12px' }}>
+                        <div
+                          draggable={canDrag}
+                          onDragStart={canDrag ? (e => startListDrag(e, idx)) : undefined}
+                          title={canDrag ? 'Drag to reorder priority' : 'Switch sort to Priority to reorder'}
+                          style={{
+                            width: 18, height: '100%', minHeight: 30,
+                            borderRadius: 4,
+                            background: catColor(cat),
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 11, userSelect: 'none',
+                            cursor: canDrag ? 'grab' : 'default',
+                            color: canDrag ? 'rgba(0,0,0,0.35)' : 'transparent',
+                          }}>
+                          ⠿
+                        </div>
                       </td>
                       <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
-                        <select value={ev.status || 'Open'} onChange={e => updateItemStatus(ev.id, e.target.value)}
+                        <input type="date"
+                          value={ev.scheduled_date || ''}
+                          onChange={e => moveItem(ev.id, e.target.value)}
+                          style={{
+                            padding: '3px 6px', borderRadius: 6, fontSize: 13,
+                            border: '1px solid var(--border)',
+                            background: ev.scheduled_date ? 'var(--bg4)' : 'transparent',
+                            color: ev.scheduled_date ? 'var(--text)' : 'var(--text3)',
+                            cursor: 'text',
+                          }}
+                          title="Scheduled date — clear it to send this item back to the unscheduled backlog" />
+                      </td>
+                      <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                        {company && (
+                          <button
+                            onClick={() => {
+                              if (filterClient === company) { setFilterClient(''); setFilterProject(TODO_PROJECT) }
+                              else { setFilterClient(company); setFilterProject('') }
+                            }}
+                            title={filterClient === company ? 'Back to ToDo hub' : `Show all ${alias} projects`}
+                            style={{
+                              width: 14, height: 14, borderRadius: '50%', marginRight: 8,
+                              border: '1.5px solid var(--text3)', cursor: 'pointer', padding: 0,
+                              background: filterClient === company ? 'var(--text3)' : 'transparent',
+                              verticalAlign: 'middle',
+                            }} />
+                        )}
+                        <span style={{
+                          display: 'inline-block', width: 84, boxSizing: 'border-box',
+                          padding: '3px 10px', borderRadius: 8, fontSize: 12,
+                          background: done ? 'var(--bg3)' : catColor(cat), color: 'var(--text)', verticalAlign: 'middle',
+                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                        }}>{alias || catLabel(cat)}</span>
+                      </td>
+                      <td style={{ padding: '10px 14px', color: 'var(--text2)', whiteSpace: 'nowrap' }}>
+                        {projName && (
+                          <button
+                            onClick={() => {
+                              if (projActive) { setFilterProject('') }
+                              else { setFilterClient(company); setFilterProject(projName) }
+                            }}
+                            title={projActive ? 'Back to client list' : `Show only ${projName}`}
+                            style={{
+                              width: 14, height: 14, borderRadius: '50%', marginRight: 8,
+                              border: '1.5px solid var(--text3)', cursor: 'pointer', padding: 0,
+                              background: projActive ? 'var(--text3)' : 'transparent',
+                              verticalAlign: 'middle',
+                            }} />
+                        )}
+                        <span style={{ verticalAlign: 'middle' }}>{projName || '—'}</span>
+                      </td>
+                      <td style={{ padding: '10px 14px', color: 'var(--text)', fontWeight: 500 }}>
+                        <EditableCell value={ev.name} onSave={text => updateItemName(ev.id, text)} />
+                      </td>
+                      <td
+                        style={{ padding: '10px 14px', width: 60, textAlign: 'center', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                        onClick={(e) => updateChecked(ev.id, e.shiftKey ? null : new Date().toISOString())}
+                        title="Click to check · Shift-click to clear"
+                      >
+                        {(() => {
+                          if (!ev.checked_at) return <span style={{ color: 'var(--text3)' }}>—</span>
+                          const d = new Date(ev.checked_at)
+                          const label = `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`
+                          const startOfDay = (x) => { const t = new Date(x); t.setHours(0, 0, 0, 0); return t.getTime() }
+                          const ageDays = Math.floor((startOfDay(new Date()) - startOfDay(d)) / 86400000)
+                          const bg = ageDays <= 0 ? '#22c55e' : ageDays < 30 ? '#3b82f6' : '#ef4444'
+                          return (
+                            <span style={{
+                              background: bg,
+                              color: '#fff', borderRadius: 4,
+                              padding: '1px 5px', fontSize: 11, display: 'inline-block',
+                            }}>{label}</span>
+                          )
+                        })()}
+                      </td>
+                      <td style={{ padding: '10px 14px', minWidth: 180, verticalAlign: 'top' }}>
+                        <NoteCell value={ev.note} onSave={text => updateNote(ev.id, text)} textColor="var(--text)" />
+                      </td>
+                      <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                        <select value={ev.item_type || 'Task'} onChange={e => updateItemType(ev.id, e.target.value)}
+                          title="Item type"
                           style={{
                             padding: '3px 8px', borderRadius: 6, fontSize: 13, cursor: 'pointer',
-                            border: '1px solid var(--border)', background: 'var(--bg2)',
-                            color: ev.status === 'Complete' ? 'var(--green)' : 'var(--text2)',
-                            fontWeight: ev.status === 'Complete' ? 600 : 400,
-                          }}>
-                          <option value="Open">Open</option>
-                          <option value="Complete">Complete</option>
+                            border: '1px solid transparent', background: 'transparent',
+                            color: 'var(--text2)',
+                          }}
+                          onFocus={e => { e.target.style.border = '1px solid var(--accent)'; e.target.style.background = 'var(--bg2)' }}
+                          onBlur={e => { e.target.style.border = '1px solid transparent'; e.target.style.background = 'transparent' }}>
+                          {ITEM_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
+                      </td>
+                      <td style={{ padding: '10px 14px', minWidth: 120 }}>
+                        <TagCell tags={ev.tags || []} suggestions={tagOptions} onSave={tags => updateItemTags(ev.id, tags)} />
+                      </td>
+                      <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                        <button
+                          onClick={() => updateItemStatus(ev.id, done ? 'Open' : 'Complete')}
+                          title={done ? 'Mark open' : 'Mark complete'}
+                          style={{
+                            width: 16, height: 16, borderRadius: '50%', padding: 0,
+                            cursor: 'pointer', verticalAlign: 'middle', marginRight: 8,
+                            border: done ? 'none' : '1.5px solid rgba(0,0,0,0.22)',
+                            background: done ? catColorDark(cat) : 'transparent',
+                          }} />
+                        <span style={{
+                          fontSize: 13, verticalAlign: 'middle',
+                          color: done ? 'var(--text)' : 'var(--text2)',
+                          fontWeight: done ? 600 : 400,
+                        }}>{done ? 'Complete' : 'Open'}</span>
                         {ev.status === 'Complete' && (
                           <input type="date"
                             value={ev.completed_date || ''}
@@ -679,8 +1219,22 @@ export default function CalendarPage() {
                             }} title="Completion date — edit if you finished on a different day" />
                         )}
                       </td>
-                      <td style={{ padding: '10px 14px', minWidth: 180, verticalAlign: 'top' }}>
-                        <NoteCell value={ev.note} onSave={text => updateNote(ev.id, text)} />
+                      <td style={{ width: 44, padding: '10px 14px 10px 0', textAlign: 'center' }}>
+                        <button
+                          onClick={() => deleteItem(ev)}
+                          title="Delete item"
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            padding: 4, lineHeight: 0, color: 'var(--text3)',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.color = 'var(--red)' }}
+                          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text3)' }}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" />
+                            <path d="M10 11v6M14 11v6" />
+                          </svg>
+                        </button>
                       </td>
                     </tr>
                   )
@@ -749,6 +1303,7 @@ export default function CalendarPage() {
           </div>
         )}
       </div>
+
     </div>
   )
 }
