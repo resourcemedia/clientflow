@@ -21,6 +21,7 @@ import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 
 const WIKI_TOKEN = process.env.WIKI_MCP_TOKEN!
+const RESOURCE_METADATA_URL = 'https://clientflow-gules.vercel.app/.well-known/oauth-protected-resource'
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
@@ -154,7 +155,8 @@ function buildServer() {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.headers['authorization'] !== `Bearer ${WIKI_TOKEN}`) {
-    res.status(401).end('Unauthorized')
+    res.setHeader('WWW-Authenticate', `Bearer resource_metadata="${RESOURCE_METADATA_URL}"`)
+    res.status(401).json({ error: 'unauthorized', error_description: 'A valid Bearer token is required.' })
     return
   }
 
