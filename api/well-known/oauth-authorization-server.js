@@ -1,6 +1,5 @@
 // RFC 8414 — OAuth 2.0 Authorization Server Metadata
-// Advertises the AS endpoints. Phase 1: discovery only — the endpoints
-// listed here (authorize / token / register) don't exist yet.
+// Advertises the AS endpoints implemented in api/oauth/*.
 // Served at /.well-known/oauth-authorization-server via vercel.json rewrite.
 const BASE = 'https://clientflow-gules.vercel.app'
 
@@ -18,7 +17,7 @@ export default function handler(req, res) {
     token_endpoint:                        `${BASE}/api/oauth/token`,
     registration_endpoint:                 `${BASE}/api/oauth/register`,
     response_types_supported:             ['code'],
-    grant_types_supported:                ['authorization_code'],
+    grant_types_supported:                ['authorization_code', 'refresh_token'],
     code_challenge_methods_supported:     ['S256'],
     token_endpoint_auth_methods_supported: ['none'],
   })
