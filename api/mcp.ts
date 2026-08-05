@@ -18,16 +18,34 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { createClient } from '@supabase/supabase-js'
+import { jwtVerify } from 'jose'
 import { z } from 'zod'
 
+const BASE = 'https://clientflow-gules.vercel.app'
 const WIKI_TOKEN = process.env.WIKI_MCP_TOKEN!
-const RESOURCE_METADATA_URL = 'https://clientflow-gules.vercel.app/.well-known/oauth-protected-resource'
+const RESOURCE_METADATA_URL = `${BASE}/.well-known/oauth-protected-resource`
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
   { auth: { persistSession: false, autoRefreshToken: false } }
 )
+
+// Phase 2's OAuth token endpoint issues these; malformed/expired/wrong-key
+// tokens must fall through to a clean 401, never throw into the handler.
+async function isValidJwt(token: string): Promise<boolean> {
+  try {
+    await jwtVerify(token, JWT_SECRET, {
+      issuer: BASE,
+      audience: `${BASE}/api/mcp`,
+      algorithms: ['HS256'],
+    })
+    return true
+  } catch {
+    return false
+  }
+}
 
 // Pull [[wikilinks]] out of a body so the graph stays queryable.
 function parseLinks(body: string): string[] {
@@ -154,7 +172,11 @@ function buildServer() {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.headers['authorization'] !== `Bearer ${WIKI_TOKEN}`) {
+  const authHeader = req.headers['authorization']
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : undefined
+  const authorized = token !== undefined && (token === WIKI_TOKEN || (await isValidJwt(token)))
+
+  if (!authorized) {
     res.setHeader('WWW-Authenticate', `Bearer resource_metadata="${RESOURCE_METADATA_URL}"`)
     res.status(401).json({ error: 'unauthorized', error_description: 'A valid Bearer token is required.' })
     return
