@@ -21,6 +21,7 @@ import TasksPrint   from './pages/TasksPrint'
 import TimeboardPage from './pages/Timeboard'
 import PacePage from './pages/Pace'
 import CashFlowPage from './pages/CashFlow'
+import WikiPage from './pages/Wiki'
 import ClientAccount from './pages/ClientAccount'
 import ProjectsSandbox from './sandbox/ProjectsSandbox'
 import ClientDashboard     from './pages/client/ClientDashboard'
@@ -92,6 +93,8 @@ function AppShell() {
           <Route path="/invoices/:id/print"  element={<InvoicePrint />} />
           <Route path="/products"            element={<ProductsPage />} />
           <Route path="/cashflow"            element={<CashFlowPage />} />
+          <Route path="/wiki"                element={<WikiPage />} />
+          <Route path="/wiki/:slug"          element={<WikiPage />} />
           <Route path="/sandbox"             element={<ProjectsSandbox />} />
           <Route path="/login"               element={<Navigate to="/" replace />} />
           <Route path="/client"               element={<ClientRoute><ClientDashboard /></ClientRoute>} />

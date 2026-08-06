@@ -17,6 +17,7 @@ const MANAGER_NAV = [
   { to: '/billing',   label: 'Invoices',               icon: DollarIcon },
   { to: '/products',  label: 'Products',               icon: ProductsIcon },
   { to: '/cashflow',  label: 'Cash Flow',              icon: CashFlowIcon },
+  { to: '/wiki',      label: 'Wiki',                   icon: WikiIcon },
 ]
 
 const CLIENT_NAV_BASE = [
@@ -240,5 +241,11 @@ function PaceIcon(props) {
   return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
     <polyline points="17 6 23 6 23 12"/>
+  </svg>
+}
+function WikiIcon(props) {
+  return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
   </svg>
 }
