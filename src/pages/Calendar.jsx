@@ -30,7 +30,7 @@ export default function CalendarPage() {
   const [filterStatus,  setFilterStatus]  = useState(() => localStorage.getItem('cal_status') || '')
   const [filterHot,     setFilterHot]     = useState(() => localStorage.getItem('cal_hot') === '1')
   const [filterTypes,   setFilterTypes]   = useState(() => (localStorage.getItem('cal_types') || '').split(',').filter(Boolean))
-  const [randomId,      setRandomId]      = useState(null)   // List "Random" focus — the single picked item, or null
+  const [randomProjectId, setRandomProjectId] = useState(null)   // List "Random" focus — the picked project's id (shows all its items), or null
   const [draggedId,   setDraggedId]   = useState(null)
   const [dragOverIso, setDragOverIso] = useState(null)
   const [listDragIdx, setListDragIdx] = useState(null)   // List reorder (Priority mode)
@@ -599,11 +599,14 @@ export default function CalendarPage() {
   // "Random" focus (List) — collapse the found set to one picked item to break inertia.
   // Pool is the live `filtered` set, so it respects every active filter (client, Hot, status…).
   // Re-clicking re-rolls; the pick auto-releases if it leaves the found set; Clear/Show all reset it.
-  const randomActive = randomId != null && filtered.some(e => e.id === randomId)
-  const displayRows  = randomActive ? listRows.filter(r => r.id === randomId) : listRows
+  const randomActive = randomProjectId != null && filtered.some(e => e.project_id === randomProjectId)
+  const displayRows  = randomActive ? listRows.filter(r => r.project_id === randomProjectId) : listRows
   function handleRandom() {
-    if (!filtered.length) return
-    setRandomId(filtered[Math.floor(Math.random() * filtered.length)].id)
+    // Pick a random PROJECT from the found set (equal odds per project, not per item),
+    // then show all its items in the current sort order — work the top one.
+    const projectIds = [...new Set(filtered.map(e => e.project_id).filter(Boolean))]
+    if (!projectIds.length) return
+    setRandomProjectId(projectIds[Math.floor(Math.random() * projectIds.length)])
   }
 
   async function handleAddItem() {
@@ -663,7 +666,7 @@ export default function CalendarPage() {
   }
 
   function clearFilters() {
-    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterCategory(''); setFilterStatus(''); setFilterHot(false); setFilterTypes([]); setRandomId(null)
+    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterCategory(''); setFilterStatus(''); setFilterHot(false); setFilterTypes([]); setRandomProjectId(null)
     setDateStart(''); setDateEnd('')
   }
 
@@ -845,7 +848,7 @@ export default function CalendarPage() {
         {view === 'list' && (
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
             {randomActive && (
-              <button onClick={() => setRandomId(null)}
+              <button onClick={() => setRandomProjectId(null)}
                 title="Back to the full found set"
                 style={{
                   padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
