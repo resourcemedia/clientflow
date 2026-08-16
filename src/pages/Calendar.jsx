@@ -26,6 +26,7 @@ export default function CalendarPage() {
   const [filterProject, setFilterProject] = useState(() => localStorage.getItem('cal_filterProject') ?? TODO_PROJECT)   // hub on first visit; ?? keeps a saved '' meaning "no filter"
   const [filterItem,    setFilterItem]    = useState('')
   const [filterTag,     setFilterTag]     = useState('')
+  const [filterCategory, setFilterCategory] = useState(() => localStorage.getItem('cal_category') || '')
   const [filterStatus,  setFilterStatus]  = useState(() => localStorage.getItem('cal_status') || '')
   const [filterHot,     setFilterHot]     = useState(() => localStorage.getItem('cal_hot') === '1')
   const [filterTypes,   setFilterTypes]   = useState(() => (localStorage.getItem('cal_types') || '').split(',').filter(Boolean))
@@ -61,8 +62,9 @@ export default function CalendarPage() {
     localStorage.setItem('cal_filterProject', filterProject)
     localStorage.setItem('cal_status',        filterStatus)
     localStorage.setItem('cal_hot',           filterHot ? '1' : '0')
+    localStorage.setItem('cal_category',      filterCategory)
     localStorage.setItem('cal_types',         filterTypes.join(','))
-  }, [view, scope, sortBy, filterClient, filterProject, filterStatus, filterHot, filterTypes])
+  }, [view, scope, sortBy, filterClient, filterProject, filterStatus, filterHot, filterCategory, filterTypes])
 
   // Active clients for the Add Item modal — same query the Projects page uses
   useEffect(() => {
@@ -555,6 +557,7 @@ export default function CalendarPage() {
     if (filterProject && e.project?.name !== filterProject) return false
     if (filterItem    && !(e.name || '').toLowerCase().includes(filterItem.toLowerCase())) return false
     if (filterTag     && !(e.tags || []).includes(filterTag)) return false
+    if (filterCategory && (e.project?.category || '') !== filterCategory) return false
     if (filterStatus  && e.status !== filterStatus) return false
     if (filterHot     && !e.is_hot) return false
     if (filterTypes.length && !filterTypes.includes(e.item_type || 'Task')) return false
@@ -566,6 +569,7 @@ export default function CalendarPage() {
   // server-side .order() across nested joins gets unwieldy.
   const CATEGORY_SORT = ['primary', 'secondary', 'accounting', 'overhead', 'charity', 'personal']
   const catRank = c => { const i = CATEGORY_SORT.indexOf(c); return i === -1 ? 999 : i }
+  const categoryOptions = [...new Set(events.map(e => e.project?.category).filter(Boolean))].sort((a, b) => catRank(a) - catRank(b))
   const listRows = (view === 'list' && sortBy === 'client')
     ? [...filtered].sort((a, b) => {
         const cr = catRank(a.project?.category) - catRank(b.project?.category)
@@ -590,7 +594,7 @@ export default function CalendarPage() {
       })
     : filtered
 
-  const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterStatus || filterHot || filterTypes.length > 0
+  const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterCategory || filterStatus || filterHot || filterTypes.length > 0
 
   // "Random" focus (List) — collapse the found set to one picked item to break inertia.
   // Pool is the live `filtered` set, so it respects every active filter (client, Hot, status…).
@@ -659,7 +663,7 @@ export default function CalendarPage() {
   }
 
   function clearFilters() {
-    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterStatus(''); setFilterHot(false); setFilterTypes([]); setRandomId(null)
+    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterCategory(''); setFilterStatus(''); setFilterHot(false); setFilterTypes([]); setRandomId(null)
     setDateStart(''); setDateEnd('')
   }
 
@@ -914,6 +918,12 @@ export default function CalendarPage() {
 
         <input value={filterItem} onChange={e => setFilterItem(e.target.value)} placeholder="Item"
           style={{ ...filterCtrl, borderColor: filterItem ? 'var(--accent)' : 'var(--border)', cursor: 'text', minWidth: 120 }} />
+
+        <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)}
+          style={{ ...filterCtrl, borderColor: filterCategory ? 'var(--accent)' : 'var(--border)' }}>
+          <option value="">Category</option>
+          {categoryOptions.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+        </select>
 
         <select value={filterTag} onChange={e => setFilterTag(e.target.value)}
           style={{ ...filterCtrl, borderColor: filterTag ? 'var(--accent)' : 'var(--border)' }}>
