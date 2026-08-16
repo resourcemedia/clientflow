@@ -130,6 +130,29 @@ export default function CalendarPage() {
     inFlightRef.current.delete(id)
   }
 
+  // Toggle an item's Hot flag inline (List). Boolean on project_items.is_hot —
+  // green (normal) ↔ red (hot). Optimistic + rollback, re-entrancy-guarded (shares inFlightRef).
+  async function updateItemHot(id, newVal) {
+    if (!id || inFlightRef.current.has(id)) return
+    const item = events.find(e => e.id === id)
+    if (!item || !!item.is_hot === !!newVal) return
+    const prev = item.is_hot
+
+    inFlightRef.current.add(id)
+    setEvents(arr => arr.map(e => e.id === id ? { ...e, is_hot: newVal } : e))
+
+    const { error } = await supabase
+      .from('project_items')
+      .update({ is_hot: newVal })
+      .eq('id', id)
+
+    if (error) {
+      setEvents(arr => arr.map(e => e.id === id ? { ...e, is_hot: prev } : e))
+      console.error('Hot toggle failed, reverted:', error)
+    }
+    inFlightRef.current.delete(id)
+  }
+
   // Edit an item's completion date inline (List). String in/out ('yyyy-MM-dd') — no Date
   // round-trip, so UTC-safe. Optimistic + rollback, re-entrancy-guarded (shares inFlightRef).
   async function updateCompletedDate(id, dateStr) {
@@ -477,7 +500,7 @@ export default function CalendarPage() {
     }
     let query = supabase
       .from('project_items')
-      .select('id, project_id, name, scheduled_date, status, completed_date, note, priority_order, item_type, tags, checked_at, project:projects(name, category, client:clients(company, alias))')
+      .select('id, project_id, name, scheduled_date, status, is_hot, completed_date, note, priority_order, item_type, tags, checked_at, project:projects(name, category, client:clients(company, alias))')
 
     if (view === 'list' && scope === 'all') {
       // A range comparison never matches NULL, so undated items are excluded by
@@ -1048,7 +1071,7 @@ export default function CalendarPage() {
               <thead>
                 <tr style={{ background: 'var(--bg3)' }}>
                   <th style={{ width: 28, padding: '10px 0 10px 14px' }}></th>
-                  {['Date','Client','Project','Item','Chk','Note','Type','Tags','Status'].map(h => (
+                  {['Date','Client','Project','Item','Chk','Note','Hot','Type','Tags','Status'].map(h => (
                     <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)' }}>{h}</th>
                   ))}
                   <th style={{ width: 44 }}></th>
@@ -1056,7 +1079,7 @@ export default function CalendarPage() {
               </thead>
               <tbody>
                 {listRows.length === 0 ? (
-                  <tr><td colSpan={11} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+                  <tr><td colSpan={12} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
                     {scope === 'all' ? 'No items match these filters.' : 'No items in this range.'}
                   </td></tr>
                 ) : listRows.map((ev, idx) => {
@@ -1176,6 +1199,16 @@ export default function CalendarPage() {
                       </td>
                       <td style={{ padding: '10px 14px', minWidth: 180, verticalAlign: 'top' }}>
                         <NoteCell value={ev.note} onSave={text => updateNote(ev.id, text)} textColor="var(--text)" />
+                      </td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                        <button
+                          onClick={() => updateItemHot(ev.id, !ev.is_hot)}
+                          title={ev.is_hot ? 'Hot — click for Normal' : 'Normal — click for Hot'}
+                          style={{
+                            width: 13, height: 13, borderRadius: '50%', padding: 0,
+                            border: 'none', cursor: 'pointer', verticalAlign: 'middle',
+                            background: ev.is_hot ? '#e05252' : '#6ab04c',
+                          }} />
                       </td>
                       <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                         <select value={ev.item_type || 'Task'} onChange={e => updateItemType(ev.id, e.target.value)}
