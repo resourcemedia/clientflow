@@ -518,13 +518,14 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
             <th style={{ ...thStyle, width: 75, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Order</th>
             <th style={{ ...thStyle, width: 110, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Scheduled</th>
             <th style={{ ...thStyle, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Note</th>
+            <th style={{ ...thStyle, width: 60, textAlign: 'center', background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Hot</th>
             <th style={{ width: 225, background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
           </tr>
         </thead>
         <tbody>
           {items.length === 0 && addingRow === null && (
             <tr>
-              <td colSpan={7} style={{ padding: '12px 16px', color: 'var(--text3)', fontSize: 13 }}>
+              <td colSpan={8} style={{ padding: '12px 16px', color: 'var(--text3)', fontSize: 13 }}>
                 No items yet.
               </td>
             </tr>
@@ -600,6 +601,16 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                       value={item.note}
                       onSave={v => onUpdateItem(projectId, item.id, { note: v && v.trim() ? v : null })}
                     />
+                  </td>
+                  <td style={{ padding: '4px 12px', textAlign: 'center', verticalAlign: 'middle', borderBottom: '1px solid #89bac9', borderRight: '1px solid #89bac9' }}>
+                    <button
+                      onClick={e => { e.stopPropagation(); onUpdateItem(projectId, item.id, { is_hot: !item.is_hot }) }}
+                      title={item.is_hot ? 'Hot — click for Normal' : 'Normal — click for Hot'}
+                      style={{
+                        width: 13, height: 13, borderRadius: '50%', padding: 0,
+                        border: 'none', cursor: 'pointer', verticalAlign: 'middle',
+                        background: item.is_hot ? '#e05252' : '#6ab04c',
+                      }} />
                   </td>
                   <td style={{ borderBottom: '1px solid #89bac9', padding: '7px 10px 7px 4px', whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
@@ -1346,7 +1357,7 @@ export default function ProjectsPage() {
         ...itemIds.map(async projectId => {
           const { data } = await supabase
             .from('project_items')
-            .select('id, item_number, name, scheduled_date, status, sort_order, note')
+            .select('id, item_number, name, scheduled_date, status, sort_order, note, is_hot')
             .eq('project_id', projectId)
             .order('sort_order', { ascending: true, nullsFirst: false })
             .order('item_number')
@@ -1466,7 +1477,7 @@ export default function ProjectsPage() {
     if (!isOpen && !loadedItemProjects.has(projectId) && !isDemo) {
       const { data } = await supabase
         .from('project_items')
-        .select('id, item_number, name, scheduled_date, status, sort_order, note')
+        .select('id, item_number, name, scheduled_date, status, sort_order, note, is_hot')
         .eq('project_id', projectId)
         .order('sort_order', { ascending: true, nullsFirst: false })
         .order('item_number')
@@ -1481,7 +1492,7 @@ export default function ProjectsPage() {
     const { data } = await supabase
       .from('project_items')
       .insert({ ...payload, project_id: projectId, item_number: nextNumber })
-      .select('id, item_number, name, scheduled_date, status, sort_order, note')
+      .select('id, item_number, name, scheduled_date, status, sort_order, note, is_hot')
       .single()
     if (data) setProjectItems(prev => ({ ...prev, [projectId]: [...(prev[projectId] || []), data] }))
   }
@@ -1491,7 +1502,7 @@ export default function ProjectsPage() {
       .from('project_items')
       .update(updates)
       .eq('id', itemId)
-      .select('id, item_number, name, scheduled_date, status, sort_order, note')
+      .select('id, item_number, name, scheduled_date, status, sort_order, note, is_hot')
       .single()
     if (data) setProjectItems(prev => ({
       ...prev,
