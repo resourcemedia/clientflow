@@ -517,8 +517,8 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
             <th style={{ ...thStyle, width: 200, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Item</th>
             <th style={{ ...thStyle, width: 75, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Order</th>
             <th style={{ ...thStyle, width: 110, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Scheduled</th>
-            <th style={{ ...thStyle, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Note</th>
             <th style={{ ...thStyle, width: 60, textAlign: 'center', background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Hot</th>
+            <th style={{ ...thStyle, background: '#89bac9', color: '#fff', borderTop: 'none', borderBottom: 'none' }}>Note</th>
             <th style={{ width: 225, background: '#89bac9', borderTop: 'none', borderBottom: 'none' }} />
           </tr>
         </thead>
@@ -596,12 +596,6 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                       </span>
                     )}
                   </td>
-                  <td style={{ padding: '4px 12px', verticalAlign: 'top', borderBottom: '1px solid #89bac9', borderRight: '1px solid #89bac9' }}>
-                    <NoteCell
-                      value={item.note}
-                      onSave={v => onUpdateItem(projectId, item.id, { note: v && v.trim() ? v : null })}
-                    />
-                  </td>
                   <td style={{ padding: '4px 12px', textAlign: 'center', verticalAlign: 'middle', borderBottom: '1px solid #89bac9', borderRight: '1px solid #89bac9' }}>
                     <button
                       onClick={e => { e.stopPropagation(); onUpdateItem(projectId, item.id, { is_hot: !item.is_hot }) }}
@@ -611,6 +605,12 @@ function ItemDrawer({ projectId, items, onAddItem, onUpdateItem, onDeleteItem, o
                         border: 'none', cursor: 'pointer', verticalAlign: 'middle',
                         background: item.is_hot ? '#e05252' : '#6ab04c',
                       }} />
+                  </td>
+                  <td style={{ padding: '4px 12px', verticalAlign: 'top', borderBottom: '1px solid #89bac9', borderRight: '1px solid #89bac9' }}>
+                    <NoteCell
+                      value={item.note}
+                      onSave={v => onUpdateItem(projectId, item.id, { note: v && v.trim() ? v : null })}
+                    />
                   </td>
                   <td style={{ borderBottom: '1px solid #89bac9', padding: '7px 10px 7px 4px', whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
