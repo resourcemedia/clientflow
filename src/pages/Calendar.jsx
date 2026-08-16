@@ -29,6 +29,7 @@ export default function CalendarPage() {
   const [filterStatus,  setFilterStatus]  = useState(() => localStorage.getItem('cal_status') || '')
   const [filterHot,     setFilterHot]     = useState(() => localStorage.getItem('cal_hot') === '1')
   const [filterTypes,   setFilterTypes]   = useState(() => (localStorage.getItem('cal_types') || '').split(',').filter(Boolean))
+  const [randomId,      setRandomId]      = useState(null)   // List "Random" focus — the single picked item, or null
   const [draggedId,   setDraggedId]   = useState(null)
   const [dragOverIso, setDragOverIso] = useState(null)
   const [listDragIdx, setListDragIdx] = useState(null)   // List reorder (Priority mode)
@@ -590,6 +591,17 @@ export default function CalendarPage() {
     : filtered
 
   const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterStatus || filterHot || filterTypes.length > 0
+
+  // "Random" focus (List) — collapse the found set to one picked item to break inertia.
+  // Pool is the live `filtered` set, so it respects every active filter (client, Hot, status…).
+  // Re-clicking re-rolls; the pick auto-releases if it leaves the found set; Clear/Show all reset it.
+  const randomActive = randomId != null && filtered.some(e => e.id === randomId)
+  const displayRows  = randomActive ? listRows.filter(r => r.id === randomId) : listRows
+  function handleRandom() {
+    if (!filtered.length) return
+    setRandomId(filtered[Math.floor(Math.random() * filtered.length)].id)
+  }
+
   async function handleAddItem() {
     const itemName = npItemName.trim()
     if (!itemName || !npClientId) return
@@ -647,7 +659,7 @@ export default function CalendarPage() {
   }
 
   function clearFilters() {
-    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterStatus(''); setFilterHot(false); setFilterTypes([])
+    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterStatus(''); setFilterHot(false); setFilterTypes([]); setRandomId(null)
     setDateStart(''); setDateEnd('')
   }
 
@@ -824,6 +836,31 @@ export default function CalendarPage() {
           }}>
           Hot
         </button>
+
+        {/* Random (List only) — collapse the found set to one item; re-click to re-roll. */}
+        {view === 'list' && (
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+            {randomActive && (
+              <button onClick={() => setRandomId(null)}
+                title="Back to the full found set"
+                style={{
+                  padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  border: '1px solid var(--border)', background: 'transparent', color: 'var(--text2)',
+                }}>
+                Show all
+              </button>
+            )}
+            <button onClick={handleRandom}
+              style={{
+                padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                border: '1px solid var(--border)',
+                background: randomActive ? 'var(--accent)' : 'transparent',
+                color: randomActive ? '#fff' : 'var(--text2)',
+              }}>
+              {randomActive ? 'Re-roll' : 'Random'}
+            </button>
+          </div>
+        )}
 
         {/* Add Item — List only, far right. Opens preloaded with the current drill context. */}
         {view === 'list' && (
@@ -1094,11 +1131,11 @@ export default function CalendarPage() {
                 </tr>
               </thead>
               <tbody>
-                {listRows.length === 0 ? (
+                {displayRows.length === 0 ? (
                   <tr><td colSpan={12} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
                     {scope === 'all' ? 'No items match these filters.' : 'No items in this range.'}
                   </td></tr>
-                ) : listRows.map((ev, idx) => {
+                ) : displayRows.map((ev, idx) => {
                   const cat     = ev.project?.category
                   const done    = ev.status === 'Complete'
                   const company  = ev.project?.client?.company || ''
