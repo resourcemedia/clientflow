@@ -120,11 +120,13 @@ export default function BillingPage() {
   const [fAmt,       setFAmt]       = useState('')
   const [fStatus,    setFStatus]    = useState('')
   const [scope, setScope] = useState(() => localStorage.getItem('invoiceScope') || 'open')
+  const [sortByClient, setSortByClient] = useState(() => localStorage.getItem('invoiceSortByClient') === 'true')
 
   const [editingSentId, setEditingSentId] = useState(null)
 
   useEffect(() => { load() }, [])
   useEffect(() => { localStorage.setItem('invoiceScope', scope) }, [scope])
+  useEffect(() => { localStorage.setItem('invoiceSortByClient', String(sortByClient)) }, [sortByClient])
 
   async function load() {
     setLoading(true)
@@ -137,7 +139,7 @@ export default function BillingPage() {
   }
 
   const displayed = useMemo(() => {
-    return invoices.filter(inv => {
+    const rows = invoices.filter(inv => {
       if (fDateStart && inv.issued_date && inv.issued_date < fDateStart) return false
       if (fDateEnd   && inv.issued_date && inv.issued_date > fDateEnd)   return false
       if (fClient && !(inv.client?.company || '').toLowerCase().includes(fClient.toLowerCase())) return false
@@ -150,7 +152,16 @@ export default function BillingPage() {
       if (scope === 'open' && inv.status === 'Paid') return false
       return true
     })
-  }, [invoices, fDateStart, fDateEnd, fClient, fNumber, fAmt, fStatus, scope])
+
+    if (!sortByClient) return rows
+
+    return [...rows].sort((a, b) => {
+      const ca = (a.client?.company || '').toLowerCase()
+      const cb = (b.client?.company || '').toLowerCase()
+      if (ca !== cb) return ca.localeCompare(cb)                         // Client A->Z
+      return (b.issued_date || '').localeCompare(a.issued_date || '')    // then Date, newest first
+    })
+  }, [invoices, fDateStart, fDateEnd, fClient, fNumber, fAmt, fStatus, scope, sortByClient])
 
   const total = displayed.reduce((s, i) => s + (i.amount || 0), 0)
   const unpaidTotal = invoices.reduce((s, i) => (i.status !== 'Paid' ? s + (i.amount || 0) : s), 0)
@@ -330,7 +341,13 @@ export default function BillingPage() {
                 <thead>
                   <tr>
                     <th>Date</th>
-                    <th>Client</th>
+                    <th
+                      onClick={() => setSortByClient(v => !v)}
+                      style={{ cursor: 'pointer', userSelect: 'none' }}
+                      title="Sort by client, then date (newest first)"
+                    >
+                      Client{sortByClient ? ' \u25be' : ''}
+                    </th>
                     <th>Number</th>
                     <th style={{ textAlign: 'right' }}>Amount</th>
                     <th>Status</th>
