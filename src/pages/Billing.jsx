@@ -166,6 +166,12 @@ export default function BillingPage() {
   const total = displayed.reduce((s, i) => s + (i.amount || 0), 0)
   const unpaidTotal = invoices.reduce((s, i) => (i.status !== 'Paid' ? s + (i.amount || 0) : s), 0)
 
+  // Invoices with an issued_date strictly older than this are >30 days old.
+  const oldCutoff = (() => {
+    const t = new Date(); t.setHours(0, 0, 0, 0); t.setDate(t.getDate() - 30)
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`
+  })()
+
   async function handleDuplicate(inv) {
     const { data: items } = await supabase
       .from('invoice_items')
@@ -364,7 +370,15 @@ export default function BillingPage() {
                     const sc = STATUS_COLORS[inv.status] || {}
                     return (
                       <tr key={inv.id}>
-                        <td className="text-mono text-dim">{fmtDate(inv.issued_date)}</td>
+                        <td className="text-mono">
+                          {inv.status !== 'Paid' && inv.issued_date && inv.issued_date < oldCutoff ? (
+                            <span style={{ background: '#ef4444', color: '#fff', borderRadius: 4, padding: '1px 6px', display: 'inline-block' }}>
+                              {fmtDate(inv.issued_date)}
+                            </span>
+                          ) : (
+                            <span className="text-dim">{fmtDate(inv.issued_date)}</span>
+                          )}
+                        </td>
                         <td className="td-main">{inv.client?.company || '—'}</td>
                         <td className="text-mono text-accent">{inv.invoice_number || '—'}</td>
                         <td className="text-mono" style={{ textAlign: 'right' }}>{fmt$(inv.amount)}</td>
