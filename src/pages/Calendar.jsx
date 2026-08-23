@@ -376,6 +376,14 @@ export default function CalendarPage() {
   function navPrev() { setCurrent(c => view === 'day' ? addDays(c, -1) : view === 'week' ? addDays(c, -7) : subMonths(c, 1)) }
   function navNext() { setCurrent(c => view === 'day' ? addDays(c, 1)  : view === 'week' ? addDays(c, 7)  : addMonths(c, 1)) }
 
+  // Switching to Day view honors a day picked in Month/Week: adopt it as the anchor
+  // date before the reset effect clears the selection. No selection → Day view keeps
+  // whatever day it was already on.
+  function switchView(v) {
+    if (v === 'day' && selectedDay) setCurrent(selectedDay)
+    setView(v)
+  }
+
   // Draggable item card + day drop-target props — shared by Week and Day views.
   // (Month view keeps its own inline copy; unify later if card styling changes.)
   function eventCard(ev, showNote = false, rows = null) {
@@ -749,7 +757,7 @@ export default function CalendarPage() {
         {/* View toggle */}
         <div style={{ display: 'flex', gap: 4, marginLeft: 12 }}>
           {[['list','List'],['day','Day'],['week','Week'],['month','Month']].map(([v, label]) => (
-            <button key={v} onClick={() => setView(v)}
+            <button key={v} onClick={() => switchView(v)}
               style={{
                 padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
                 border: '1px solid var(--border)',
@@ -1140,13 +1148,20 @@ export default function CalendarPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '52px repeat(7,1fr)' }}>
                 {/* header row: empty corner + 7 day headers */}
                 <div style={{ borderBottom: '1px solid var(--border)' }} />
-                {weekDays.map((day, i) => (
-                  <div key={`hdr-${i}`} style={{
-                    textAlign: 'center', padding: '8px 4px', fontSize: 12, fontWeight: 600,
-                    borderBottom: '1px solid var(--border)', borderLeft: '1px solid var(--border)',
-                    color: isSameDay(day, today) ? 'var(--accent)' : 'var(--text2)',
-                  }}>{format(day, 'EEE d')}</div>
-                ))}
+                {weekDays.map((day, i) => {
+                  const isSel = selectedDay && isSameDay(day, selectedDay)
+                  return (
+                    <div key={`hdr-${i}`}
+                      onClick={() => setSelectedDay(isSel ? null : day)}
+                      title="Click to select · then hit Day to open it"
+                      style={{
+                        textAlign: 'center', padding: '8px 4px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                        borderBottom: '1px solid var(--border)', borderLeft: '1px solid var(--border)',
+                        background: isSel ? 'var(--accent-glow)' : 'transparent',
+                        color: isSameDay(day, today) ? 'var(--accent)' : 'var(--text2)',
+                      }}>{format(day, 'EEE d')}</div>
+                  )
+                })}
 
                 {/* any-time lane */}
                 <div style={{ ...gutter, color: 'var(--text2)' }}>Any time</div>
