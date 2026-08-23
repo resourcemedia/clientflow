@@ -1163,23 +1163,46 @@ export default function CalendarPage() {
         })()}
 
         {view === 'day' && (() => {
-          const dayIso     = format(current, 'yyyy-MM-dd')
-          const dayEvents  = eventsOnDay(current)
-          const isDragOver = dragOverIso === dayIso
+          const day = current
+          const cellBase = {
+            minHeight: 52, padding: 6,
+            borderTop: '1px solid var(--border)', borderLeft: '1px solid var(--border)',
+          }
+          const gutter = {
+            fontSize: 11, color: 'var(--text3)', textAlign: 'right',
+            padding: '8px 10px', borderTop: '1px solid var(--border)',
+          }
+          // One hour cell for the single day column. hour null = any-time lane.
+          const dayCell = (hour, extraBg) => {
+            const dayIso = format(day, 'yyyy-MM-dd')
+            const cells  = eventsOnDay(day).filter(e => hour === null ? e.scheduled_hour == null : e.scheduled_hour === hour)
+            const isOver = dragOverIso === `${dayIso}#${hour}`
+            return (
+              <div key={`${hour}-${dayIso}`} {...hourDropProps(dayIso, hour)}
+                style={{
+                  ...cellBase,
+                  background: isOver ? 'var(--accent-glow)' : (extraBg || 'var(--bg2)'),
+                  outline: isOver ? '2px dashed var(--accent)' : 'none', outlineOffset: -2,
+                }}>
+                {cells.map(ev => eventCard(ev, true, cells))}
+              </div>
+            )
+          }
           return (
-            <div className="card">
+            <div className="card" style={{ overflow: 'auto' }}>
               <div style={{ padding: '12px 16px', textAlign: 'center', fontSize: 15, fontWeight: 700, borderBottom: '1px solid var(--border)', background: 'var(--bg3)' }}>
                 {format(current, 'EEEE, MMMM d')}
               </div>
-              <div {...dropProps(dayIso)}
-                style={{
-                  minHeight: 360, padding: '12px 16px',
-                  background: isDragOver ? 'var(--accent-glow)' : 'var(--bg2)',
-                  outline: isDragOver ? '2px dashed var(--accent)' : 'none', outlineOffset: -2,
-                }}>
-                {dayEvents.length === 0
-                  ? <div style={{ color: 'var(--text3)', fontSize: 13, textAlign: 'center', padding: 20 }}>Nothing scheduled.</div>
-                  : dayEvents.map(ev => eventCard(ev, true, dayEvents))}
+              <div style={{ display: 'grid', gridTemplateColumns: '52px 1fr' }}>
+                {/* any-time lane */}
+                <div style={{ ...gutter, color: 'var(--text2)' }}>Any time</div>
+                {dayCell(null, 'var(--bg3)')}
+
+                {/* hour rows — gutter label + one cell, flattened as direct grid children */}
+                {HOURS.flatMap(h => [
+                  <div key={`gut-${h}`} style={gutter}>{fmtHour(h)}</div>,
+                  dayCell(h),
+                ])}
               </div>
             </div>
           )
