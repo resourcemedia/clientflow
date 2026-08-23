@@ -88,23 +88,30 @@ export default function CalendarPage() {
   }, [])
 
   // Reschedule an item by drag-drop. Optimistic + rollback, single write, re-entrancy-guarded.
-  async function moveItem(id, newDateIso) {
+  // newHour: undefined = leave hour untouched · null = clear (any-time) · number = set that hour.
+  async function moveItem(id, newDateIso, newHour = undefined) {
     if (!id || inFlightRef.current.has(id)) return       // guard: ignore concurrent fire on same item
     const item = events.find(e => e.id === id)
-    const value = newDateIso || null                        // empty picker → back to backlog
-    if (!item || item.scheduled_date === value) return      // missing or no-op (same day)
+    if (!item) return
+    const nextDate = newDateIso || null                     // empty → back to backlog
+    const setHour  = newHour !== undefined
+    const nextHour = setHour ? newHour : item.scheduled_hour
+    if (item.scheduled_date === nextDate && item.scheduled_hour === nextHour) return   // no-op
+
     const prevDate = item.scheduled_date
+    const prevHour = item.scheduled_hour
 
     inFlightRef.current.add(id)                            // LOCK synchronously, before any await
-    setEvents(prev => prev.map(e => e.id === id ? { ...e, scheduled_date: value } : e))  // optimistic
+    setEvents(prev => prev.map(e => e.id === id ? { ...e, scheduled_date: nextDate, scheduled_hour: nextHour } : e))  // optimistic
 
+    const patch = setHour ? { scheduled_date: nextDate, scheduled_hour: nextHour } : { scheduled_date: nextDate }
     const { error } = await supabase
       .from('project_items')
-      .update({ scheduled_date: value })
+      .update(patch)
       .eq('id', id)
 
     if (error) {
-      setEvents(prev => prev.map(e => e.id === id ? { ...e, scheduled_date: prevDate } : e))  // rollback
+      setEvents(prev => prev.map(e => e.id === id ? { ...e, scheduled_date: prevDate, scheduled_hour: prevHour } : e))  // rollback
       console.error('Calendar move failed, reverted:', error)
     }
     inFlightRef.current.delete(id)                         // release
@@ -398,7 +405,7 @@ export default function CalendarPage() {
       const toIdx   = rows.findIndex(r => r.id === ev.id)
       setCardOverId(null); setDraggedId(null); setDragOverIso(null)
       if (fromIdx < 0) {
-        if (dragged && ev.scheduled_date) moveItem(dragged, ev.scheduled_date)
+        if (dragged && ev.scheduled_date) moveItem(dragged, ev.scheduled_date, ev.scheduled_hour ?? null)
         return
       }
       if (toIdx < 0 || fromIdx === toIdx) return
@@ -486,6 +493,27 @@ export default function CalendarPage() {
     }
   }
 
+  // ── Hour grid (Week/Day) ──────────────────────────────────────────────
+  // Visual hour bands. hour: null = any-time lane · number (0–23) = that hour.
+  // dragOverIso carries a composite `${dayIso}#${hour}` key so only the hovered
+  // cell highlights, not the whole column.
+  const CAL_START_HOUR = 7      // first hour row shown. tweak to taste.
+  const CAL_END_HOUR   = 21     // last hour row shown (inclusive).
+  const HOURS = Array.from({ length: CAL_END_HOUR - CAL_START_HOUR + 1 }, (_, k) => k + CAL_START_HOUR)
+  const fmtHour = h => {
+    const ampm = h < 12 ? 'AM' : 'PM'
+    const h12  = h % 12 === 0 ? 12 : h % 12
+    return `${h12}${ampm}`
+  }
+  function hourDropProps(dayIso, hour) {
+    const key = `${dayIso}#${hour}`
+    return {
+      onDragOver:  e => { e.preventDefault(); e.stopPropagation(); if (dragOverIso !== key) setDragOverIso(key) },
+      onDragLeave: () => { if (dragOverIso === key) setDragOverIso(null) },
+      onDrop:      e => { e.preventDefault(); e.stopPropagation(); moveItem(draggedId, dayIso, hour); setDraggedId(null); setDragOverIso(null) },
+    }
+  }
+
   useEffect(() => {
     setLoading(true)
     loadEvents()
@@ -505,7 +533,7 @@ export default function CalendarPage() {
     }
     let query = supabase
       .from('project_items')
-      .select('id, project_id, name, scheduled_date, status, is_hot, completed_date, note, priority_order, item_type, tags, checked_at, project:projects(name, category, client:clients(company, alias))')
+      .select('id, project_id, name, scheduled_date, scheduled_hour, status, is_hot, completed_date, note, priority_order, item_type, tags, checked_at, project:projects(name, category, client:clients(company, alias))')
 
     if (view === 'list' && scope === 'all') {
       // A range comparison never matches NULL, so undated items are excluded by
@@ -1081,32 +1109,58 @@ export default function CalendarPage() {
         </div>
         )}
 
-        {view === 'week' && (
-          <div className="card">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)' }}>
-              {Array.from({ length: 7 }, (_, k) => addDays(startOfWeek(current), k)).map((day, i) => {
-                const dayIso     = format(day, 'yyyy-MM-dd')
-                const dayEvents  = eventsOnDay(day)
-                const isToday    = isSameDay(day, today)
-                const isDragOver = dragOverIso === dayIso
-                return (
-                  <div key={i} {...dropProps(dayIso)}
-                    style={{
-                      minHeight: 340, padding: '8px 6px',
-                      borderRight: i < 6 ? '1px solid var(--border)' : 'none',
-                      background: isDragOver ? 'var(--accent-glow)' : 'var(--bg2)',
-                      outline: isDragOver ? '2px dashed var(--accent)' : 'none', outlineOffset: -2,
-                    }}>
-                    <div style={{ textAlign: 'center', marginBottom: 8, fontSize: 12, fontWeight: 600, color: isToday ? 'var(--accent)' : 'var(--text2)' }}>
-                      {format(day, 'EEE d')}
-                    </div>
-                    {dayEvents.map(ev => eventCard(ev, false, dayEvents))}
-                  </div>
-                )
-              })}
+        {view === 'week' && (() => {
+          const weekDays = Array.from({ length: 7 }, (_, k) => addDays(startOfWeek(current), k))
+          const cellBase = {
+            minHeight: 44, padding: 4,
+            borderTop: '1px solid var(--border)', borderLeft: '1px solid var(--border)',
+          }
+          const gutter = {
+            fontSize: 11, color: 'var(--text3)', textAlign: 'right',
+            padding: '6px 8px', borderTop: '1px solid var(--border)',
+          }
+          // One day/hour cell. hour null = any-time lane.
+          const dayCell = (day, hour, extraBg) => {
+            const dayIso = format(day, 'yyyy-MM-dd')
+            const cells  = eventsOnDay(day).filter(e => hour === null ? e.scheduled_hour == null : e.scheduled_hour === hour)
+            const isOver = dragOverIso === `${dayIso}#${hour}`
+            return (
+              <div key={`${hour}-${dayIso}`} {...hourDropProps(dayIso, hour)}
+                style={{
+                  ...cellBase,
+                  background: isOver ? 'var(--accent-glow)' : (extraBg || 'var(--bg2)'),
+                  outline: isOver ? '2px dashed var(--accent)' : 'none', outlineOffset: -2,
+                }}>
+                {cells.map(ev => eventCard(ev, false, cells))}
+              </div>
+            )
+          }
+          return (
+            <div className="card" style={{ overflow: 'auto' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '52px repeat(7,1fr)' }}>
+                {/* header row: empty corner + 7 day headers */}
+                <div style={{ borderBottom: '1px solid var(--border)' }} />
+                {weekDays.map((day, i) => (
+                  <div key={`hdr-${i}`} style={{
+                    textAlign: 'center', padding: '8px 4px', fontSize: 12, fontWeight: 600,
+                    borderBottom: '1px solid var(--border)', borderLeft: '1px solid var(--border)',
+                    color: isSameDay(day, today) ? 'var(--accent)' : 'var(--text2)',
+                  }}>{format(day, 'EEE d')}</div>
+                ))}
+
+                {/* any-time lane */}
+                <div style={{ ...gutter, color: 'var(--text2)' }}>Any time</div>
+                {weekDays.map(day => dayCell(day, null, 'var(--bg3)'))}
+
+                {/* hour rows — gutter label + 7 cells, flattened so every cell is a direct grid child */}
+                {HOURS.flatMap(h => [
+                  <div key={`gut-${h}`} style={gutter}>{fmtHour(h)}</div>,
+                  ...weekDays.map(day => dayCell(day, h)),
+                ])}
+              </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
 
         {view === 'day' && (() => {
           const dayIso     = format(current, 'yyyy-MM-dd')
