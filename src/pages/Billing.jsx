@@ -287,10 +287,9 @@ export default function BillingPage() {
             onChange={e => setFStatus(e.target.value)}
           >
             <option value="">All statuses</option>
-            <option value="Open">Open</option>
             <option value="Send">Send</option>
+            <option value="Collect">Collect</option>
             <option value="Paid">Paid</option>
-            <option value="Overdue">Overdue</option>
           </select>
           {(fDateStart || fDateEnd || fClient || fNumber || fAmt || fStatus) && (
             <button
