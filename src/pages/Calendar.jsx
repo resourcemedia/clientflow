@@ -1104,12 +1104,7 @@ export default function CalendarPage() {
                   </div>
 
                   {/* Event cards — same component as Day/Week, no note */}
-                  {dayEvents.slice(0, 3).map(ev => eventCard(ev, false, dayEvents))}
-                  {dayEvents.length > 3 && (
-                    <div style={{ fontSize: 10, color: 'var(--text3)', paddingLeft: 4 }}>
-                      +{dayEvents.length - 3} more
-                    </div>
-                  )}
+                  {dayEvents.map(ev => eventCard(ev, false, dayEvents))}
                 </div>
               )
             })}
