@@ -925,22 +925,6 @@ export default function CalendarPage() {
           </div>
         )}
 
-        {/* Add Item — List only, far right. Opens preloaded with the current drill context. */}
-        {view === 'list' && (
-          <button className="btn btn-primary" style={{ marginLeft: 'auto' }}
-            onClick={() => {
-              const cur = clients.find(c => c.company === filterClient)
-              setNpClientId(cur?.id || '')
-              const curProj = cur && filterProject
-                ? allProjects.find(p => p.client_id === cur.id && p.name === filterProject)
-                : null
-              setNpProjectSel(curProj?.id || '')
-              setShowAddItem(true)
-            }}>
-            Add Item
-          </button>
-        )}
-
         {/* Date navigation (view-aware) — hidden in List; date inputs drive that view */}
         {view !== 'list' && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
@@ -955,6 +939,22 @@ export default function CalendarPage() {
           <button className="btn btn-ghost btn-sm" onClick={() => setCurrent(new Date())}>Today</button>
         </div>
         )}
+
+        {/* Add Item — all views. Opens preloaded with the current drill context. In List it
+            sits right after Random (which carries marginLeft:auto); in Day/Week/Month it sits
+            right after the date nav (which carries marginLeft:auto) — so no auto-margin of its own. */}
+        <button className="btn btn-primary"
+          onClick={() => {
+            const cur = clients.find(c => c.company === filterClient)
+            setNpClientId(cur?.id || '')
+            const curProj = cur && filterProject
+              ? allProjects.find(p => p.client_id === cur.id && p.name === filterProject)
+              : null
+            setNpProjectSel(curProj?.id || '')
+            setShowAddItem(true)
+          }}>
+          Add Item
+        </button>
       </div>
 
       {/* Filter bar — attribute filters, stack as AND. Date range lives in List view. */}
@@ -1006,7 +1006,7 @@ export default function CalendarPage() {
       </div>
 
       {/* Add Item inset — a horizontal pre-row above the table */}
-      {view === 'list' && showAddItem && (
+      {showAddItem && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
           margin: '12px 28px 0', padding: '12px 16px',
