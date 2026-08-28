@@ -36,6 +36,7 @@ export default function CalendarPage() {
   const [listDragIdx, setListDragIdx] = useState(null)   // List reorder (Priority mode)
   const [listOverIdx, setListOverIdx] = useState(null)
   const [cardOverId,  setCardOverId]  = useState(null)   // Day card reorder drop target
+  const [expandedId,  setExpandedId]  = useState(null)   // Month/Week: card click reveals note + date input
   const listDragFrom  = useRef(null)
   const reorderingRef = useRef(false)                     // re-entrancy guard
   const [view, setView] = useState(() => localStorage.getItem('cal_view') || 'list')   // 'day' | 'week' | 'month' | 'list'
@@ -386,7 +387,7 @@ export default function CalendarPage() {
 
   // Draggable item card + day drop-target props — shared by Week and Day views.
   // (Month view keeps its own inline copy; unify later if card styling changes.)
-  function eventCard(ev, showNote = false, rows = null) {
+  function eventCard(ev, showNote = false, rows = null, allowExpand = false) {
     const cat        = ev.project?.category
     const done       = ev.status === 'Complete'
     const isDragging = draggedId === ev.id
@@ -398,6 +399,7 @@ export default function CalendarPage() {
       e.dataTransfer.setData('text/plain', ev.id)
     }
     const endDrag = () => { setDraggedId(null); setDragOverIso(null); setCardOverId(null) }
+    const isExpanded = allowExpand && expandedId === ev.id
 
     // Card-on-card drop. stopPropagation keeps the day cell's onDrop from also
     // firing, so this handler must cover BOTH cases:
@@ -433,6 +435,7 @@ export default function CalendarPage() {
       <div key={ev.id}
         onDragEnd={endDrag}
         {...dropTargetProps}
+        onClick={allowExpand ? (e => { e.stopPropagation(); setExpandedId(id => id === ev.id ? null : ev.id) }) : undefined}
         style={{
           display: 'flex', alignItems: 'stretch',
           marginBottom: 8, borderRadius: 6, overflow: 'hidden',
@@ -440,6 +443,7 @@ export default function CalendarPage() {
           opacity: isDragging ? 0.4 : 1,
           // inset shadow, not a border — a border would shift the layout mid-drag
           boxShadow: cardOverId === ev.id ? 'inset 0 3px 0 0 var(--accent)' : 'none',
+          cursor: allowExpand ? 'pointer' : undefined,
         }}
         title={`${ev.project?.name || ''} — ${ev.name}`}>
 
@@ -483,11 +487,26 @@ export default function CalendarPage() {
             fontSize: 13, lineHeight: 1.5, fontWeight: 700, color: 'var(--text)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{ev.name}</div>
-          {showNote && ev.note && (
+          {(showNote || isExpanded) && ev.note && (
             <div style={{
               fontSize: 12, lineHeight: 1.5, marginTop: 2,
               color: 'var(--text2)', whiteSpace: 'pre-wrap',
             }}>{ev.note}</div>
+          )}
+          {isExpanded && (
+            <div onClick={e => e.stopPropagation()} style={{ marginTop: 6 }}>
+              <input type="date"
+                value={ev.scheduled_date || ''}
+                onChange={e => moveItem(ev.id, e.target.value)}
+                style={{
+                  padding: '3px 6px', borderRadius: 6, fontSize: 12,
+                  border: '1px solid var(--border)',
+                  background: ev.scheduled_date ? 'var(--bg4)' : 'transparent',
+                  color: ev.scheduled_date ? 'var(--text)' : 'var(--text3)',
+                  cursor: 'text',
+                }}
+                title="Scheduled date — move this item to any date, including beyond the visible range" />
+            </div>
           )}
         </div>
       </div>
@@ -526,6 +545,7 @@ export default function CalendarPage() {
     setLoading(true)
     loadEvents()
     setSelectedDay(null)
+    setExpandedId(null)
   }, [current, location.pathname, view, dateStart, dateEnd, scope, sortBy])
 
   async function loadEvents() {
@@ -1104,7 +1124,7 @@ export default function CalendarPage() {
                   </div>
 
                   {/* Event cards — same component as Day/Week, no note */}
-                  {dayEvents.map(ev => eventCard(ev, false, dayEvents))}
+                  {dayEvents.map(ev => eventCard(ev, false, dayEvents, true))}
                 </div>
               )
             })}
@@ -1134,7 +1154,7 @@ export default function CalendarPage() {
                   background: isOver ? 'var(--accent-glow)' : (extraBg || 'var(--bg2)'),
                   outline: isOver ? '2px dashed var(--accent)' : 'none', outlineOffset: -2,
                 }}>
-                {cells.map(ev => eventCard(ev, false, cells))}
+                {cells.map(ev => eventCard(ev, false, cells, true))}
               </div>
             )
           }
