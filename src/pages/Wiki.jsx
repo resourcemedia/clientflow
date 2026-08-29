@@ -66,7 +66,23 @@ function parseInline(text, resolve, navigate, keyBase) {
   return nodes
 }
 
-// Block-level render: headings, bullet lists, paragraphs. Dependency-free.
+// GFM pipe-table helpers (dependency-free).
+const TABLE_DELIM_RE = /^\s*\|?\s*:?-{1,}:?\s*(\|\s*:?-{1,}:?\s*)*\|?\s*$/
+function splitTableRow(line) {
+  let s = line.trim()
+  if (s.startsWith('|')) s = s.slice(1)
+  if (s.endsWith('|')) s = s.slice(0, -1)
+  return s.split('|').map(c => c.trim())
+}
+function tableAlign(cell) {
+  const c = cell.trim()
+  const l = c.startsWith(':'), r = c.endsWith(':')
+  if (l && r) return 'center'
+  if (r) return 'right'
+  return 'left'
+}
+
+// Block-level render: headings, bullet lists, paragraphs, tables. Dependency-free.
 function renderBody(body, resolve, navigate) {
   const lines = String(body || '').replace(/\r\n/g, '\n').split('\n')
   const blocks = []
@@ -97,8 +113,50 @@ function renderBody(body, resolve, navigate) {
       list = []
     }
   }
-  for (const raw of lines) {
+  for (let bi = 0; bi < lines.length; bi++) {
+    const raw = lines[bi]
     const line = raw.replace(/\s+$/, '')
+    // GFM pipe table: a header row + delimiter row, then pipe rows.
+    if (line.includes('|') && bi + 1 < lines.length &&
+        lines[bi + 1].includes('|') && TABLE_DELIM_RE.test(lines[bi + 1])) {
+      flushPara(); flushList()
+      const key = 't' + blocks.length
+      const headers = splitTableRow(line)
+      const aligns = splitTableRow(lines[bi + 1]).map(tableAlign)
+      const rows = []
+      let j = bi + 2
+      while (j < lines.length && lines[j].includes('|') && lines[j].trim() !== '') {
+        rows.push(splitTableRow(lines[j])); j++
+      }
+      blocks.push(
+        <div key={key} style={{ overflowX: 'auto', margin: '0 0 14px' }}>
+          <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 14 }}>
+            <thead>
+              <tr>
+                {headers.map((c, ci) => (
+                  <th key={ci} style={{ border: '1px solid var(--border)', padding: '6px 10px', textAlign: aligns[ci] || 'left', background: 'var(--bg)', fontWeight: 600 }}>
+                    {parseInline(c, resolve, navigate, key + '-h' + ci)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, ri) => (
+                <tr key={ri}>
+                  {headers.map((_, ci) => (
+                    <td key={ci} style={{ border: '1px solid var(--border)', padding: '6px 10px', textAlign: aligns[ci] || 'left', verticalAlign: 'top' }}>
+                      {parseInline(r[ci] || '', resolve, navigate, key + '-r' + ri + '-' + ci)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )
+      bi = j - 1
+      continue
+    }
     const h = /^(#{1,3})\s+(.*)$/.exec(line)
     const li = /^\s*[-*]\s+(.*)$/.exec(line)
     if (h) {
