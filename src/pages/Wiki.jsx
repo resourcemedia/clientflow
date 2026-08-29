@@ -18,7 +18,7 @@ function makeResolver(pages) {
   }
 }
 
-const INLINE_RE = /(`[^`]+`)|(\[\[[^\]]+\]\])|(\[[^\]]+\]\([^)]+\))|(\*\*[^*]+\*\*)|(\*[^*]+\*)/g
+const INLINE_RE = /(`[^`]+`)|(\[\[[^\]]+\]\])|(\[[^\]]+\]\([^)]+\))|(\*\*[^*]+\*\*)|(\*[^*]+\*)|(!\[[^\]]*\]\([^)]+\))/g
 
 // Parse inline markdown + [[wikilinks]] into an array of React nodes.
 function parseInline(text, resolve, navigate, keyBase) {
@@ -58,6 +58,12 @@ function parseInline(text, resolve, navigate, keyBase) {
       nodes.push(<strong key={key}>{tok.slice(2, -2)}</strong>)
     } else if (m[5]) {
       nodes.push(<em key={key}>{tok.slice(1, -1)}</em>)
+    } else if (m[6]) {
+      const im = /^!\[([^\]]*)\]\(([^)]+)\)$/.exec(tok)
+      nodes.push(
+        <img key={key} src={im[2]} alt={im[1]}
+             style={{ maxWidth: '100%', height: 'auto', borderRadius: 6, display: 'block', margin: '10px 0' }} />
+      )
     }
     last = INLINE_RE.lastIndex
     i++
