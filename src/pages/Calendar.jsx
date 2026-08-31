@@ -483,16 +483,35 @@ export default function CalendarPage() {
             fontSize: 12, lineHeight: 1.45, color: 'var(--text2)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{ev.project?.name}</div>
-          <div style={{
-            fontSize: 13, lineHeight: 1.5, fontWeight: 700, color: 'var(--text)',
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>{ev.name}</div>
-          {(showNote || isExpanded) && ev.note && (
+          {isExpanded ? (
+            // Expanded (Week/Month): title becomes an inline editor. stopPropagation
+            // keeps the click from collapsing the card. Bold/size inherited from wrapper.
+            <div onClick={e => e.stopPropagation()} style={{
+              fontSize: 13, lineHeight: 1.5, fontWeight: 700, color: 'var(--text)',
+            }}>
+              <EditableCell value={ev.name} onSave={text => updateItemName(ev.id, text)} />
+            </div>
+          ) : (
+            <div style={{
+              fontSize: 13, lineHeight: 1.5, fontWeight: 700, color: 'var(--text)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>{ev.name}</div>
+          )}
+          {isExpanded ? (
+            // Expanded (Week/Month): note is editable — NoteCell shows an "Add note…"
+            // placeholder when empty, so a note can be added where none exists.
+            <div onClick={e => e.stopPropagation()} style={{
+              fontSize: 12, lineHeight: 1.5, marginTop: 4,
+            }}>
+              <NoteCell value={ev.note} onSave={text => updateNote(ev.id, text)} />
+            </div>
+          ) : (showNote && ev.note && (
+            // Day view: note stays read-only.
             <div style={{
               fontSize: 12, lineHeight: 1.5, marginTop: 2,
               color: 'var(--text2)', whiteSpace: 'pre-wrap',
             }}>{ev.note}</div>
-          )}
+          ))}
           {isExpanded && (
             <div onClick={e => e.stopPropagation()} style={{ marginTop: 6 }}>
               <input type="date"
