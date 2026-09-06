@@ -53,6 +53,9 @@ export default function CalendarPage() {
   const [scope,     setScope]     = useState(() => localStorage.getItem('cal_scope') || 'all')  // List only: 'scheduled' | 'all'
   const [sortBy,    setSortBy]    = useState(() => localStorage.getItem('cal_sortBy') || 'client')     // List only: 'client' | 'date' | 'priority'
   const inFlightRef = useRef(new Set())
+  const [selectedIds, setSelectedIds] = useState(() => new Set())   // List batch-select: item ids ticked for a bulk date change
+  const [batchDate,   setBatchDate]   = useState('')                // date to apply to the selected items ('' = clear to backlog)
+  const batchBusyRef  = useRef(false)                               // re-entrancy guard for the batch apply
 
   // Remember where the user left off — mirrors the Tasks page's saved-state pattern
   useEffect(() => {
@@ -116,6 +119,52 @@ export default function CalendarPage() {
       console.error('Calendar move failed, reverted:', error)
     }
     inFlightRef.current.delete(id)                         // release
+  }
+
+  // ── List batch date change ────────────────────────────────────────────────
+  function toggleSelect(id) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  // Master circle: select every currently displayed row, or clear them if all are already selected.
+  function toggleSelectAll() {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      const allOn = displayRows.length > 0 && displayRows.every(r => next.has(r.id))
+      displayRows.forEach(r => allOn ? next.delete(r.id) : next.add(r.id))
+      return next
+    })
+  }
+
+  async function applyBatchDate() {
+    if (batchBusyRef.current) return
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+    const nextDate = batchDate || null                    // blank → send back to unscheduled backlog
+
+    // snapshot each touched item's prior date so a failure rolls back only those rows
+    const prevDates = new Map(events.filter(e => selectedIds.has(e.id)).map(e => [e.id, e.scheduled_date]))
+
+    batchBusyRef.current = true
+    setEvents(cur => cur.map(e => selectedIds.has(e.id) ? { ...e, scheduled_date: nextDate } : e))  // optimistic
+
+    const { error } = await supabase
+      .from('project_items')
+      .update({ scheduled_date: nextDate })
+      .in('id', ids)
+
+    if (error) {
+      setEvents(cur => cur.map(e => prevDates.has(e.id) ? { ...e, scheduled_date: prevDates.get(e.id) } : e))  // rollback
+      console.error('Batch date apply failed, reverted:', error)
+    } else {
+      setSelectedIds(new Set())
+      setBatchDate('')
+    }
+    batchBusyRef.current = false
   }
 
   // Update item status inline (List). Flipping to Complete stamps completed_date (today,
@@ -1257,12 +1306,54 @@ export default function CalendarPage() {
           )
         })()}
 
+        {view === 'list' && selectedIds.size > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+            padding: '10px 14px', marginBottom: 10, borderRadius: 10,
+            background: 'var(--bg3)', border: '1px solid var(--border)',
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+              {selectedIds.size} selected
+            </span>
+            <input type="date" value={batchDate} onChange={e => setBatchDate(e.target.value)}
+              style={{
+                padding: '5px 8px', borderRadius: 6, fontSize: 13,
+                border: '1px solid var(--border)', background: 'var(--bg4)', color: 'var(--text)', cursor: 'text',
+              }}
+              title="Date to apply to every selected item — leave blank to send them to the backlog" />
+            <button onClick={applyBatchDate}
+              style={{
+                padding: '6px 16px', borderRadius: 6, fontSize: 13, fontWeight: 600,
+                border: 'none', cursor: 'pointer', background: 'var(--accent)', color: '#fff',
+              }}>
+              Apply
+            </button>
+            <button onClick={() => setSelectedIds(new Set())}
+              style={{
+                padding: '6px 12px', borderRadius: 6, fontSize: 13,
+                border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text3)',
+              }}>
+              Clear selection
+            </button>
+          </div>
+        )}
+
         {view === 'list' && (
           <div className="card" style={{ overflow: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: 'var(--bg3)' }}>
                   <th style={{ width: 28, padding: '10px 0 10px 14px' }}></th>
+                  <th style={{ width: 24, padding: '10px 0', textAlign: 'center' }}>
+                    <button
+                      onClick={toggleSelectAll}
+                      title="Select / clear all rows shown"
+                      style={{
+                        width: 15, height: 15, borderRadius: '50%', padding: 0, cursor: 'pointer', verticalAlign: 'middle',
+                        border: (displayRows.length > 0 && displayRows.every(r => selectedIds.has(r.id))) ? 'none' : '1.5px solid var(--text3)',
+                        background: (displayRows.length > 0 && displayRows.every(r => selectedIds.has(r.id))) ? 'var(--accent)' : 'transparent',
+                      }} />
+                  </th>
                   {['Date','Client','Project','Item','Chk','Note','Hot','Type','Tags','Status'].map(h => (
                     <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)' }}>{h}</th>
                   ))}
@@ -1271,7 +1362,7 @@ export default function CalendarPage() {
               </thead>
               <tbody>
                 {displayRows.length === 0 ? (
-                  <tr><td colSpan={12} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+                  <tr><td colSpan={13} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
                     {scope === 'all' ? 'No items match these filters.' : 'No items in this range.'}
                   </td></tr>
                 ) : displayRows.map((ev, idx) => {
@@ -1312,6 +1403,16 @@ export default function CalendarPage() {
                           }}>
                           ⠿
                         </div>
+                      </td>
+                      <td style={{ width: 24, padding: '10px 0', textAlign: 'center' }}>
+                        <button
+                          onClick={() => toggleSelect(ev.id)}
+                          title={selectedIds.has(ev.id) ? 'Selected — click to deselect' : 'Select for batch date change'}
+                          style={{
+                            width: 16, height: 16, borderRadius: '50%', padding: 0, cursor: 'pointer', verticalAlign: 'middle',
+                            border: selectedIds.has(ev.id) ? 'none' : '1.5px solid var(--text3)',
+                            background: selectedIds.has(ev.id) ? 'var(--accent)' : 'transparent',
+                          }} />
                       </td>
                       <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                         <input type="date"
