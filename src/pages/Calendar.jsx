@@ -817,9 +817,7 @@ export default function CalendarPage() {
     // After creating a new project, the select switches to it for subsequent saves.
     setNpItemName('')
     if (creatingProject) { setNpProjectSel(project.id); setNpNewProjName('') }
-    // Land on the project so the new item is immediately visible
-    setFilterClient(project.client?.company || '')
-    setFilterProject(project.name)
+    // Keep the current filtered view — don't hijack it to the new item's project.
     loadEvents()
   }
 
