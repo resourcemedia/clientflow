@@ -508,16 +508,44 @@ export default function CalendarPage() {
           }}>⠿</div>
 
         <div style={{ flex: 1, minWidth: 0, padding: '8px 30px 8px 12px', position: 'relative' }}>
-          <button
-            onClick={e => { e.stopPropagation(); updateItemStatus(ev.id, done ? 'Open' : 'Complete') }}
-            title={done ? 'Mark open' : 'Mark complete'}
-            style={{
-              position: 'absolute', top: 8, right: 8,
-              width: 16, height: 16, borderRadius: '50%',
-              padding: 0, cursor: 'pointer',
-              border: done ? 'none' : '1.5px solid rgba(0,0,0,0.22)',
-              background: done ? catColorDark(cat) : 'transparent',
-            }} />
+          <div style={{
+            position: 'absolute', top: 8, right: 8,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+          }}>
+            <button
+              onClick={e => { e.stopPropagation(); updateItemStatus(ev.id, done ? 'Open' : 'Complete') }}
+              title={done ? 'Mark open' : 'Mark complete'}
+              style={{
+                width: 16, height: 16, borderRadius: '50%',
+                padding: 0, cursor: 'pointer',
+                border: done ? 'none' : '1.5px solid rgba(0,0,0,0.22)',
+                background: done ? catColorDark(cat) : 'transparent',
+              }} />
+            <button
+              onClick={e => { e.stopPropagation(); toggleSelect(ev.id) }}
+              title={selectedIds.has(ev.id) ? 'Selected — click to deselect' : 'Select for batch date change'}
+              style={{
+                width: 16, height: 16, borderRadius: '50%',
+                padding: 0, cursor: 'pointer',
+                border: selectedIds.has(ev.id) ? 'none' : '1.5px solid var(--text3)',
+                background: selectedIds.has(ev.id) ? 'var(--accent)' : 'transparent',
+              }} />
+            <button
+              onClick={e => { e.stopPropagation(); deleteItem(ev) }}
+              title="Delete item"
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: 0, lineHeight: 0, color: 'var(--text3)',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--red)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text3)' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" />
+                <path d="M10 11v6M14 11v6" />
+              </svg>
+            </button>
+          </div>
           {alias && (
             <div style={{
               display: 'inline-block',
@@ -1118,6 +1146,38 @@ export default function CalendarPage() {
 
       <div className="page-content">
 
+        {selectedIds.size > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+            padding: '10px 14px', marginBottom: 10, borderRadius: 10,
+            background: 'var(--bg3)', border: '1px solid var(--border)',
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+              {selectedIds.size} selected
+            </span>
+            <input type="date" value={batchDate} onChange={e => setBatchDate(e.target.value)}
+              style={{
+                padding: '5px 8px', borderRadius: 6, fontSize: 13,
+                border: '1px solid var(--border)', background: 'var(--bg4)', color: 'var(--text)', cursor: 'text',
+              }}
+              title="Date to apply to every selected item — leave blank to send them to the backlog" />
+            <button onClick={applyBatchDate}
+              style={{
+                padding: '6px 16px', borderRadius: 6, fontSize: 13, fontWeight: 600,
+                border: 'none', cursor: 'pointer', background: 'var(--accent)', color: '#fff',
+              }}>
+              Apply
+            </button>
+            <button onClick={() => setSelectedIds(new Set())}
+              style={{
+                padding: '6px 12px', borderRadius: 6, fontSize: 13,
+                border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text3)',
+              }}>
+              Clear selection
+            </button>
+          </div>
+        )}
+
         {view === 'month' && (
         <div className="card">
           {/* Day-of-week headers */}
@@ -1305,38 +1365,6 @@ export default function CalendarPage() {
             </div>
           )
         })()}
-
-        {view === 'list' && selectedIds.size > 0 && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-            padding: '10px 14px', marginBottom: 10, borderRadius: 10,
-            background: 'var(--bg3)', border: '1px solid var(--border)',
-          }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
-              {selectedIds.size} selected
-            </span>
-            <input type="date" value={batchDate} onChange={e => setBatchDate(e.target.value)}
-              style={{
-                padding: '5px 8px', borderRadius: 6, fontSize: 13,
-                border: '1px solid var(--border)', background: 'var(--bg4)', color: 'var(--text)', cursor: 'text',
-              }}
-              title="Date to apply to every selected item — leave blank to send them to the backlog" />
-            <button onClick={applyBatchDate}
-              style={{
-                padding: '6px 16px', borderRadius: 6, fontSize: 13, fontWeight: 600,
-                border: 'none', cursor: 'pointer', background: 'var(--accent)', color: '#fff',
-              }}>
-              Apply
-            </button>
-            <button onClick={() => setSelectedIds(new Set())}
-              style={{
-                padding: '6px 12px', borderRadius: 6, fontSize: 13,
-                border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text3)',
-              }}>
-              Clear selection
-            </button>
-          </div>
-        )}
 
         {view === 'list' && (
           <div className="card" style={{ overflow: 'auto' }}>
