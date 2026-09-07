@@ -516,18 +516,16 @@ export default function CalendarPage() {
               onClick={e => { e.stopPropagation(); updateItemStatus(ev.id, done ? 'Open' : 'Complete') }}
               title={done ? 'Mark open' : 'Mark complete'}
               style={{
-                width: 16, height: 16, borderRadius: '50%',
+                width: 16, height: 16, borderRadius: 4,
                 padding: 0, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 border: done ? 'none' : '1.5px solid rgba(0,0,0,0.22)',
                 background: done ? catColorDark(cat) : 'transparent',
               }}>
-              {done && (
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
-                  stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 6 9 17l-5-5" />
-                </svg>
-              )}
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                stroke={done ? '#fff' : 'rgba(0,0,0,0.35)'} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
             </button>
             <button
               onClick={e => { e.stopPropagation(); toggleSelect(ev.id) }}
