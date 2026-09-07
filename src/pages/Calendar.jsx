@@ -513,6 +513,15 @@ export default function CalendarPage() {
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
           }}>
             <button
+              onClick={e => { e.stopPropagation(); toggleSelect(ev.id) }}
+              title={selectedIds.has(ev.id) ? 'Selected — click to deselect' : 'Select for batch date change'}
+              style={{
+                width: 16, height: 16, borderRadius: '50%',
+                padding: 0, cursor: 'pointer',
+                border: selectedIds.has(ev.id) ? 'none' : '1.5px solid var(--text3)',
+                background: selectedIds.has(ev.id) ? 'var(--accent)' : 'transparent',
+              }} />
+            <button
               onClick={e => { e.stopPropagation(); updateItemStatus(ev.id, done ? 'Open' : 'Complete') }}
               title={done ? 'Mark open' : 'Mark complete'}
               style={{
@@ -527,15 +536,6 @@ export default function CalendarPage() {
                 <path d="M20 6 9 17l-5-5" />
               </svg>
             </button>
-            <button
-              onClick={e => { e.stopPropagation(); toggleSelect(ev.id) }}
-              title={selectedIds.has(ev.id) ? 'Selected — click to deselect' : 'Select for batch date change'}
-              style={{
-                width: 16, height: 16, borderRadius: '50%',
-                padding: 0, cursor: 'pointer',
-                border: selectedIds.has(ev.id) ? 'none' : '1.5px solid var(--text3)',
-                background: selectedIds.has(ev.id) ? 'var(--accent)' : 'transparent',
-              }} />
             <button
               onClick={e => { e.stopPropagation(); deleteItem(ev) }}
               title="Delete item"
