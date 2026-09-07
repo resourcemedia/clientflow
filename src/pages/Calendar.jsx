@@ -1346,7 +1346,7 @@ export default function CalendarPage() {
                   background: isOver ? 'var(--accent-glow)' : (extraBg || 'var(--bg2)'),
                   outline: isOver ? '2px dashed var(--accent)' : 'none', outlineOffset: -2,
                 }}>
-                {cells.map(ev => eventCard(ev, true, cells))}
+                {cells.map(ev => eventCard(ev, false, cells, true))}
               </div>
             )
           }
