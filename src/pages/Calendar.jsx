@@ -55,6 +55,7 @@ export default function CalendarPage() {
   const inFlightRef = useRef(new Set())
   const [selectedIds, setSelectedIds] = useState(() => new Set())   // List batch-select: item ids ticked for a bulk date change
   const [batchDate,   setBatchDate]   = useState('')                // date to apply to the selected items ('' = clear to backlog)
+  const [batchHour,   setBatchHour]   = useState('')                // hour to apply to selected items ('' = pick before Apply time)
   const batchBusyRef  = useRef(false)                               // re-entrancy guard for the batch apply
 
   // Remember where the user left off — mirrors the Tasks page's saved-state pattern
@@ -163,6 +164,31 @@ export default function CalendarPage() {
     } else {
       setSelectedIds(new Set())
       setBatchDate('')
+    }
+    batchBusyRef.current = false
+  }
+
+  async function applyBatchHour(hourValue) {
+    if (batchBusyRef.current) return
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+
+    const prevHours = new Map(events.filter(e => selectedIds.has(e.id)).map(e => [e.id, e.scheduled_hour]))
+
+    batchBusyRef.current = true
+    setEvents(cur => cur.map(e => selectedIds.has(e.id) ? { ...e, scheduled_hour: hourValue } : e))  // optimistic
+
+    const { error } = await supabase
+      .from('project_items')
+      .update({ scheduled_hour: hourValue })
+      .in('id', ids)
+
+    if (error) {
+      setEvents(cur => cur.map(e => prevHours.has(e.id) ? { ...e, scheduled_hour: prevHours.get(e.id) } : e))  // rollback
+      console.error('Batch hour apply failed, reverted:', error)
+    } else {
+      setSelectedIds(new Set())
+      setBatchHour('')
     }
     batchBusyRef.current = false
   }
@@ -596,7 +622,7 @@ export default function CalendarPage() {
             }}>{ev.note}</div>
           ))}
           {isExpanded && (
-            <div onClick={e => e.stopPropagation()} style={{ marginTop: 6 }}>
+            <div onClick={e => e.stopPropagation()} style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
               <input type="date"
                 value={ev.scheduled_date || ''}
                 onChange={e => moveItem(ev.id, e.target.value)}
@@ -608,6 +634,21 @@ export default function CalendarPage() {
                   cursor: 'text',
                 }}
                 title="Scheduled date — move this item to any date, including beyond the visible range" />
+              <select
+                value={ev.scheduled_hour ?? ''}
+                onChange={e => moveItem(ev.id, ev.scheduled_date, e.target.value === '' ? null : Number(e.target.value))}
+                disabled={!ev.scheduled_date}
+                style={{
+                  padding: '3px 6px', borderRadius: 6, fontSize: 12,
+                  border: '1px solid var(--border)',
+                  background: ev.scheduled_hour != null ? 'var(--bg4)' : 'transparent',
+                  color: ev.scheduled_hour != null ? 'var(--text)' : 'var(--text3)',
+                  cursor: ev.scheduled_date ? 'pointer' : 'not-allowed',
+                }}
+                title={ev.scheduled_date ? 'Scheduled time — top of the hour' : 'Set a date first'}>
+                <option value="">Any time</option>
+                {HOURS.map(h => <option key={h} value={h}>{fmtHour(h)}</option>)}
+              </select>
             </div>
           )}
         </div>
@@ -1172,6 +1213,29 @@ export default function CalendarPage() {
               }}>
               Apply
             </button>
+            <select value={batchHour} onChange={e => setBatchHour(e.target.value)}
+              style={{
+                padding: '5px 8px', borderRadius: 6, fontSize: 13,
+                border: '1px solid var(--border)', background: 'var(--bg4)', color: 'var(--text)', cursor: 'pointer',
+              }}
+              title="Time to apply to every selected item">
+              <option value="">Time…</option>
+              {HOURS.map(h => <option key={h} value={h}>{fmtHour(h)}</option>)}
+            </select>
+            <button onClick={() => { if (batchHour !== '') applyBatchHour(Number(batchHour)) }}
+              style={{
+                padding: '6px 16px', borderRadius: 6, fontSize: 13, fontWeight: 600,
+                border: 'none', cursor: 'pointer', background: 'var(--accent)', color: '#fff',
+              }}>
+              Apply time
+            </button>
+            <button onClick={() => applyBatchHour(null)}
+              style={{
+                padding: '6px 12px', borderRadius: 6, fontSize: 13,
+                border: '1px solid var(--border)', cursor: 'pointer', background: 'var(--bg4)', color: 'var(--text2)',
+              }}>
+              Clear time
+            </button>
             <button onClick={() => setSelectedIds(new Set())}
               style={{
                 padding: '6px 12px', borderRadius: 6, fontSize: 13,
@@ -1458,6 +1522,21 @@ export default function CalendarPage() {
                             cursor: 'text',
                           }}
                           title="Scheduled date — clear it to send this item back to the unscheduled backlog" />
+                        <select
+                          value={ev.scheduled_hour ?? ''}
+                          onChange={e => moveItem(ev.id, ev.scheduled_date, e.target.value === '' ? null : Number(e.target.value))}
+                          disabled={!ev.scheduled_date}
+                          style={{
+                            marginLeft: 6, padding: '3px 6px', borderRadius: 6, fontSize: 13,
+                            border: '1px solid var(--border)',
+                            background: ev.scheduled_hour != null ? 'var(--bg4)' : 'transparent',
+                            color: ev.scheduled_hour != null ? 'var(--text)' : 'var(--text3)',
+                            cursor: ev.scheduled_date ? 'pointer' : 'not-allowed',
+                          }}
+                          title={ev.scheduled_date ? 'Scheduled time — top of the hour' : 'Set a date first'}>
+                          <option value="">Any time</option>
+                          {HOURS.map(h => <option key={h} value={h}>{fmtHour(h)}</option>)}
+                        </select>
                       </td>
                       <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                         {company && (
