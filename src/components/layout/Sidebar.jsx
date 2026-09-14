@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useTheme } from '../../lib/theme'
 import { useAuth } from '../../lib/auth'
@@ -53,9 +53,55 @@ export default function Sidebar() {
 
   const role = profile?.role
   const isClient = role === 'client_admin' || role === 'client_team'
+
+  // Manager nav is user-reorderable; order persists per-browser in localStorage.
+  const NAV_ORDER_KEY = 'managerNavOrder'
+  const [navOrder, setNavOrder] = useState(() => {
+    try {
+      const raw = localStorage.getItem(NAV_ORDER_KEY)
+      const parsed = raw ? JSON.parse(raw) : null
+      return Array.isArray(parsed) ? parsed : null
+    } catch { return null }
+  })
+
+  // Apply the saved order to MANAGER_NAV: saved items first (in saved order),
+  // then any items not yet in the saved list (e.g. newly added routes) appended
+  // in their original definition order so nothing ever disappears from the menu.
+  const orderedManagerNav = navOrder
+    ? [
+        ...navOrder.map(to => MANAGER_NAV.find(i => i.to === to)).filter(Boolean),
+        ...MANAGER_NAV.filter(i => !navOrder.includes(i.to)),
+      ]
+    : MANAGER_NAV
+
   const nav = isClient
     ? (role === 'client_team' ? CLIENT_NAV_BASE : CLIENT_ADMIN_NAV)
-    : MANAGER_NAV
+    : orderedManagerNav
+
+  // ── Nav drag-to-reorder (manager only) — ports the Calendar list-reorder idiom.
+  const [navDragIdx, setNavDragIdx] = useState(null)
+  const [navOverIdx, setNavOverIdx] = useState(null)
+  const navDragFrom = useRef(null)
+
+  function startNavDrag(e, idx) {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(idx)) // claim payload so the <a> drags the item, not its href
+    navDragFrom.current = idx
+    setNavDragIdx(idx)
+  }
+  function overNavItem(e, idx) { e.preventDefault(); setNavOverIdx(idx) }
+  function endNavDrag() { setNavDragIdx(null); setNavOverIdx(null); navDragFrom.current = null }
+  function dropNavItem(toIdx) {
+    const fromIdx = navDragFrom.current
+    endNavDrag()
+    if (fromIdx == null || fromIdx === toIdx) return
+    const next = nav.slice()
+    const [moved] = next.splice(fromIdx, 1)
+    next.splice(toIdx, 0, moved)
+    const order = next.map(i => i.to)
+    setNavOrder(order)
+    try { localStorage.setItem(NAV_ORDER_KEY, JSON.stringify(order)) } catch {}
+  }
 
   useEffect(() => {
     if (isClient) return
@@ -88,25 +134,42 @@ export default function Sidebar() {
 
       {/* Nav */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
-        {nav.map(item => {
+        <style>{`
+          .nav-item .nav-grip { opacity: 0; transition: opacity .15s; flex-shrink: 0; cursor: grab; }
+          .nav-item:hover .nav-grip { opacity: .45; }
+        `}</style>
+        {nav.map((item, idx) => {
           const Icon = item.icon
           const isActive = item.exact
             ? loc.pathname === item.to
             : loc.pathname.startsWith(item.to)
+          const canReorder = !isClient
           return (
             <NavLink
               key={item.to}
               to={item.to}
+              draggable={canReorder}
+              onDragStart={canReorder ? (e => startNavDrag(e, idx)) : undefined}
+              onDragOver={canReorder ? (e => overNavItem(e, idx)) : undefined}
+              onDrop={canReorder ? (() => dropNavItem(idx)) : undefined}
+              onDragEnd={canReorder ? endNavDrag : undefined}
               className={`nav-item ${isActive ? 'active' : ''}`}
-              style={{ textDecoration: 'none' }}
+              style={{
+                textDecoration: 'none',
+                cursor: canReorder ? 'grab' : 'pointer',
+                opacity: navDragIdx === idx ? 0.4 : 1,
+                boxShadow: (canReorder && navOverIdx === idx && navDragIdx !== idx)
+                  ? 'inset 0 2px 0 var(--accent)' : undefined,
+              }}
             >
               <Icon className="nav-icon" />
-              {item.label}
+              <span style={{ marginRight: 'auto' }}>{item.label}</span>
               {!isClient && item.badgeKey && badges[item.badgeKey] > 0 && (
-                <span className={`nav-badge${item.badgeWarn ? ' warn' : ''}`}>
+                <span className={`nav-badge${item.badgeWarn ? ' warn' : ''}`} style={{ marginLeft: 0 }}>
                   {badges[item.badgeKey]}
                 </span>
               )}
+              {canReorder && <GripIcon className="nav-grip" style={{ color: 'var(--text3)' }} />}
             </NavLink>
           )
         })}
@@ -247,5 +310,12 @@ function WikiIcon(props) {
   return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
     <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+  </svg>
+}
+function GripIcon(props) {
+  return <svg {...props} width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+    <circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/>
+    <circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/>
+    <circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/>
   </svg>
 }
