@@ -24,6 +24,7 @@ export default function CalendarPage() {
   const [selectedDay, setSelectedDay] = useState(null)
   const [filterClient,  setFilterClient]  = useState(() => localStorage.getItem('cal_filterClient') || '')
   const [filterProject, setFilterProject] = useState(() => localStorage.getItem('cal_filterProject') ?? TODO_PROJECT)   // hub on first visit; ?? keeps a saved '' meaning "no filter"
+  const clientScopeSnap = useRef(null)   // remembers list state before a per-row client isolate, so the second toggle restores it
   const [filterItem,    setFilterItem]    = useState('')
   const [filterTag,     setFilterTag]     = useState('')
   const [filterCategory, setFilterCategory] = useState(() => localStorage.getItem('cal_category') || '')
@@ -1542,10 +1543,16 @@ export default function CalendarPage() {
                         {company && (
                           <button
                             onClick={() => {
-                              if (filterClient === company) { setFilterClient(''); setFilterProject(TODO_PROJECT) }
-                              else { setFilterClient(company); setFilterProject('') }
+                              if (filterClient === company) {
+                                const prev = clientScopeSnap.current
+                                setFilterClient(prev ? prev.client : ''); setFilterProject(prev ? prev.project : '')
+                                clientScopeSnap.current = null
+                              } else {
+                                if (!clientScopeSnap.current) clientScopeSnap.current = { client: filterClient, project: filterProject }
+                                setFilterClient(company); setFilterProject('')
+                              }
                             }}
-                            title={filterClient === company ? 'Back to ToDo hub' : `Show all ${alias} projects`}
+                            title={filterClient === company ? 'Back to previous list' : `Isolate ${alias} — all items`}
                             style={{
                               width: 14, height: 14, borderRadius: '50%', marginRight: 8,
                               border: '1.5px solid var(--text3)', cursor: 'pointer', padding: 0,
