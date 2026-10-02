@@ -743,18 +743,11 @@ export default function CalendarPage() {
 
   // Filter options derived from the loaded month (client-side, no extra queries)
   const clientOptions  = [...new Set(allProjects.map(p => p.client?.company).filter(Boolean))].sort()
-  // When a client filter is active, the Project dropdown only offers that client's projects
-  const projectOptions = [...new Set(
-    allProjects
-      .filter(p => !filterClient || p.client?.company === filterClient)
-      .map(p => p.name)
-      .filter(Boolean)
-  )].sort()
   const tagOptions     = [...new Set(events.flatMap(e => e.tags || []).filter(Boolean))].sort()
 
   const filtered = events.filter(e => {
     if (filterClient  && e.project?.client?.company !== filterClient) return false
-    if (filterProject && e.project?.name !== filterProject) return false
+    if (filterProject && !(e.project?.name || '').toLowerCase().includes(filterProject.toLowerCase())) return false
     if (filterItem    && !(e.name || '').toLowerCase().includes(filterItem.toLowerCase())) return false
     if (filterTag     && !(e.tags || []).includes(filterTag)) return false
     if (filterCategory && (e.project?.category || '') !== filterCategory) return false
@@ -1111,11 +1104,8 @@ export default function CalendarPage() {
           {clientOptions.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
 
-        <select value={filterProject} onChange={e => setFilterProject(e.target.value)}
-          style={{ ...filterCtrl, borderColor: filterProject ? 'var(--accent)' : 'var(--border)' }}>
-          <option value="">Project</option>
-          {projectOptions.map(p => <option key={p} value={p}>{p}</option>)}
-        </select>
+        <input value={filterProject} onChange={e => setFilterProject(e.target.value)} placeholder="Project"
+          style={{ ...filterCtrl, borderColor: filterProject ? 'var(--accent)' : 'var(--border)', cursor: 'text', minWidth: 120 }} />
 
         <input value={filterItem} onChange={e => setFilterItem(e.target.value)} placeholder="Item"
           style={{ ...filterCtrl, borderColor: filterItem ? 'var(--accent)' : 'var(--border)', cursor: 'text', minWidth: 120 }} />
