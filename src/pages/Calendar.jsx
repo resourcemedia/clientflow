@@ -57,6 +57,7 @@ export default function CalendarPage() {
   const [selectedIds, setSelectedIds] = useState(() => new Set())   // List batch-select: item ids ticked for a bulk date change
   const [batchDate,   setBatchDate]   = useState('')                // date to apply to the selected items ('' = clear to backlog)
   const [batchHour,   setBatchHour]   = useState('')                // hour to apply to selected items ('' = pick before Apply time)
+  const [batchChk,    setBatchChk]    = useState(() => format(new Date(), 'yyyy-MM-dd'))  // Chk date to stamp on selected items (local date, defaults to today)
   const batchBusyRef  = useRef(false)                               // re-entrancy guard for the batch apply
 
   // Remember where the user left off — mirrors the Tasks page's saved-state pattern
@@ -190,6 +191,34 @@ export default function CalendarPage() {
     } else {
       setSelectedIds(new Set())
       setBatchHour('')
+    }
+    batchBusyRef.current = false
+  }
+
+  // Batch Chk stamp. The picker gives a local date; stamp it at local noon so the
+  // UTC conversion can never shift it to the previous/next day.
+  async function applyBatchChecked() {
+    if (batchBusyRef.current) return
+    const ids = [...selectedIds]
+    if (ids.length === 0 || !batchChk) return
+    const stamp = new Date(`${batchChk}T12:00:00`).toISOString()
+
+    const prevChecked = new Map(events.filter(e => selectedIds.has(e.id)).map(e => [e.id, e.checked_at ?? null]))
+
+    batchBusyRef.current = true
+    setEvents(cur => cur.map(e => selectedIds.has(e.id) ? { ...e, checked_at: stamp } : e))  // optimistic
+
+    const { error } = await supabase
+      .from('project_items')
+      .update({ checked_at: stamp })
+      .in('id', ids)
+
+    if (error) {
+      setEvents(cur => cur.map(e => prevChecked.has(e.id) ? { ...e, checked_at: prevChecked.get(e.id) } : e))  // rollback
+      console.error('Batch Chk apply failed, reverted:', error)
+    } else {
+      setSelectedIds(new Set())
+      setBatchChk(format(new Date(), 'yyyy-MM-dd'))
     }
     batchBusyRef.current = false
   }
@@ -1226,6 +1255,20 @@ export default function CalendarPage() {
                 border: '1px solid var(--border)', cursor: 'pointer', background: 'var(--bg4)', color: 'var(--text2)',
               }}>
               Clear time
+            </button>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginLeft: 6 }}>Checked</span>
+            <input type="date" value={batchChk} onChange={e => setBatchChk(e.target.value)}
+              style={{
+                padding: '5px 8px', borderRadius: 6, fontSize: 13,
+                border: '1px solid var(--border)', background: 'var(--bg4)', color: 'var(--text)', cursor: 'text',
+              }}
+              title="Chk date to stamp on every selected item" />
+            <button onClick={applyBatchChecked}
+              style={{
+                padding: '6px 16px', borderRadius: 6, fontSize: 13, fontWeight: 600,
+                border: 'none', cursor: 'pointer', background: 'var(--accent)', color: '#fff',
+              }}>
+              Apply
             </button>
             <button onClick={() => setSelectedIds(new Set())}
               style={{
