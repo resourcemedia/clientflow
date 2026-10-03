@@ -731,7 +731,7 @@ export default function CashFlowPage() {
               </datalist>
 
               {/* ── pinned header ── */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 1430, flexShrink: 0 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 1664, flexShrink: 0 }}>
                 <colgroup>
                   <col style={{ width: 28 }} /><col style={{ width: 52 }} /><col style={{ width: 110 }} />
                   <col style={{ width: 100 }} /><col style={{ width: 110 }} /><col style={{ width: 60 }} /><col /><col style={{ width: 100 }} /><col style={{ width: 100 }} /><col style={{ width: 100 }} /><col style={{ width: 100 }} />
@@ -796,7 +796,7 @@ export default function CashFlowPage() {
 
               {/* ── scrollable body ── */}
               <div style={{ flex: 1, overflowY: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 1430 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 1664 }}>
                   <colgroup>
                     <col style={{ width: 28 }} /><col style={{ width: 52 }} /><col style={{ width: 110 }} />
                     <col style={{ width: 100 }} /><col style={{ width: 110 }} /><col style={{ width: 60 }} /><col /><col style={{ width: 100 }} /><col style={{ width: 100 }} /><col style={{ width: 100 }} /><col style={{ width: 100 }} />
@@ -836,7 +836,7 @@ export default function CashFlowPage() {
               </div>
 
               {/* ── pinned footer ── */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 1430, flexShrink: 0, borderTop: '2px solid var(--border2)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 1664, flexShrink: 0, borderTop: '2px solid var(--border2)' }}>
                 <colgroup>
                   <col style={{ width: 28 }} /><col style={{ width: 52 }} /><col style={{ width: 110 }} />
                   <col style={{ width: 100 }} /><col style={{ width: 110 }} /><col style={{ width: 60 }} /><col /><col style={{ width: 100 }} /><col style={{ width: 100 }} /><col style={{ width: 100 }} /><col style={{ width: 100 }} />
