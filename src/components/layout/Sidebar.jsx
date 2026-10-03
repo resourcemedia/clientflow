@@ -50,6 +50,7 @@ export default function Sidebar() {
   const { signOut, profile } = useAuth()
   const loc = useLocation()
   const [badges, setBadges] = useState({ projects: 0, proofs: 0, tasks: 0 })
+  const [mobileOpen, setMobileOpen] = useState(false) // mobile drawer (≤768px); no effect on desktop
 
   const role = profile?.role
   const isClient = role === 'client_admin' || role === 'client_team'
@@ -122,7 +123,12 @@ export default function Sidebar() {
   const roleLabel   = ROLE_LABELS[role] ?? 'Manager'
 
   return (
-    <aside className="sidebar">
+    <>
+    <button className="nav-toggle" onClick={() => setMobileOpen(true)} aria-label="Open menu">
+      <MenuIcon width="18" height="18" />
+    </button>
+    {mobileOpen && <div className="nav-backdrop" onClick={() => setMobileOpen(false)} />}
+    <aside className={`sidebar has-drawer${mobileOpen ? ' open' : ''}`}>
       {/* Logo */}
       <div className="sidebar-logo">
         <div className="logo-mark">C</div>
@@ -133,7 +139,7 @@ export default function Sidebar() {
       </div>
 
       {/* Nav */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }} onClick={() => setMobileOpen(false)}>
         <style>{`
           .nav-item .nav-grip { opacity: 0; transition: opacity .15s; flex-shrink: 0; cursor: grab; }
           .nav-item:hover .nav-grip { opacity: .45; }
@@ -198,7 +204,14 @@ export default function Sidebar() {
         </button>
       </div>
     </aside>
+    </>
   )
+}
+
+function MenuIcon(props) {
+  return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+  </svg>
 }
 
 // ── ICONS ─────────────────────────────────────────────────────────────
