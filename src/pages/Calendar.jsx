@@ -44,6 +44,7 @@ export default function CalendarPage() {
   const [allProjects, setAllProjects] = useState([])   // full projects catalog, independent of items
   const [clients, setClients] = useState([])           // Add Item modal options
   const [showAddItem,   setShowAddItem]   = useState(false)
+  const [mobilePanel,   setMobilePanel]   = useState(null)   // mobile only: 'menu' | 'filter' | null
   const [npClientId,    setNpClientId]    = useState('')
   const [npProjectSel,  setNpProjectSel]  = useState('')   // project id, or '__new__'
   const [npNewProjName, setNpNewProjName] = useState('')
@@ -890,6 +891,25 @@ export default function CalendarPage() {
     setDateStart(''); setDateEnd('')
   }
 
+  // Add Item opener — shared by the desktop button and the mobile Add Item tab.
+  function openAddItem() {
+    const cur = clients.find(c => c.company === filterClient)
+    setNpClientId(cur?.id || '')
+    const curProj = cur && filterProject
+      ? allProjects.find(p => p.client_id === cur.id && p.name === filterProject)
+      : null
+    setNpProjectSel(curProj?.id || '')
+    setShowAddItem(true)
+  }
+
+  // Mobile tab bar (Menu / Filter / Add Item) — only visible at the mobile breakpoint.
+  const mtab = (active) => ({
+    padding: '5px 12px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+    border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+    background: active ? 'var(--accent)' : 'transparent',
+    color: active ? '#fff' : 'var(--text2)',
+  })
+
   const filterCtrl = {
     padding: '6px 12px', borderRadius: 8, fontSize: 13,
     border: '1px solid var(--border)', background: 'var(--bg2)',
@@ -928,16 +948,57 @@ export default function CalendarPage() {
 
   return (
     <div className="fade-in">
-      <div className="topbar">
+      {/* Mobile drawers — same breakpoint as the nav drawer in styles.css. On desktop
+          .cal-menu is display:contents, so the toggles lay out exactly as before. */}
+      <style>{`
+        .cal-mtabs { display: none; }
+        .cal-menu { display: contents; }
+        @media (max-width: 768px), (max-height: 500px) and (pointer: coarse) {
+          .cal-topbar { flex-wrap: wrap; height: auto; min-height: 58px; row-gap: 0; }
+          .cal-crumb .breadcrumb-link, .cal-crumb .breadcrumb-sep { display: none; }
+          .cal-mtabs { display: flex; gap: 6px; }
+          .cal-add-desktop { display: none !important; }
+          .cal-menu { display: none; }
+          .cal-menu.open {
+            display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+            flex-basis: 100%; padding: 6px 0 14px;
+            max-height: 60vh; max-height: 60dvh; overflow-y: auto;
+          }
+          .cal-menu.open > div:empty { display: none; }
+          .cal-menu.open > * { margin-left: 0 !important; }
+          .cal-filters { display: none !important; }
+          .cal-filters.open { display: flex !important; flex-direction: column; align-items: flex-start !important; }
+          .cal-additem { flex-direction: column; align-items: flex-start !important; margin: 12px 16px 0 !important; }
+          .cal-additem > input, .cal-additem > select { flex: 0 0 auto !important; width: 100%; min-width: 0 !important; }
+        }
+      `}</style>
+      <div className="topbar cal-topbar">
         {/* Plain wrapper: .breadcrumb's flex:1 only applies as a direct child of the
             flex topbar, so this div keeps the title compact and the toggles flush left */}
-        <div>
+        <div className="cal-crumb">
           <Breadcrumb segments={[
             { label: 'Dashboard', onClick: () => navigate('/') },
             { label: 'Calendar' },
           ]} />
         </div>
 
+        {/* Mobile tabs — each toggles its drawer; one drawer open at a time */}
+        <div className="cal-mtabs">
+          <button style={mtab(mobilePanel === 'menu')}
+            onClick={() => { setShowAddItem(false); setMobilePanel(p => p === 'menu' ? null : 'menu') }}>
+            Menu
+          </button>
+          <button style={mtab(mobilePanel === 'filter')}
+            onClick={() => { setShowAddItem(false); setMobilePanel(p => p === 'filter' ? null : 'filter') }}>
+            Filter{anyFilterActive ? ' •' : ''}
+          </button>
+          <button style={mtab(showAddItem)}
+            onClick={() => { if (showAddItem) { setShowAddItem(false) } else { setMobilePanel(null); openAddItem() } }}>
+            Add Item
+          </button>
+        </div>
+
+        <div className={`cal-menu${mobilePanel === 'menu' ? ' open' : ''}`}>
         {/* View toggle */}
         <div style={{ display: 'flex', gap: 4, marginLeft: 12 }}>
           {[['list','List'],['day','Day'],['week','Week'],['month','Month']].map(([v, label]) => (
@@ -1107,22 +1168,15 @@ export default function CalendarPage() {
         {/* Add Item — all views. Opens preloaded with the current drill context. In List it
             sits right after Random (which carries marginLeft:auto); in Day/Week/Month it sits
             right after the date nav (which carries marginLeft:auto) — so no auto-margin of its own. */}
-        <button className="btn btn-primary"
-          onClick={() => {
-            const cur = clients.find(c => c.company === filterClient)
-            setNpClientId(cur?.id || '')
-            const curProj = cur && filterProject
-              ? allProjects.find(p => p.client_id === cur.id && p.name === filterProject)
-              : null
-            setNpProjectSel(curProj?.id || '')
-            setShowAddItem(true)
-          }}>
+        </div>{/* /cal-menu */}
+
+        <button className="btn btn-primary cal-add-desktop" onClick={openAddItem}>
           Add Item
         </button>
       </div>
 
       {/* Filter bar — attribute filters, stack as AND. Date range lives in List view. */}
-      <div style={{
+      <div className={`cal-filters${mobilePanel === 'filter' ? ' open' : ''}`} style={{
         display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
         padding: '10px 28px', marginBottom: 4,
       }}>
@@ -1168,7 +1222,7 @@ export default function CalendarPage() {
 
       {/* Add Item inset — a horizontal pre-row above the table */}
       {showAddItem && (
-        <div style={{
+        <div className="cal-additem" style={{
           display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
           margin: '12px 28px 0', padding: '12px 16px',
           background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12,
