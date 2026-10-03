@@ -647,7 +647,7 @@ select option { background: var(--bg3); color: var(--text); }
 
 /* ── MOBILE NAV DRAWER ── */
 .nav-toggle, .nav-backdrop { display: none; }
-@media (max-width: 768px) {
+@media (max-width: 768px), (max-height: 500px) and (pointer: coarse) {
   .sidebar.has-drawer {
     height: 100vh;
     height: 100dvh;
