@@ -705,6 +705,13 @@ export default function CashFlowPage() {
             <option value="Online">Online</option>
             <option value="Check">Check</option>
           </select>
+          {(dayStart || dayEnd || filterWho || filterCat || filterTag || filterAccount) && (
+            <button
+              onClick={() => { setDayStart(''); setDayEnd(''); setFilterWho(''); setFilterCat(''); setFilterTag(''); setFilterAccount('') }}
+              title="Clear all filters"
+              style={{ ...inputStyle, cursor: 'pointer', color: 'var(--text2)', fontWeight: 600 }}
+            >✕ Clear</button>
+          )}
         </div>
 
         {loading ? (
