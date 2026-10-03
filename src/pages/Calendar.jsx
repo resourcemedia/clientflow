@@ -954,20 +954,38 @@ export default function CalendarPage() {
         .cal-mtabs { display: none; }
         .cal-menu { display: contents; }
         @media (max-width: 768px), (max-height: 500px) and (pointer: coarse) {
-          .cal-topbar { flex-wrap: wrap; height: auto; min-height: 58px; row-gap: 0; }
+          /* Topbar: white 58px title row, grey below it so the open Menu block sits on the
+             page background like the Add Item block. The 1px gradient stop is the border. */
+          .cal-topbar {
+            flex-wrap: wrap; height: auto; min-height: 58px; row-gap: 0; align-content: flex-start;
+            column-gap: 8px; padding-right: 12px; border-bottom: none;
+            background: linear-gradient(to bottom, var(--bg2) 0 57px, var(--border) 57px 58px, var(--bg) 58px);
+          }
+          .cal-crumb { display: flex; align-items: center; min-height: 58px; }
           .cal-crumb .breadcrumb-link, .cal-crumb .breadcrumb-sep { display: none; }
-          .cal-mtabs { display: flex; gap: 6px; }
+          .cal-mtabs { display: flex; align-items: center; gap: 6px; min-height: 58px; }
           .cal-add-desktop { display: none !important; }
           .cal-menu { display: none; }
+          /* Menu block — same card as the Add Item block (16px from the page edges).
+             Margins offset the topbar's 60px left / 12px right padding. */
           .cal-menu.open {
             display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
-            flex-basis: 100%; padding: 6px 0 14px;
+            box-sizing: border-box; flex-basis: calc(100% + 40px);
+            margin: 12px 4px 0 -44px; padding: 12px 16px;
+            background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
             max-height: 60vh; max-height: 60dvh; overflow-y: auto;
           }
           .cal-menu.open > div:empty { display: none; }
           .cal-menu.open > * { margin-left: 0 !important; }
           .cal-filters { display: none !important; }
-          .cal-filters.open { display: flex !important; flex-direction: column; align-items: flex-start !important; }
+          /* Filter block — same card as the Add Item block; fields go full width */
+          .cal-filters.open {
+            display: flex !important; flex-direction: column; align-items: stretch !important;
+            margin: 12px 16px 0 !important; padding: 12px 16px !important;
+            background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+          }
+          .cal-filters.open > input, .cal-filters.open > select { width: 100%; box-sizing: border-box; min-width: 0 !important; }
+          .cal-filters.open > button { align-self: flex-start; padding-left: 0 !important; }
           .cal-additem { flex-direction: column; align-items: flex-start !important; margin: 12px 16px 0 !important; }
           .cal-additem > input, .cal-additem > select { flex: 0 0 auto !important; width: 100%; min-width: 0 !important; }
         }
