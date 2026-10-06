@@ -953,6 +953,7 @@ export default function CalendarPage() {
       <style>{`
         .cal-mtabs { display: none; }
         .cal-menu { display: contents; }
+        .cal-list-cards { display: none; }
         @media (max-width: 768px), (max-height: 500px) and (pointer: coarse) {
           /* Topbar: white 58px title row, grey below it so the open Menu block sits on the
              page background like the Add Item block. The 1px gradient stop is the border. */
@@ -988,6 +989,9 @@ export default function CalendarPage() {
           .cal-filters.open > button { align-self: flex-start; padding-left: 0 !important; }
           .cal-additem { flex-direction: column; align-items: flex-start !important; margin: 12px 16px 0 !important; }
           .cal-additem > input, .cal-additem > select { flex: 0 0 auto !important; width: 100%; min-width: 0 !important; }
+          /* List view — swap the wide table for stacked Day-view cards */
+          .cal-list-table { display: none; }
+          .cal-list-cards { display: block; }
         }
       `}</style>
       <div className="topbar cal-topbar">
@@ -1540,8 +1544,20 @@ export default function CalendarPage() {
           )
         })()}
 
+        {/* List — mobile: stacked Day-view cards (shown only at the mobile breakpoint).
+            Reorder rows passed only in Priority sort, matching the table's drag rule. */}
         {view === 'list' && (
-          <div className="card" style={{ overflow: 'auto' }}>
+          <div className="card cal-list-cards" style={{ padding: 8 }}>
+            {displayRows.length === 0 ? (
+              <div style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+                {scope === 'all' ? 'No items match these filters.' : 'No items in this range.'}
+              </div>
+            ) : displayRows.map(ev => eventCard(ev, false, sortBy === 'priority' ? displayRows : null, true))}
+          </div>
+        )}
+
+        {view === 'list' && (
+          <div className="card cal-list-table" style={{ overflow: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: 'var(--bg3)' }}>
