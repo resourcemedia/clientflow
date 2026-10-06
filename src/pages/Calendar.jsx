@@ -1552,7 +1552,37 @@ export default function CalendarPage() {
               <div style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
                 {scope === 'all' ? 'No items match these filters.' : 'No items in this range.'}
               </div>
-            ) : displayRows.map(ev => eventCard(ev, false, sortBy === 'priority' ? displayRows : null, true))}
+            ) : displayRows.map((ev, idx) => (
+              // Date gutter, like Day view's hour gutter. An invisible native date input
+              // covers the gutter, so tapping it opens the phone's date picker.
+              // Clearing the date sends the item to the unscheduled backlog (same as the table).
+              <div key={ev.id} style={{
+                display: 'grid', gridTemplateColumns: '48px 1fr', alignItems: 'center',
+                paddingTop: 8, borderTop: idx === 0 ? 'none' : '1px solid var(--border)',
+              }}>
+                <div style={{
+                  position: 'relative', alignSelf: 'stretch', marginBottom: 8,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+                  fontSize: 12, color: ev.scheduled_date ? 'var(--text)' : 'var(--text3)',
+                }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="5" width="18" height="16" rx="2" />
+                    <path d="M3 10h18M8 3v4M16 3v4" />
+                  </svg>
+                  <span>{ev.scheduled_date ? format(new Date(ev.scheduled_date + 'T00:00:00'), 'M/d') : '—'}</span>
+                  <input type="date"
+                    value={ev.scheduled_date || ''}
+                    onChange={e => moveItem(ev.id, e.target.value)}
+                    title="Scheduled date — tap to change"
+                    style={{
+                      position: 'absolute', inset: 0, width: '100%', height: '100%',
+                      opacity: 0, border: 'none', padding: 0, margin: 0, cursor: 'pointer',
+                    }} />
+                </div>
+                {eventCard(ev, false, sortBy === 'priority' ? displayRows : null, true)}
+              </div>
+            ))}
           </div>
         )}
 
