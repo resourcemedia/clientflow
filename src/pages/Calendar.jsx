@@ -824,7 +824,7 @@ export default function CalendarPage() {
       })
     : filtered
 
-  const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterCategory || filterStatus || filterHot || filterTypes.length > 0 || omitChecked
+  const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterCategory || filterStatus !== 'Open' || filterHot || filterTypes.length > 0 || omitChecked
 
   // "Random" focus (List) — collapse the found set to one picked item to break inertia.
   // Pool is the live `filtered` set, so it respects every active filter (client, Hot, status…).
@@ -894,7 +894,7 @@ export default function CalendarPage() {
   }
 
   function clearFilters() {
-    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterCategory(''); setFilterStatus(''); setFilterHot(false); setFilterTypes([]); setRandomProjectId(null)
+    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterCategory(''); setFilterStatus('Open'); setFilterHot(false); setFilterTypes([]); setRandomProjectId(null)
     setDateStart(''); setDateEnd(''); setOmitChecked(false)
   }
 
