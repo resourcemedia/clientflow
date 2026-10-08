@@ -781,8 +781,17 @@ export default function CalendarPage() {
   // today's LOCAL date (stamps are written at local noon), so the list empties as you work.
   const todayStr   = format(new Date(), 'yyyy-MM-dd')
   const isChkToday = e => !!e.checked_at && format(new Date(e.checked_at), 'yyyy-MM-dd') === todayStr
+  // Client filter is a typeahead: an exact pick from the list matches that client
+  // only; partial text matches any client whose company or alias contains it.
+  const clientQ     = filterClient.trim().toLowerCase()
+  const clientExact = clientOptions.includes(filterClient)
   const filtered = events.filter(e => {
-    if (filterClient  && e.project?.client?.company !== filterClient) return false
+    if (clientQ) {
+      const co = e.project?.client?.company || ''
+      const al = e.project?.client?.alias || ''
+      if (clientExact ? co !== filterClient
+                      : !(co.toLowerCase().includes(clientQ) || al.toLowerCase().includes(clientQ))) return false
+    }
     if (filterProject && !(e.project?.name || '').toLowerCase().includes(filterProject.toLowerCase())) return false
     if (filterItem    && !(e.name || '').toLowerCase().includes(filterItem.toLowerCase())) return false
     if (filterTag     && !(e.tags || []).includes(filterTag)) return false
@@ -1209,12 +1218,13 @@ export default function CalendarPage() {
         display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
         padding: '10px 28px', marginBottom: 4,
       }}>
-        <select value={filterClient}
+        <input value={filterClient} list="cal-client-options" placeholder="Client"
           onChange={e => { setFilterClient(e.target.value); setFilterProject('') }}
-          style={{ ...filterCtrl, borderColor: filterClient ? 'var(--accent)' : 'var(--border)' }}>
-          <option value="">Client</option>
-          {clientOptions.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
+          onKeyDown={e => { if (e.key === 'Escape') { setFilterClient(''); setFilterProject('') } }}
+          style={{ ...filterCtrl, borderColor: filterClient ? 'var(--accent)' : 'var(--border)', cursor: 'text', minWidth: 160 }} />
+        <datalist id="cal-client-options">
+          {clientOptions.map(c => <option key={c} value={c} />)}
+        </datalist>
 
         <input value={filterProject} onChange={e => setFilterProject(e.target.value)} placeholder="Project"
           style={{ ...filterCtrl, borderColor: filterProject ? 'var(--accent)' : 'var(--border)', cursor: 'text', minWidth: 120 }} />
