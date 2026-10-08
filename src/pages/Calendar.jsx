@@ -31,6 +31,7 @@ export default function CalendarPage() {
   const [filterStatus,  setFilterStatus]  = useState(() => localStorage.getItem('cal_status') || '')
   const [filterHot,     setFilterHot]     = useState(() => localStorage.getItem('cal_hot') === '1')
   const [filterTypes,   setFilterTypes]   = useState(() => (localStorage.getItem('cal_types') || '').split(',').filter(Boolean))
+  const [omitChecked,   setOmitChecked]   = useState(() => localStorage.getItem('cal_omitChk') === '1')   // List only: hide items Chk-stamped today
   const [randomProjectId, setRandomProjectId] = useState(null)   // List "Random" focus — the picked project's id (shows all its items), or null
   const [draggedId,   setDraggedId]   = useState(null)
   const [dragOverIso, setDragOverIso] = useState(null)
@@ -72,7 +73,8 @@ export default function CalendarPage() {
     localStorage.setItem('cal_hot',           filterHot ? '1' : '0')
     localStorage.setItem('cal_category',      filterCategory)
     localStorage.setItem('cal_types',         filterTypes.join(','))
-  }, [view, scope, sortBy, filterClient, filterProject, filterStatus, filterHot, filterCategory, filterTypes])
+    localStorage.setItem('cal_omitChk',       omitChecked ? '1' : '0')
+  }, [view, scope, sortBy, filterClient, filterProject, filterStatus, filterHot, filterCategory, filterTypes, omitChecked])
 
   // Active clients for the Add Item modal — same query the Projects page uses
   useEffect(() => {
@@ -775,6 +777,10 @@ export default function CalendarPage() {
   const clientOptions  = [...new Set(allProjects.map(p => p.client?.company).filter(Boolean))].sort()
   const tagOptions     = [...new Set(events.flatMap(e => e.tags || []).filter(Boolean))].sort()
 
+  // Omit Checked (List) — an item counts as checked when its Chk stamp falls on
+  // today's LOCAL date (stamps are written at local noon), so the list empties as you work.
+  const todayStr   = format(new Date(), 'yyyy-MM-dd')
+  const isChkToday = e => !!e.checked_at && format(new Date(e.checked_at), 'yyyy-MM-dd') === todayStr
   const filtered = events.filter(e => {
     if (filterClient  && e.project?.client?.company !== filterClient) return false
     if (filterProject && !(e.project?.name || '').toLowerCase().includes(filterProject.toLowerCase())) return false
@@ -784,6 +790,7 @@ export default function CalendarPage() {
     if (filterStatus  && e.status !== filterStatus) return false
     if (filterHot     && !e.is_hot) return false
     if (filterTypes.length && !filterTypes.includes(e.item_type || 'Task')) return false
+    if (view === 'list' && omitChecked && isChkToday(e)) return false
     return true
   })
 
@@ -817,7 +824,7 @@ export default function CalendarPage() {
       })
     : filtered
 
-  const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterCategory || filterStatus || filterHot || filterTypes.length > 0
+  const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterCategory || filterStatus || filterHot || filterTypes.length > 0 || omitChecked
 
   // "Random" focus (List) — collapse the found set to one picked item to break inertia.
   // Pool is the live `filtered` set, so it respects every active filter (client, Hot, status…).
@@ -888,7 +895,7 @@ export default function CalendarPage() {
 
   function clearFilters() {
     setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterCategory(''); setFilterStatus(''); setFilterHot(false); setFilterTypes([]); setRandomProjectId(null)
-    setDateStart(''); setDateEnd('')
+    setDateStart(''); setDateEnd(''); setOmitChecked(false)
   }
 
   // Add Item opener — shared by the desktop button and the mobile Add Item tab.
@@ -1233,6 +1240,16 @@ export default function CalendarPage() {
               style={{ ...filterCtrl, cursor: 'text' }} title="Date start" />
             <input type="date" value={dateEnd} onChange={e => setDateEnd(e.target.value)}
               style={{ ...filterCtrl, cursor: 'text' }} title="Date end" />
+            <button onClick={() => setOmitChecked(v => !v)}
+              title="Hide items Chk-stamped today — check them all to empty the list"
+              style={{
+                ...filterCtrl, fontWeight: 600,
+                borderColor: omitChecked ? 'var(--accent)' : 'var(--border)',
+                background:  omitChecked ? 'var(--accent)' : 'var(--bg2)',
+                color:       omitChecked ? '#fff' : 'var(--text2)',
+              }}>
+              Omit Checked{omitChecked ? ` (${events.filter(isChkToday).length})` : ''}
+            </button>
           </>
         )}
 
