@@ -836,14 +836,16 @@ export default function CalendarPage() {
   const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterCategory || filterStatus !== 'Open' || filterHot || filterTypes.length > 0 || omitChecked
 
   // "Random" focus (List) — collapse the found set to one picked item to break inertia.
-  // Pool is the live `filtered` set, so it respects every active filter (client, Hot, status…).
+  // Pool is the live `filtered` set, so it respects every active filter (client, Hot, status…),
+  // minus anything Chk-stamped today — Random never lands on work already touched today,
+  // whether or not Omit Checked is on.
   // Re-clicking re-rolls; the pick auto-releases if it leaves the found set; Clear/Show all reset it.
   const randomActive = randomProjectId != null && filtered.some(e => e.project_id === randomProjectId)
   const displayRows  = randomActive ? listRows.filter(r => r.project_id === randomProjectId) : listRows
   function handleRandom() {
     // Pick a random PROJECT from the found set (equal odds per project, not per item),
     // then show all its items in the current sort order — work the top one.
-    const projectIds = [...new Set(filtered.map(e => e.project_id).filter(Boolean))]
+    const projectIds = [...new Set(filtered.filter(e => !isChkToday(e)).map(e => e.project_id).filter(Boolean))]
     if (!projectIds.length) return
     setRandomProjectId(projectIds[Math.floor(Math.random() * projectIds.length)])
   }
