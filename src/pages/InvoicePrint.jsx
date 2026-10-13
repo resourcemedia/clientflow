@@ -73,7 +73,7 @@ export default function InvoicePrint() {
     <>
       <style>{`
         @media print {
-          .sidebar, .print-hide { display: none !important; }
+          .sidebar, .nav-toggle, .nav-backdrop, .print-hide { display: none !important; }
           .app-layout { display: block !important; }
           .main-content {
             padding: 0 !important;
