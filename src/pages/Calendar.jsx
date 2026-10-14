@@ -199,12 +199,13 @@ export default function CalendarPage() {
   }
 
   // Batch Chk stamp. The picker gives a local date; stamp it at local noon so the
-  // UTC conversion can never shift it to the previous/next day.
-  async function applyBatchChecked() {
+  // UTC conversion can never shift it to the previous/next day. clear=true nulls
+  // checked_at instead — resets a cycle so checked items rejoin the list and Random.
+  async function applyBatchChecked(clear = false) {
     if (batchBusyRef.current) return
     const ids = [...selectedIds]
-    if (ids.length === 0 || !batchChk) return
-    const stamp = new Date(`${batchChk}T12:00:00`).toISOString()
+    if (ids.length === 0 || (!clear && !batchChk)) return
+    const stamp = clear ? null : new Date(`${batchChk}T12:00:00`).toISOString()
 
     const prevChecked = new Map(events.filter(e => selectedIds.has(e.id)).map(e => [e.id, e.checked_at ?? null]))
 
@@ -1368,12 +1369,20 @@ export default function CalendarPage() {
                 border: '1px solid var(--border)', background: 'var(--bg4)', color: 'var(--text)', cursor: 'text',
               }}
               title="Chk date to stamp on every selected item" />
-            <button onClick={applyBatchChecked}
+            <button onClick={() => applyBatchChecked()}
               style={{
                 padding: '6px 16px', borderRadius: 6, fontSize: 13, fontWeight: 600,
                 border: 'none', cursor: 'pointer', background: 'var(--accent)', color: '#fff',
               }}>
               Apply
+            </button>
+            <button onClick={() => applyBatchChecked(true)}
+              title="Remove the Chk date from every selected item"
+              style={{
+                padding: '6px 12px', borderRadius: 6, fontSize: 13,
+                border: '1px solid var(--border)', cursor: 'pointer', background: 'var(--bg4)', color: 'var(--text2)',
+              }}>
+              Clear checked
             </button>
             <button onClick={() => setSelectedIds(new Set())}
               style={{
