@@ -734,6 +734,21 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
   const [applyInvoiceNumber, setApplyInvoiceNumber] = useState('')
   const [applyError, setApplyError] = useState('')
   const [editingProjectId, setEditingProjectId] = useState(null)
+  const [sortByProject, setSortByProject] = useState(() => localStorage.getItem('timeboardSortByProject') === 'true')
+  useEffect(() => { localStorage.setItem('timeboardSortByProject', String(sortByProject)) }, [sortByProject])
+
+  // Display-only ordering: Project (alias | number) A->Z, then Date/In oldest first.
+  // Entries with no project sort last. Selection, totals, and Out times are unaffected.
+  const viewRows = useMemo(() => {
+    if (!sortByProject) return rows
+    return [...rows].sort((a, b) => {
+      const pa = a.project ? projectLabel(a).toLowerCase() : '\uffff'
+      const pb = b.project ? projectLabel(b).toLowerCase() : '\uffff'
+      if (pa !== pb) return pa.localeCompare(pb, undefined, { numeric: true })
+      if (a.date !== b.date) return a.date.localeCompare(b.date)
+      return (a.start_time || '').localeCompare(b.start_time || '')
+    })
+  }, [rows, sortByProject])
 
   const allSelected = rows.length > 0 && rows.every(r => selectedRows.has(r.id))
   function toggleSelectAll() {
@@ -894,7 +909,13 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
               <th style={{ ...TH, width: '1%', minWidth: 0, padding: '8px 6px 8px 4px', whiteSpace: 'nowrap' }}>Date</th>
               <th style={{ ...TH, width: '1%', minWidth: 0, padding: '8px 6px 8px 4px', whiteSpace: 'nowrap' }}>In</th>
               <th style={{ ...TH, width: '1%', minWidth: 0, padding: '8px 6px 8px 4px', whiteSpace: 'nowrap' }}>Out</th>
-              <th style={{ ...TH, minWidth: 200 }}>Project</th>
+              <th
+                onClick={() => setSortByProject(v => !v)}
+                style={{ ...TH, minWidth: 200, cursor: 'pointer', userSelect: 'none' }}
+                title="Sort by project, then date (oldest first)"
+              >
+                Project{sortByProject ? ' \u25be' : ''}
+              </th>
               <th style={{ ...TH, width: '100%' }}>Description</th>
               <th style={{ ...TH, textAlign: 'right', width: 65 }}>Hours</th>
               <th style={{ ...TH, width: 50, textAlign: 'center' }}></th>
@@ -908,7 +929,7 @@ function CollapsedView({ rows, projects, onEntryChange, user, filterInvoice, onO
             </tr>
           </thead>
           <tbody>
-            {rows.map(row => {
+            {viewRows.map(row => {
               const rowStyle = { ...TD }
               const cat = row.project?.category
               const catColor = CATEGORY_COLORS[cat] || '#eee'
