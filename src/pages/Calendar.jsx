@@ -14,6 +14,33 @@ import {
 // alphabetically. If this convention changes, this is the only line to edit.
 const TODO_PROJECT = '- ToDo'
 
+// URL link icons + button style — ported verbatim from CashFlow.jsx
+function EditLinkIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+    </svg>
+  )
+}
+
+function ExternalLinkIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+      <polyline points="15 3 21 3 21 9"/>
+      <line x1="10" y1="14" x2="21" y2="3"/>
+    </svg>
+  )
+}
+
+const ICON_BTN = {
+  border: '1px solid var(--border)', borderRadius: 4, padding: '2px 5px',
+  cursor: 'pointer', background: 'var(--bg3)', color: 'var(--text2)',
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  lineHeight: 1,
+}
+
 export default function CalendarPage() {
   useEffect(() => { document.title = 'Calendar' }, [])
   const navigate  = useNavigate()
@@ -36,6 +63,10 @@ export default function CalendarPage() {
   const [draggedId,   setDraggedId]   = useState(null)
   const [dragOverIso, setDragOverIso] = useState(null)
   const [listDragIdx, setListDragIdx] = useState(null)   // List reorder (Priority mode)
+  const [urlEditId, setUrlEditId] = useState(null)       // List: which row's URL popover is open
+  const [urlDraft, setUrlDraft] = useState('')
+  const urlInputRef = useRef(null)
+  const urlPopoverRef = useRef(null)
   const [listOverIdx, setListOverIdx] = useState(null)
   const [cardOverId,  setCardOverId]  = useState(null)   // Day card reorder drop target
   const [expandedId,  setExpandedId]  = useState(null)   // Month/Week: card click reveals note + date input
@@ -420,6 +451,47 @@ export default function CalendarPage() {
     inFlightRef.current.delete(id)
   }
 
+  // Related URL (List). Optimistic + rollback, re-entrancy-guarded (shares inFlightRef).
+  async function updateItemUrl(id, raw) {
+    if (!id || inFlightRef.current.has(id)) return
+    const item = events.find(e => e.id === id)
+    if (!item) return
+    const value = raw && raw.trim() ? raw.trim() : null
+    if ((item.url ?? null) === value) return
+    const prev = item.url
+
+    inFlightRef.current.add(id)
+    setEvents(arr => arr.map(e => e.id === id ? { ...e, url: value } : e))
+
+    const { error } = await supabase
+      .from('project_items')
+      .update({ url: value })
+      .eq('id', id)
+
+    if (error) {
+      setEvents(arr => arr.map(e => e.id === id ? { ...e, url: prev } : e))
+      console.error('URL update failed, reverted:', error)
+    }
+    inFlightRef.current.delete(id)
+  }
+
+  async function commitUrl() {
+    const id = urlEditId
+    setUrlEditId(null)
+    await updateItemUrl(id, urlDraft)
+  }
+
+  useEffect(() => {
+    if (!urlEditId) return
+    setUrlDraft(events.find(e => e.id === urlEditId)?.url || '')
+    setTimeout(() => urlInputRef.current?.focus(), 0)
+    function handleClick(e) {
+      if (urlPopoverRef.current && !urlPopoverRef.current.contains(e.target)) setUrlEditId(null)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [urlEditId])
+
   // ── List reorder (Priority mode) ────────────────────────────────────────────
   // The visible rows occupy a set of priority slots. Reorder the rows among
   // those SAME slots. Rows hidden by a filter keep their ranks untouched, so
@@ -738,7 +810,7 @@ export default function CalendarPage() {
     }
     let query = supabase
       .from('project_items')
-      .select('id, project_id, name, scheduled_date, scheduled_hour, status, is_hot, completed_date, note, priority_order, item_type, tags, checked_at, project:projects(name, category, client:clients(company, alias))')
+      .select('id, project_id, name, scheduled_date, scheduled_hour, status, is_hot, completed_date, note, priority_order, item_type, tags, checked_at, url, project:projects(name, category, client:clients(company, alias))')
 
     if (view === 'list' && scope === 'all') {
       // A range comparison never matches NULL, so undated items are excluded by
@@ -1640,7 +1712,7 @@ export default function CalendarPage() {
                         background: (displayRows.length > 0 && displayRows.every(r => selectedIds.has(r.id))) ? 'var(--accent)' : 'transparent',
                       }} />
                   </th>
-                  {['Date','Client','Project','Item','Chk','Note','Hot','Type','Tags','Status'].map(h => (
+                  {['Date','Client','Project','Item','Chk','Note','Hot','Type','Tags','','Status'].map(h => (
                     <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)' }}>{h}</th>
                   ))}
                   <th style={{ width: 44 }}></th>
@@ -1648,7 +1720,7 @@ export default function CalendarPage() {
               </thead>
               <tbody>
                 {displayRows.length === 0 ? (
-                  <tr><td colSpan={13} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+                  <tr><td colSpan={14} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
                     {scope === 'all' ? 'No items match these filters.' : 'No items in this range.'}
                   </td></tr>
                 ) : displayRows.map((ev, idx) => {
@@ -1825,6 +1897,50 @@ export default function CalendarPage() {
                       </td>
                       <td style={{ padding: '10px 14px', minWidth: 120 }}>
                         <TagCell tags={ev.tags || []} suggestions={tagOptions} onSave={tags => updateItemTags(ev.id, tags)} />
+                      </td>
+                      <td style={{ padding: '10px 6px', whiteSpace: 'nowrap', position: 'relative' }}
+                        ref={urlEditId === ev.id ? urlPopoverRef : undefined}>
+                        <div style={{ display: 'inline-flex', gap: 4, verticalAlign: 'middle' }}>
+                          <button style={ICON_BTN}
+                            onClick={() => setUrlEditId(v => v === ev.id ? null : ev.id)}
+                            title="Edit URL">
+                            <EditLinkIcon />
+                          </button>
+                          <a
+                            href={ev.url || undefined}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={e => { if (!ev.url) e.preventDefault() }}
+                            title={ev.url || 'No URL set'}
+                            style={{
+                              ...ICON_BTN, textDecoration: 'none', padding: '3px 6px',
+                              opacity: ev.url ? 1 : 0.35,
+                              pointerEvents: ev.url ? 'auto' : 'none',
+                              background: ev.url ? '#22c55e' : undefined,
+                              color: ev.url ? '#fff' : undefined,
+                              borderColor: ev.url ? '#22c55e' : undefined,
+                            }}>
+                            <ExternalLinkIcon />
+                          </a>
+                        </div>
+                        {urlEditId === ev.id && (
+                          <div style={{
+                            position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 300,
+                            background: 'var(--bg2)', border: '1px solid var(--border)',
+                            borderRadius: 8, boxShadow: '0 4px 18px rgba(0,0,0,0.18)',
+                            padding: 8, minWidth: 280, display: 'flex', gap: 6, alignItems: 'center',
+                          }}>
+                            <input
+                              ref={urlInputRef}
+                              value={urlDraft}
+                              onChange={e => setUrlDraft(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter') commitUrl(); if (e.key === 'Escape') setUrlEditId(null) }}
+                              placeholder="https://…"
+                              style={{ flex: 1, fontSize: 12, padding: '3px 7px', border: '1px solid var(--border)', borderRadius: 4, background: 'var(--bg)', color: 'var(--text)', outline: 'none' }}
+                            />
+                            <button className="btn btn-primary btn-sm" onClick={commitUrl}>Save</button>
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                         <button
