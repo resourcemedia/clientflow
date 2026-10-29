@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth'
 import { windowStats, computeAnnualProjection } from '../lib/projections'
 import { toLocalISO, todayISO, calcHoursFromTimes, enrichEntries } from '../lib/timeentries'
 import { usePaceTargets } from '../lib/config'
+import { Modal } from '../components/ui'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
 
@@ -670,34 +671,35 @@ ${groupsHtml}
 // ── Client Totals ──────────────────────────────────────────────────────────────
 // Per-client snapshot of whatever is currently in view. Paired with the
 // To Invoice filter it answers "what does each client owe me this run?"
-function openClientTotals(rows) {
-  if (!rows || rows.length === 0) return
-  const w = window.open('', '_blank', 'width=760,height=700')
-  if (!w) return
-
+// Rendered as an in-page modal (popups/new tabs are blocked in some browsers,
+// including the Claude built-in browser used for scheduled runs).
+function summarizeClientTotals(rows) {
   const map = {}
-  rows.forEach(r => {
+  ;(rows || []).forEach(r => {
     const name = r.project?.client?.company || r.project?.client?.alias || 'Unassigned'
     if (!map[name]) map[name] = { hours: 0, amt: 0 }
     map[name].hours += r.hours
     map[name].amt   += r.billableAmt
   })
-
   const names = Object.keys(map).sort((a, b) => a.localeCompare(b))
-  const totalHours = names.reduce((s, n) => s + map[n].hours, 0)
-  const totalAmt   = names.reduce((s, n) => s + map[n].amt,   0)
+  const lines = names.map(n => ({ name: n, hours: map[n].hours, amt: map[n].amt }))
+  const totalHours = lines.reduce((s, l) => s + l.hours, 0)
+  const totalAmt   = lines.reduce((s, l) => s + l.amt,   0)
+  return { lines, totalHours, totalAmt }
+}
 
-  const rowsHtml = names.map(n => `<tr class="detail">
-    <td>${n}</td>
-    <td class="num">${map[n].hours.toFixed(2)}</td>
-    <td class="num">${map[n].amt.toFixed(2)}</td>
+// Print via a hidden iframe so no new window/tab is needed.
+function printClientTotals(summary) {
+  const rowsHtml = summary.lines.map(l => `<tr class="detail">
+    <td>${l.name}</td>
+    <td class="num">${l.hours.toFixed(2)}</td>
+    <td class="num">${l.amt.toFixed(2)}</td>
   </tr>`).join('\n')
 
-  w.document.write(`<!DOCTYPE html><html><head><title>Client Invoice List</title>
+  const html = `<!DOCTYPE html><html><head><title>Client Invoice List</title>
 <style>
   *{box-sizing:border-box}
   body{font-family:Arial,sans-serif;font-size:12px;padding:32px 36px;color:#222;max-width:640px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  button{margin-bottom:20px;padding:5px 14px;cursor:pointer;font-size:12px}
   h1{font-size:20px;font-weight:700;margin:0 0 20px;padding-bottom:10px;border-bottom:1px solid #cccccc}
   table{width:100%;border-collapse:collapse}
   td{padding:8px 6px 8px 0;font-size:13px;vertical-align:middle}
@@ -705,17 +707,65 @@ function openClientTotals(rows) {
   td.lbl{text-align:right;font-weight:700}
   .detail td{border-bottom:0.5px solid #cccccc}
   .grand td{font-weight:700;border-top:1px solid #cccccc;padding-top:9px;font-size:13px}
-  @media print{button{display:none}}
 </style></head><body>
-<button onclick="window.print()">Print / Save PDF</button>
 <h1>Client Invoice List</h1>
 <table><tbody>
 ${rowsHtml}
 </tbody><tfoot>
-  <tr class="grand"><td class="lbl">TOTAL</td><td class="num">${totalHours.toFixed(2)}</td><td class="num">${totalAmt.toFixed(2)}</td></tr>
+  <tr class="grand"><td class="lbl">TOTAL</td><td class="num">${summary.totalHours.toFixed(2)}</td><td class="num">${summary.totalAmt.toFixed(2)}</td></tr>
 </tfoot></table>
-</body></html>`)
-  w.document.close()
+</body></html>`
+
+  const iframe = document.createElement('iframe')
+  Object.assign(iframe.style, { position: 'fixed', right: 0, bottom: 0, width: 0, height: 0, border: 0 })
+  document.body.appendChild(iframe)
+  const doc = iframe.contentWindow.document
+  doc.open(); doc.write(html); doc.close()
+  setTimeout(() => {
+    iframe.contentWindow.focus()
+    iframe.contentWindow.print()
+    setTimeout(() => iframe.remove(), 1000)
+  }, 100)
+}
+
+function ClientTotalsModal({ rows, onClose }) {
+  const summary = useMemo(() => summarizeClientTotals(rows), [rows])
+  const cell = { padding: '8px 6px 8px 0', fontSize: 13, borderBottom: '1px solid var(--border)' }
+  const num  = { ...cell, textAlign: 'right', width: 90, fontFamily: 'DM Mono, monospace' }
+  return (
+    <Modal title="Client Invoice List" onClose={onClose} footer={
+      <>
+        <button className="btn btn-ghost" onClick={onClose}>Close</button>
+        <button className="btn btn-primary" onClick={() => printClientTotals(summary)}
+          disabled={summary.lines.length === 0}>Print / Save PDF</button>
+      </>
+    }>
+      <div style={{ padding: '16px 24px' }}>
+        {summary.lines.length === 0 ? (
+          <div style={{ color: 'var(--text3)', fontSize: 13 }}>No entries in view.</div>
+        ) : (
+          <table data-testid="client-totals" style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <tbody>
+              {summary.lines.map(l => (
+                <tr key={l.name}>
+                  <td style={cell}>{l.name}</td>
+                  <td style={num}>{l.hours.toFixed(2)}</td>
+                  <td style={num}>{l.amt.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td style={{ ...cell, borderBottom: 'none', textAlign: 'right', fontWeight: 700 }}>TOTAL</td>
+                <td style={{ ...num, borderBottom: 'none', fontWeight: 700 }}>{summary.totalHours.toFixed(2)}</td>
+                <td style={{ ...num, borderBottom: 'none', fontWeight: 700 }}>{summary.totalAmt.toFixed(2)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        )}
+      </div>
+    </Modal>
+  )
 }
 
 // ── Collapsed View ─────────────────────────────────────────────────────────────
@@ -1257,6 +1307,7 @@ export default function TimeboardPage() {
   const [filterInvoiceWeek, setFilterInvoiceWeek] = useState('')
   const [filterInvoice, setFilterInvoice]         = useState('')
   const [filterToInvoice, setFilterToInvoice]     = useState(false)
+  const [showClientTotals, setShowClientTotals]   = useState(false)
 
   useEffect(() => { load(dateMode, dateStart, dateEnd) }, [dateMode, dateStart, dateEnd])
 
@@ -1439,7 +1490,7 @@ export default function TimeboardPage() {
             >To Invoice</button>
             {filterToInvoice && (
               <button className="btn btn-ghost btn-sm"
-                onClick={() => openClientTotals(displayRows)}
+                onClick={() => setShowClientTotals(true)}
               >
                 Client Totals
               </button>
@@ -1497,6 +1548,9 @@ export default function TimeboardPage() {
             filterInvoice={filterInvoice}
             onEntryDelete={handleEntryDelete}
           />
+        )}
+        {showClientTotals && (
+          <ClientTotalsModal rows={displayRows} onClose={() => setShowClientTotals(false)} />
         )}
       </div>
     </div>
