@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Navigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -206,10 +206,21 @@ function fmtDate(ts) {
 
 const byUpdatedDesc = (a, b) => (String(a.updated_at) < String(b.updated_at) ? 1 : -1)
 
+// Bare /wiki lands here; the full page list lives at /wiki?view=index.
+const LIFE_PLAN_SLUG = 'life-plan'
+const INDEX_PATH     = '/wiki?view=index'
+
+const TAB_BTN = { background: 'transparent', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer' }
+const TAB_BTN_ACTIVE = { ...TAB_BTN, background: 'var(--bg)', borderColor: 'var(--accent)', color: 'var(--accent)', fontWeight: 600 }
+const SEARCH_INPUT = { background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 13, width: 180, outline: 'none' }
+
 // ── component ────────────────────────────────────────────────────────────────
 export default function WikiPage() {
   const { slug } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const isIndex = !slug && searchParams.get('view') === 'index'
+  const [query, setQuery]     = useState('')
   const [pages, setPages]     = useState([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(null) // null | { slug?, title, body, isNew }
@@ -234,6 +245,13 @@ export default function WikiPage() {
 
   const resolve = useMemo(() => makeResolver(pages), [pages])
   const current = slug ? pages.find(p => p.slug === slug) : null
+  const q = query.trim().toLowerCase()
+  const searchResults = useMemo(
+    () => (q ? pages.filter(p => (p.title || '').toLowerCase().includes(q)) : pages),
+    [pages, q]
+  )
+
+  function goTo(path) { setQuery(''); navigate(path) }
 
   function startCreate() { setError(''); setEditing({ title: '', body: '', isNew: true }) }
   function startEdit(p)  { setError(''); setEditing({ slug: p.slug, title: p.title, body: p.body || '', isNew: false }) }
@@ -279,7 +297,7 @@ export default function WikiPage() {
     const { error } = await supabase.from('pages').delete().eq('id', p.id)
     if (error) { window.alert('Could not delete: ' + error.message); return }
     setPages(prev => prev.filter(x => x.id !== p.id))
-    navigate('/wiki')
+    navigate(INDEX_PATH)
   }
 
   // ── editor ──────────────────────────────────────────────────────────────
@@ -333,20 +351,36 @@ export default function WikiPage() {
   return (
     <div className="fade-in">
       <div className="topbar">
-        <div className="topbar-title">Wiki</div>
+        <div className="topbar-title" style={{ flex: 'none' }}>Wiki</div>
+        <button style={slug === LIFE_PLAN_SLUG && !q ? TAB_BTN_ACTIVE : TAB_BTN} onClick={() => goTo('/wiki/' + LIFE_PLAN_SLUG)}>Life Plan</button>
+        <button style={isIndex && !q ? TAB_BTN_ACTIVE : TAB_BTN} onClick={() => goTo(INDEX_PATH)}>Index</button>
+        <input
+          type="search"
+          placeholder="Search titles"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Escape') setQuery('') }}
+          style={SEARCH_INPUT}
+        />
+        <div style={{ flex: 1 }} />
+        <button style={PRIMARY_BTN} onClick={() => { setQuery(''); startCreate() }}>+ New page</button>
       </div>
       <div className="page-content">
         {loading ? (
           <div className="card"><div style={{ padding: 32, color: 'var(--text2)' }}>Loading…</div></div>
         ) : editing ? (
           renderEditor()
+        ) : q ? (
+          renderList(searchResults, 'No page titles match “' + query.trim() + '”.')
+        ) : !slug && !isIndex ? (
+          <Navigate to={'/wiki/' + LIFE_PLAN_SLUG} replace />
         ) : slug ? (
           <div className="card">
             <div style={{ padding: '20px 24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
-                <a href="/wiki" onClick={(e) => { e.preventDefault(); navigate('/wiki') }}
+                <a href={INDEX_PATH} onClick={(e) => { e.preventDefault(); navigate(INDEX_PATH) }}
                    style={{ ...LINK_STYLE, fontSize: 13 }}>
-                  ← All pages
+                  ← Index
                 </a>
                 {current && (
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -377,17 +411,22 @@ export default function WikiPage() {
             </div>
           </div>
         ) : (
-          <>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-              <button style={PRIMARY_BTN} onClick={startCreate}>+ New page</button>
-            </div>
+          renderList(pages, 'No pages yet. Create your first with “New page”.')
+        )}
+      </div>
+    </div>
+  )
+
+  // ── page list (index + title search results) ─────────────────────────────
+  function renderList(list, emptyMsg) {
+    return (
             <div className="card">
               <div style={{ padding: '8px 0' }}>
-                {pages.length === 0 ? (
-                  <div style={{ padding: 32, color: 'var(--text2)' }}>No pages yet. Create your first with “New page”.</div>
-                ) : pages.map((p, idx) => (
+                {list.length === 0 ? (
+                  <div style={{ padding: 32, color: 'var(--text2)' }}>{emptyMsg}</div>
+                ) : list.map((p, idx) => (
                   <a key={p.id} href={'/wiki/' + p.slug}
-                     onClick={(e) => { e.preventDefault(); navigate('/wiki/' + p.slug) }}
+                     onClick={(e) => { e.preventDefault(); goTo('/wiki/' + p.slug) }}
                      style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16,
                               padding: '12px 24px', textDecoration: 'none', color: 'inherit',
                               borderTop: idx === 0 ? 'none' : '1px solid var(--border)', cursor: 'pointer' }}>
@@ -402,9 +441,6 @@ export default function WikiPage() {
                 ))}
               </div>
             </div>
-          </>
-        )}
-      </div>
-    </div>
-  )
+    )
+  }
 }
