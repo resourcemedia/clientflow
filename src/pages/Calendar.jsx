@@ -54,7 +54,9 @@ export default function CalendarPage() {
   const clientScopeSnap = useRef(null)   // remembers list state before a per-row client isolate, so the second toggle restores it
   const [filterItem,    setFilterItem]    = useState('')
   const [filterTag,     setFilterTag]     = useState('')
-  const [filterCategory, setFilterCategory] = useState(() => localStorage.getItem('cal_category') || '')
+  const [filterCategories, setFilterCategories] = useState(() => (localStorage.getItem('cal_category') || '').split(',').filter(Boolean))   // multi-select; legacy single value loads as a 1-item array
+  const [catMenuOpen, setCatMenuOpen] = useState(false)
+  const catMenuRef = useRef(null)
   const [filterStatus,  setFilterStatus]  = useState(() => localStorage.getItem('cal_status') || '')
   const [filterHot,     setFilterHot]     = useState(() => localStorage.getItem('cal_hot') === '1')
   const [filterTypes,   setFilterTypes]   = useState(() => (localStorage.getItem('cal_types') || '').split(',').filter(Boolean))
@@ -102,10 +104,10 @@ export default function CalendarPage() {
     localStorage.setItem('cal_filterProject', filterProject)
     localStorage.setItem('cal_status',        filterStatus)
     localStorage.setItem('cal_hot',           filterHot ? '1' : '0')
-    localStorage.setItem('cal_category',      filterCategory)
+    localStorage.setItem('cal_category',      filterCategories.join(','))
     localStorage.setItem('cal_types',         filterTypes.join(','))
     localStorage.setItem('cal_omitChk',       omitChecked ? '1' : '0')
-  }, [view, scope, sortBy, filterClient, filterProject, filterStatus, filterHot, filterCategory, filterTypes, omitChecked])
+  }, [view, scope, sortBy, filterClient, filterProject, filterStatus, filterHot, filterCategories, filterTypes, omitChecked])
 
   // Active clients for the Add Item modal — same query the Projects page uses
   useEffect(() => {
@@ -492,6 +494,16 @@ export default function CalendarPage() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [urlEditId])
 
+  // Category multi-select menu — close on outside click (same pattern as the URL popover)
+  useEffect(() => {
+    if (!catMenuOpen) return
+    function handleClick(e) {
+      if (catMenuRef.current && !catMenuRef.current.contains(e.target)) setCatMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [catMenuOpen])
+
   // ── List reorder (Priority mode) ────────────────────────────────────────────
   // The visible rows occupy a set of priority slots. Reorder the rows among
   // those SAME slots. Rows hidden by a filter keep their ranks untouched, so
@@ -868,7 +880,7 @@ export default function CalendarPage() {
     if (filterProject && !(e.project?.name || '').toLowerCase().includes(filterProject.toLowerCase())) return false
     if (filterItem    && !(e.name || '').toLowerCase().includes(filterItem.toLowerCase())) return false
     if (filterTag     && !(e.tags || []).includes(filterTag)) return false
-    if (filterCategory && (e.project?.category || '') !== filterCategory) return false
+    if (filterCategories.length && !filterCategories.includes(e.project?.category || '')) return false
     if (filterStatus  && e.status !== filterStatus) return false
     if (filterHot     && !e.is_hot) return false
     if (filterTypes.length && !filterTypes.includes(e.item_type || 'Task')) return false
@@ -906,7 +918,7 @@ export default function CalendarPage() {
       })
     : filtered
 
-  const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterCategory || filterStatus !== 'Open' || filterHot || filterTypes.length > 0 || omitChecked
+  const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterCategories.length > 0 || filterStatus !== 'Open' || filterHot || filterTypes.length > 0 || omitChecked
 
   // "Random" focus (List) — collapse the found set to one picked item to break inertia.
   // Pool is the live `filtered` set, so it respects every active filter (client, Hot, status…),
@@ -978,7 +990,7 @@ export default function CalendarPage() {
   }
 
   function clearFilters() {
-    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterCategory(''); setFilterStatus('Open'); setFilterHot(false); setFilterTypes([]); setRandomProjectId(null)
+    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterCategories([]); setFilterStatus('Open'); setFilterHot(false); setFilterTypes([]); setRandomProjectId(null)
     setDateStart(''); setDateEnd(''); setOmitChecked(false)
   }
 
@@ -1307,11 +1319,36 @@ export default function CalendarPage() {
         <input value={filterItem} onChange={e => setFilterItem(e.target.value)} placeholder="Item"
           style={{ ...filterCtrl, borderColor: filterItem ? 'var(--accent)' : 'var(--border)', cursor: 'text', minWidth: 120 }} />
 
-        <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)}
-          style={{ ...filterCtrl, borderColor: filterCategory ? 'var(--accent)' : 'var(--border)' }}>
-          <option value="">Category</option>
-          {categoryOptions.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
-        </select>
+        {/* Category — multi-select checkbox menu; checked categories stack as OR */}
+        <div ref={catMenuRef} style={{ position: 'relative' }}>
+          <button type="button" onClick={() => setCatMenuOpen(o => !o)}
+            style={{ ...filterCtrl, borderColor: filterCategories.length ? 'var(--accent)' : 'var(--border)' }}>
+            {filterCategories.length === 0 ? 'Category'
+              : filterCategories.length === 1 ? filterCategories[0].charAt(0).toUpperCase() + filterCategories[0].slice(1)
+              : `Category (${filterCategories.length})`} ▾
+          </button>
+          {catMenuOpen && (
+            <div style={{
+              position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 50, minWidth: 170,
+              background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8,
+              boxShadow: '0 6px 20px rgba(0,0,0,0.12)', padding: 6,
+            }}>
+              {categoryOptions.map(c => (
+                <label key={c} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', fontSize: 13, color: 'var(--text2)', cursor: 'pointer', borderRadius: 6 }}>
+                  <input type="checkbox" checked={filterCategories.includes(c)}
+                    onChange={() => setFilterCategories(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])} />
+                  {c.charAt(0).toUpperCase() + c.slice(1)}
+                </label>
+              ))}
+              {filterCategories.length > 0 && (
+                <button type="button" onClick={() => setFilterCategories([])}
+                  style={{ display: 'block', width: '100%', textAlign: 'left', marginTop: 4, padding: '5px 8px', fontSize: 12, color: 'var(--text3)', background: 'transparent', border: 'none', borderTop: '1px solid var(--border)', cursor: 'pointer' }}>
+                  Clear categories
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
         <select value={filterTag} onChange={e => setFilterTag(e.target.value)}
           style={{ ...filterCtrl, borderColor: filterTag ? 'var(--accent)' : 'var(--border)' }}>
