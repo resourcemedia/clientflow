@@ -822,7 +822,7 @@ export default function CalendarPage() {
     }
     let query = supabase
       .from('project_items')
-      .select('id, project_id, name, scheduled_date, scheduled_hour, status, is_hot, completed_date, note, priority_order, item_type, tags, checked_at, url, project:projects(name, category, client:clients(company, alias))')
+      .select('id, project_id, name, scheduled_date, scheduled_hour, status, is_hot, completed_date, note, priority_order, item_type, tags, checked_at, url, project:projects(name, category, project_number, client:clients(company, alias))')
 
     if (view === 'list' && scope === 'all') {
       // A range comparison never matches NULL, so undated items are excluded by
@@ -1749,7 +1749,7 @@ export default function CalendarPage() {
                         background: (displayRows.length > 0 && displayRows.every(r => selectedIds.has(r.id))) ? 'var(--accent)' : 'transparent',
                       }} />
                   </th>
-                  {['Date','Client','Project','Item','Chk','Note','Hot','Type','Tags','','Status'].map(h => (
+                  {['Date','Client','No','Project','Item','Chk','Note','Hot','Type','Tags','','Status'].map(h => (
                     <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)' }}>{h}</th>
                   ))}
                   <th style={{ width: 44 }}></th>
@@ -1757,7 +1757,7 @@ export default function CalendarPage() {
               </thead>
               <tbody>
                 {displayRows.length === 0 ? (
-                  <tr><td colSpan={14} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+                  <tr><td colSpan={15} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
                     {scope === 'all' ? 'No items match these filters.' : 'No items in this range.'}
                   </td></tr>
                 ) : displayRows.map((ev, idx) => {
@@ -1766,6 +1766,7 @@ export default function CalendarPage() {
                   const company  = ev.project?.client?.company || ''
                   const alias    = ev.project?.client?.alias || company
                   const projName = ev.project?.name || ''
+                  const projNum  = ev.project?.project_number || ''
                   const projActive = projName && filterProject === projName && filterClient === company
                   const canDrag = sortBy === 'priority'
                   const compFmt  = ev.completed_date ? format(new Date(ev.completed_date + 'T00:00:00'), 'M/d/yy') : ''
@@ -1864,6 +1865,9 @@ export default function CalendarPage() {
                           background: done ? 'var(--bg3)' : catColor(cat), color: 'var(--text)', verticalAlign: 'middle',
                           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                         }}>{alias || catLabel(cat)}</span>
+                      </td>
+                      <td style={{ padding: '10px 14px', color: 'var(--text3)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                        {projNum || '—'}
                       </td>
                       <td style={{ padding: '10px 14px', color: 'var(--text2)', whiteSpace: 'nowrap' }}>
                         {projName && (
