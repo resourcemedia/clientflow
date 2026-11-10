@@ -1315,18 +1315,35 @@ export default function TimeboardPage() {
     setLoading(true)
     if (!isDemo) {
       const today = todayISO()
-      let q = supabase.from('time_entries')
-        .select('*, project:projects(id, name, project_number, category, client:clients(id, company, alias))')
-        .order('date').order('start_time')
-        .range(0, 4999)
-      if (mode === 'today') {
-        q = q.gte('date', today).lte('date', today)
-      } else if (mode === 'range') {
-        if (start) q = q.gte('date', start)
-        if (end)   q = q.lte('date', end)
+      // Supabase caps each response at 1000 rows (server max-rows), regardless
+      // of .range(). Page through in 1000-row chunks so wide date ranges
+      // don't silently drop the newest entries.
+      const buildQuery = () => {
+        let q = supabase.from('time_entries')
+          .select('*, project:projects(id, name, project_number, category, client:clients(id, company, alias))')
+          .order('date').order('start_time').order('id')
+        if (mode === 'today') {
+          q = q.gte('date', today).lte('date', today)
+        } else if (mode === 'range') {
+          if (start) q = q.gte('date', start)
+          if (end)   q = q.lte('date', end)
+        }
+        return q
+      }
+      const fetchAllEntries = async () => {
+        const PAGE = 1000
+        let all = [], from = 0
+        while (true) {
+          const { data, error } = await buildQuery().range(from, from + PAGE - 1)
+          if (error) return { data: all, error }
+          all = all.concat(data || [])
+          if (!data || data.length < PAGE) break
+          from += PAGE
+        }
+        return { data: all, error: null }
       }
       const [{ data: e, error: eErr }, { data: p }] = await Promise.all([
-        q,
+        fetchAllEntries(),
         supabase.from('projects')
           .select('id, name, project_number, category, client:clients(id, company, alias, hourly_rate)')
           .order('project_number'),
