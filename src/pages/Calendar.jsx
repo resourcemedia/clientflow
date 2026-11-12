@@ -87,7 +87,7 @@ export default function CalendarPage() {
   const [dateStart, setDateStart] = useState('')   // List view range (yyyy-MM-dd)
   const [dateEnd,   setDateEnd]   = useState('')
   const [scope,     setScope]     = useState(() => localStorage.getItem('cal_scope') || 'all')  // List only: 'scheduled' | 'all'
-  const [sortBy,    setSortBy]    = useState(() => localStorage.getItem('cal_sortBy') || 'client')     // List only: 'client' | 'date' | 'priority'
+  const [sortBy,    setSortBy]    = useState(() => localStorage.getItem('cal_sortBy') || 'client')     // List only: 'client' | 'date' | 'priority' | 'clientNo' (Client header click)
   const inFlightRef = useRef(new Set())
   const [selectedIds, setSelectedIds] = useState(() => new Set())   // List batch-select: item ids ticked for a bulk date change
   const [batchDate,   setBatchDate]   = useState('')                // date to apply to the selected items ('' = clear to backlog)
@@ -894,7 +894,31 @@ export default function CalendarPage() {
   const CATEGORY_SORT = ['primary', 'secondary', 'accounting', 'overhead', 'charity', 'personal']
   const catRank = c => { const i = CATEGORY_SORT.indexOf(c); return i === -1 ? 999 : i }
   const categoryOptions = [...new Set(events.map(e => e.project?.category).filter(Boolean))].sort((a, b) => catRank(a) - catRank(b))
-  const listRows = (view === 'list' && sortBy === 'client')
+  // Client-header sort — clicking the Client column: client alias, then job number
+  // (numeric when both parse, else text), then date (undated first), item name, priority.
+  const listRows = (view === 'list' && sortBy === 'clientNo')
+    ? [...filtered].sort((a, b) => {
+        const aa = (a.project?.client?.alias || a.project?.client?.company || '').toLowerCase()
+        const ab = (b.project?.client?.alias || b.project?.client?.company || '').toLowerCase()
+        if (aa !== ab) return aa < ab ? -1 : 1
+        const ja = a.project?.project_number || ''
+        const jb = b.project?.project_number || ''
+        if (ja !== jb) {
+          const na = parseInt(ja, 10), nb = parseInt(jb, 10)
+          if (!isNaN(na) && !isNaN(nb) && na !== nb) return na - nb
+          return ja < jb ? -1 : 1
+        }
+        if (a.scheduled_date !== b.scheduled_date) {
+          if (!a.scheduled_date) return -1
+          if (!b.scheduled_date) return 1
+          return a.scheduled_date < b.scheduled_date ? -1 : 1
+        }
+        const ia = (a.name || '').toLowerCase()
+        const ib = (b.name || '').toLowerCase()
+        if (ia !== ib) return ia < ib ? -1 : 1
+        return (a.priority_order ?? 0) - (b.priority_order ?? 0)
+      })
+    : (view === 'list' && sortBy === 'client')
     ? [...filtered].sort((a, b) => {
         const cr = catRank(a.project?.category) - catRank(b.project?.category)
         if (cr !== 0) return cr
@@ -1749,9 +1773,18 @@ export default function CalendarPage() {
                         background: (displayRows.length > 0 && displayRows.every(r => selectedIds.has(r.id))) ? 'var(--accent)' : 'transparent',
                       }} />
                   </th>
-                  {['Date','Client','No','Project','Item','Chk','Note','Hot','Type','Tags','','Status'].map(h => (
-                    <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)' }}>{h}</th>
-                  ))}
+                  {['Date','Client','No','Project','Item','Chk','Note','Hot','Type','Tags','','Status'].map(h => {
+                    const isClientSort = h === 'Client'
+                    const clientActive = isClientSort && sortBy === 'clientNo'
+                    return (
+                      <th key={h}
+                        onClick={isClientSort ? () => setSortBy('clientNo') : undefined}
+                        title={isClientSort ? 'Sort by client, then job number' : undefined}
+                        style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: clientActive ? 'var(--text)' : 'var(--text3)', cursor: isClientSort ? 'pointer' : undefined, userSelect: isClientSort ? 'none' : undefined, whiteSpace: 'nowrap' }}>
+                        {h}{clientActive ? ' ▲' : ''}
+                      </th>
+                    )
+                  })}
                   <th style={{ width: 44 }}></th>
                 </tr>
               </thead>
