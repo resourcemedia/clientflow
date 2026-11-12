@@ -358,6 +358,38 @@ export default function CalendarPage() {
     inFlightRef.current.delete(id)
   }
 
+  // Rename a project inline (List). The name lives on `projects`, so every row of that
+  // project updates together, plus the projects catalog and an active Project filter.
+  // Optimistic + rollback, re-entrancy-guarded (shares inFlightRef, keyed 'proj:<id>').
+  async function updateProjectName(projectId, text) {
+    const key = 'proj:' + projectId
+    if (!projectId || inFlightRef.current.has(key)) return
+    const value = text && text.trim() ? text.trim() : null
+    const sample = events.find(e => e.project_id === projectId)
+    const prev = sample?.project?.name ?? ''
+    if (!value || prev === value) return
+
+    const rename = name => {
+      setEvents(arr => arr.map(e => e.project_id === projectId ? { ...e, project: { ...e.project, name } } : e))
+      setAllProjects(arr => arr.map(p => p.id === projectId ? { ...p, name } : p))
+    }
+    const filterWasThis = filterProject === prev
+    inFlightRef.current.add(key)
+    rename(value)
+    if (filterWasThis) setFilterProject(value)
+
+    const { error } = await supabase
+      .from('projects')
+      .update({ name: value })
+      .eq('id', projectId)
+    if (error) {
+      console.error('project rename failed:', error)
+      rename(prev)
+      if (filterWasThis) setFilterProject(prev)
+    }
+    inFlightRef.current.delete(key)
+  }
+
   // Save an item's note inline (List). Empty note clears to null.
   // Optimistic + rollback, re-entrancy-guarded (shares inFlightRef).
   async function updateNote(id, text) {
@@ -1925,7 +1957,9 @@ export default function CalendarPage() {
                               verticalAlign: 'middle',
                             }} />
                         )}
-                        <span style={{ verticalAlign: 'middle' }}>{projName || '—'}</span>
+                        <span style={{ verticalAlign: 'middle', display: 'inline-block', minWidth: 120 }}>
+                          <EditableCell value={projName} onSave={text => updateProjectName(ev.project_id, text)} />
+                        </span>
                       </td>
                       <td style={{ padding: '10px 14px', color: 'var(--text)', fontWeight: 500 }}>
                         <EditableCell value={ev.name} onSave={text => updateItemName(ev.id, text)} />
