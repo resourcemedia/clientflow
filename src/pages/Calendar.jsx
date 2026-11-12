@@ -53,6 +53,7 @@ export default function CalendarPage() {
   const [filterProject, setFilterProject] = useState(() => localStorage.getItem('cal_filterProject') ?? TODO_PROJECT)   // hub on first visit; ?? keeps a saved '' meaning "no filter"
   const clientScopeSnap = useRef(null)   // remembers list state before a per-row client isolate, so the second toggle restores it
   const [filterItem,    setFilterItem]    = useState('')
+  const [filterNote,    setFilterNote]    = useState('')   // List only: text search across item notes
   const [filterTag,     setFilterTag]     = useState('')
   const [filterCategories, setFilterCategories] = useState(() => (localStorage.getItem('cal_category') || '').split(',').filter(Boolean))   // multi-select; legacy single value loads as a 1-item array
   const [catMenuOpen, setCatMenuOpen] = useState(false)
@@ -879,6 +880,7 @@ export default function CalendarPage() {
     }
     if (filterProject && !(e.project?.name || '').toLowerCase().includes(filterProject.toLowerCase())) return false
     if (filterItem    && !(e.name || '').toLowerCase().includes(filterItem.toLowerCase())) return false
+    if (view === 'list' && filterNote && !(e.note || '').toLowerCase().includes(filterNote.toLowerCase())) return false
     if (filterTag     && !(e.tags || []).includes(filterTag)) return false
     if (filterCategories.length && !filterCategories.includes(e.project?.category || '')) return false
     if (filterStatus  && e.status !== filterStatus) return false
@@ -942,7 +944,7 @@ export default function CalendarPage() {
       })
     : filtered
 
-  const anyFilterActive = filterClient || filterProject || filterItem || filterTag || filterCategories.length > 0 || filterStatus !== 'Open' || filterHot || filterTypes.length > 0 || omitChecked
+  const anyFilterActive = filterClient || filterProject || filterItem || (view === 'list' && filterNote) || filterTag || filterCategories.length > 0 || filterStatus !== 'Open' || filterHot || filterTypes.length > 0 || omitChecked
 
   // "Random" focus (List) — collapse the found set to one picked item to break inertia.
   // Pool is the live `filtered` set, so it respects every active filter (client, Hot, status…),
@@ -1014,7 +1016,7 @@ export default function CalendarPage() {
   }
 
   function clearFilters() {
-    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterTag(''); setFilterCategories([]); setFilterStatus('Open'); setFilterHot(false); setFilterTypes([]); setRandomProjectId(null)
+    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterNote(''); setFilterTag(''); setFilterCategories([]); setFilterStatus('Open'); setFilterHot(false); setFilterTypes([]); setRandomProjectId(null)
     setDateStart(''); setDateEnd(''); setOmitChecked(false)
   }
 
@@ -1342,6 +1344,12 @@ export default function CalendarPage() {
 
         <input value={filterItem} onChange={e => setFilterItem(e.target.value)} placeholder="Item"
           style={{ ...filterCtrl, borderColor: filterItem ? 'var(--accent)' : 'var(--border)', cursor: 'text', minWidth: 120 }} />
+
+        {/* Note search — List only (the Note column only shows there). Partial, case-insensitive. */}
+        {view === 'list' && (
+          <input value={filterNote} onChange={e => setFilterNote(e.target.value)} placeholder="Note"
+            style={{ ...filterCtrl, borderColor: filterNote ? 'var(--accent)' : 'var(--border)', cursor: 'text', minWidth: 120 }} />
+        )}
 
         {/* Category — multi-select checkbox menu; checked categories stack as OR */}
         <div ref={catMenuRef} style={{ position: 'relative' }}>
