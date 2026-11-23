@@ -13,6 +13,8 @@ import {
 // The per-client hub project. Named with a leading dash so it sorts first
 // alphabetically. If this convention changes, this is the only line to edit.
 const TODO_PROJECT = '- ToDo'
+// Work status for open items (project_items.work_status, nullable). Status (Open/Complete) is separate.
+const WORK_STATUSES = ['Work On', 'On Hold', 'Follow Up']
 
 // URL link icons + button style — ported verbatim from CashFlow.jsx
 function EditLinkIcon() {
@@ -59,6 +61,7 @@ export default function CalendarPage() {
   const [catMenuOpen, setCatMenuOpen] = useState(false)
   const catMenuRef = useRef(null)
   const [filterStatus,  setFilterStatus]  = useState(() => localStorage.getItem('cal_status') || '')
+  const [filterWorkStatus, setFilterWorkStatus] = useState(() => localStorage.getItem('cal_workStatus') || '')   // List only: '' = all, '__none__' = no work status set, else a WORK_STATUSES value
   const [filterHot,     setFilterHot]     = useState(() => localStorage.getItem('cal_hot') === '1')
   const [filterTypes,   setFilterTypes]   = useState(() => (localStorage.getItem('cal_types') || '').split(',').filter(Boolean))
   const [omitChecked,   setOmitChecked]   = useState(() => localStorage.getItem('cal_omitChk') === '1')   // List only: hide items Chk-stamped today
@@ -104,11 +107,12 @@ export default function CalendarPage() {
     localStorage.setItem('cal_filterClient',  filterClient)
     localStorage.setItem('cal_filterProject', filterProject)
     localStorage.setItem('cal_status',        filterStatus)
+    localStorage.setItem('cal_workStatus',    filterWorkStatus)
     localStorage.setItem('cal_hot',           filterHot ? '1' : '0')
     localStorage.setItem('cal_category',      filterCategories.join(','))
     localStorage.setItem('cal_types',         filterTypes.join(','))
     localStorage.setItem('cal_omitChk',       omitChecked ? '1' : '0')
-  }, [view, scope, sortBy, filterClient, filterProject, filterStatus, filterHot, filterCategories, filterTypes, omitChecked])
+  }, [view, scope, sortBy, filterClient, filterProject, filterStatus, filterWorkStatus, filterHot, filterCategories, filterTypes, omitChecked])
 
   // Active clients for the Add Item modal — same query the Projects page uses
   useEffect(() => {
@@ -282,6 +286,30 @@ export default function CalendarPage() {
     if (error) {
       setEvents(arr => arr.map(e => e.id === id ? { ...e, status: prev.status, completed_date: prev.completed_date } : e))
       console.error('Status update failed, reverted:', error)
+    }
+    inFlightRef.current.delete(id)
+  }
+
+  // Set an item's work status inline (List): Work On / On Hold / Follow Up, or null.
+  // Separate from status (Open/Complete). Optimistic + rollback, re-entrancy-guarded (shares inFlightRef).
+  async function updateWorkStatus(id, newVal) {
+    if (!id || inFlightRef.current.has(id)) return
+    const item = events.find(e => e.id === id)
+    const next = newVal || null
+    if (!item || (item.work_status || null) === next) return
+    const prev = item.work_status ?? null
+
+    inFlightRef.current.add(id)
+    setEvents(arr => arr.map(e => e.id === id ? { ...e, work_status: next } : e))
+
+    const { error } = await supabase
+      .from('project_items')
+      .update({ work_status: next })
+      .eq('id', id)
+
+    if (error) {
+      setEvents(arr => arr.map(e => e.id === id ? { ...e, work_status: prev } : e))
+      console.error('Work status update failed, reverted:', error)
     }
     inFlightRef.current.delete(id)
   }
@@ -855,7 +883,7 @@ export default function CalendarPage() {
     }
     let query = supabase
       .from('project_items')
-      .select('id, project_id, name, scheduled_date, scheduled_hour, status, is_hot, completed_date, note, priority_order, item_type, tags, checked_at, url, project:projects(name, category, project_number, client:clients(company, alias))')
+      .select('id, project_id, name, scheduled_date, scheduled_hour, status, work_status, is_hot, completed_date, note, priority_order, item_type, tags, checked_at, url, project:projects(name, category, project_number, client:clients(company, alias))')
 
     if (view === 'list' && scope === 'all') {
       // A range comparison never matches NULL, so undated items are excluded by
@@ -916,6 +944,7 @@ export default function CalendarPage() {
     if (filterTag     && !(e.tags || []).includes(filterTag)) return false
     if (filterCategories.length && !filterCategories.includes(e.project?.category || '')) return false
     if (filterStatus  && e.status !== filterStatus) return false
+    if (view === 'list' && filterWorkStatus && (filterWorkStatus === '__none__' ? !!e.work_status : e.work_status !== filterWorkStatus)) return false
     if (filterHot     && !e.is_hot) return false
     if (filterTypes.length && !filterTypes.includes(e.item_type || 'Task')) return false
     if (view === 'list' && omitChecked && isChkToday(e)) return false
@@ -976,7 +1005,7 @@ export default function CalendarPage() {
       })
     : filtered
 
-  const anyFilterActive = filterClient || filterProject || filterItem || (view === 'list' && filterNote) || filterTag || filterCategories.length > 0 || filterStatus !== 'Open' || filterHot || filterTypes.length > 0 || omitChecked
+  const anyFilterActive = filterClient || filterProject || filterItem || (view === 'list' && filterNote) || (view === 'list' && filterWorkStatus) || filterTag || filterCategories.length > 0 || filterStatus !== 'Open' || filterHot || filterTypes.length > 0 || omitChecked
 
   // "Random" focus (List) — collapse the found set to one picked item to break inertia.
   // Pool is the live `filtered` set, so it respects every active filter (client, Hot, status…),
@@ -1048,7 +1077,7 @@ export default function CalendarPage() {
   }
 
   function clearFilters() {
-    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterNote(''); setFilterTag(''); setFilterCategories([]); setFilterStatus('Open'); setFilterHot(false); setFilterTypes([]); setRandomProjectId(null)
+    setFilterClient(''); setFilterProject(''); setFilterItem(''); setFilterNote(''); setFilterTag(''); setFilterCategories([]); setFilterStatus('Open'); setFilterWorkStatus(''); setFilterHot(false); setFilterTypes([]); setRandomProjectId(null)
     setDateStart(''); setDateEnd(''); setOmitChecked(false)
   }
 
@@ -1381,6 +1410,16 @@ export default function CalendarPage() {
         {view === 'list' && (
           <input value={filterNote} onChange={e => setFilterNote(e.target.value)} placeholder="Note"
             style={{ ...filterCtrl, borderColor: filterNote ? 'var(--accent)' : 'var(--border)', cursor: 'text', minWidth: 120 }} />
+        )}
+
+        {/* Work status filter — List only (the dropdown lives in the List Status column). */}
+        {view === 'list' && (
+          <select value={filterWorkStatus} onChange={e => setFilterWorkStatus(e.target.value)}
+            style={{ ...filterCtrl, borderColor: filterWorkStatus ? 'var(--accent)' : 'var(--border)' }}>
+            <option value="">Status</option>
+            {WORK_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+            <option value="__none__">No status set</option>
+          </select>
         )}
 
         {/* Category — multi-select checkbox menu; checked categories stack as OR */}
@@ -2072,7 +2111,18 @@ export default function CalendarPage() {
                           fontSize: 13, verticalAlign: 'middle',
                           color: done ? 'var(--text)' : 'var(--text2)',
                           fontWeight: done ? 600 : 400,
-                        }}>{done ? 'Complete' : 'Open'}</span>
+                        }}>{done ? 'Complete' : (
+                          <select value={ev.work_status || ''} onChange={e => updateWorkStatus(ev.id, e.target.value)}
+                            title="Work status"
+                            style={{
+                              padding: '2px 6px', borderRadius: 6, fontSize: 12,
+                              border: '1px solid var(--border)', background: 'var(--bg2)',
+                              color: ev.work_status ? 'var(--text)' : 'var(--text3)', cursor: 'pointer', outline: 'none',
+                            }}>
+                            <option value="">Open</option>
+                            {WORK_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        )}</span>
                         {ev.status === 'Complete' && (
                           <input type="date"
                             value={ev.completed_date || ''}
