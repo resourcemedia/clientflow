@@ -83,6 +83,39 @@ export default function PacePage() {
   const dailyHours = useMemo(() => buildDailyHoursSeries(ytdEnriched, hoursStart, hoursEnd, hoursBucket), [ytdEnriched, hoursStart, hoursEnd, hoursBucket])
   const catHours   = useMemo(() => buildCategoryHoursSeries(ytdEnriched, catBucket, catStart, catEnd), [ytdEnriched, catBucket, catStart, catEnd])
 
+  // Hover box for the category chart (all three modes): one row per shown category,
+  // top band first to match the stack, each as hrs + % of shown hours, then a Total row.
+  function renderCatTip({ active, label }) {
+    const row = active && catHours.data.find(r => r.t === label)
+    if (!row) return null
+    const shown = CATEGORY_SERIES.filter(c => !catHidden.includes(c)).reverse()
+    const total = shown.reduce((s, c) => s + (row[c] || 0), 0)
+    const pct = v => total > 0 ? Math.round((v / total) * 100) : 0
+    const hrs = v => Math.round(v * 100) / 100
+    const title = catBucket === 'month'
+      ? new Date(label).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+      : catBucket === 'week' ? 'Week of ' + fmtTipDate(label) : fmtTipDate(label)
+    return (
+      <div style={{ background: '#fff', border: '1px solid #ccc', padding: '8px 12px', fontSize: 13, lineHeight: 1.7, color: '#222' }}>
+        <div style={{ fontWeight: 600, marginBottom: 2 }}>{title}</div>
+        {shown.map(c => (
+          <div key={c} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 2, background: CATEGORY_COLORS[c], flexShrink: 0 }} />
+            <span style={{ flex: 1 }}>{CAT_NAMES[c]}</span>
+            <span style={{ fontFamily: 'DM Mono, monospace', marginLeft: 16 }}>
+              {catMode === 'share' ? `${pct(row[c] || 0)}% (${hrs(row[c] || 0)} hrs)` : `${hrs(row[c] || 0)} hrs (${pct(row[c] || 0)}%)`}
+            </span>
+          </div>
+        ))}
+        <div style={{ display: 'flex', gap: 8, borderTop: '1px solid #ddd', marginTop: 4, paddingTop: 4, fontWeight: 700 }}>
+          <span style={{ width: 10, flexShrink: 0 }} />
+          <span style={{ flex: 1 }}>Total</span>
+          <span style={{ fontFamily: 'DM Mono, monospace', marginLeft: 16 }}>{catMode === 'share' ? `100% (${hrs(total)} hrs)` : `${hrs(total)} hrs (100%)`}</span>
+        </div>
+      </div>
+    )
+  }
+
   const TH = { textAlign: 'right', fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)', paddingBottom: 6 }
   const TD = { textAlign: 'right', fontSize: 17, fontWeight: 700, fontFamily: 'DM Mono, monospace', color: 'var(--text)', padding: '3px 0' }
   const LB = { fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)', padding: '3px 12px 3px 0' }
@@ -245,11 +278,7 @@ export default function PacePage() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis type="number" dataKey="t" scale="time" domain={catHours.domain} ticks={catHours.ticks} tickFormatter={catHours.tickFmt === 'day' ? fmtAxisDay : fmtAxisMonth} tick={{ fontSize: 11, fill: 'var(--text3)' }} />
               <YAxis width={40} tick={{ fontSize: 11, fill: 'var(--text3)' }} />
-              <Tooltip
-                labelFormatter={ms => catBucket === 'month'
-                  ? new Date(ms).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-                  : catBucket === 'week' ? 'Week of ' + fmtTipDate(ms) : fmtTipDate(ms)}
-                formatter={(v, name) => [v == null ? '—' : `${v} hrs`, name]} />
+              <Tooltip content={renderCatTip} />
               {CATEGORY_SERIES.filter(c => !catHidden.includes(c)).map(c => (
                 <Line key={c} type="linear" dataKey={c} name={CAT_NAMES[c]} stroke={CATEGORY_COLORS[c]} strokeWidth={2.5}
                   dot={catBucket === 'month' ? { r: 3, fill: CATEGORY_COLORS[c] } : false} isAnimationActive={false} />
@@ -261,17 +290,7 @@ export default function PacePage() {
               <XAxis type="number" dataKey="t" scale="time" domain={catHours.domain} ticks={catHours.ticks} tickFormatter={catHours.tickFmt === 'day' ? fmtAxisDay : fmtAxisMonth} tick={{ fontSize: 11, fill: 'var(--text3)' }} />
               <YAxis width={44} tick={{ fontSize: 11, fill: 'var(--text3)' }}
                 tickFormatter={catMode === 'share' ? v => Math.round(v * 100) + '%' : undefined} />
-              <Tooltip
-                labelFormatter={ms => catBucket === 'month'
-                  ? new Date(ms).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-                  : catBucket === 'week' ? 'Week of ' + fmtTipDate(ms) : fmtTipDate(ms)}
-                formatter={(v, name, item) => {
-                  if (v == null) return ['—', name]
-                  const shown = CATEGORY_SERIES.filter(c => !catHidden.includes(c))
-                  const total = shown.reduce((s, c) => s + (item?.payload?.[c] || 0), 0)
-                  const pct = total > 0 ? Math.round((v / total) * 100) : 0
-                  return [catMode === 'share' ? `${pct}% (${v} hrs)` : `${v} hrs (${pct}%)`, name]
-                }} />
+              <Tooltip content={renderCatTip} />
               {CATEGORY_SERIES.filter(c => !catHidden.includes(c)).map(c => (
                 <Area key={c} type="linear" dataKey={c} name={CAT_NAMES[c]} stackId="cat"
                   stroke={CATEGORY_COLORS[c]} fill={CATEGORY_COLORS[c]} fillOpacity={0.85} strokeWidth={1.5} isAnimationActive={false} />
