@@ -28,6 +28,10 @@ export default function PacePage() {
   const [rateEnd,      setRateEnd]      = useState('')
   const [catBucket,    setCatBucket]    = useState(() => localStorage.getItem('pace_catBucket') || 'week')   // 'day' | 'week' | 'month'
   useEffect(() => { localStorage.setItem('pace_catBucket', catBucket) }, [catBucket])
+  const [catStart,     setCatStart]     = useState('')
+  const [catEnd,       setCatEnd]       = useState('')
+  const [catHidden,    setCatHidden]    = useState(() => (localStorage.getItem('pace_catHidden') || '').split(',').filter(Boolean))   // categories switched off
+  useEffect(() => { localStorage.setItem('pace_catHidden', catHidden.join(',')) }, [catHidden])
 
   useEffect(() => {
     if (isDemo) { setLoading(false); return }
@@ -56,7 +60,7 @@ export default function PacePage() {
   const yearEnd = useMemo(() => buildYearEndSeries(ytdEnriched, proj), [ytdEnriched, proj.A, proj.B, proj.C])
   const runRate = useMemo(() => buildRunRateSeries(ytdEnriched, rateStart, rateEnd), [ytdEnriched, rateStart, rateEnd])
   const dailyHours = useMemo(() => buildDailyHoursSeries(ytdEnriched, hoursStart, hoursEnd), [ytdEnriched, hoursStart, hoursEnd])
-  const catHours   = useMemo(() => buildCategoryHoursSeries(ytdEnriched, catBucket), [ytdEnriched, catBucket])
+  const catHours   = useMemo(() => buildCategoryHoursSeries(ytdEnriched, catBucket, catStart, catEnd), [ytdEnriched, catBucket, catStart, catEnd])
 
   const TH = { textAlign: 'right', fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)', paddingBottom: 6 }
   const TD = { textAlign: 'right', fontSize: 17, fontWeight: 700, fontFamily: 'DM Mono, monospace', color: 'var(--text)', padding: '3px 0' }
@@ -149,7 +153,17 @@ export default function PacePage() {
         <div className="card" style={{ padding: 16, marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
             <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text3)' }}>Hours by Category</div>
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input type="date" value={catStart} max={catEnd || undefined}
+                onChange={e => setCatStart(e.target.value)} style={{ width: 140, fontSize: 12 }} />
+              <span style={{ color: 'var(--text3)', fontSize: 12 }}>→</span>
+              <input type="date" value={catEnd} min={catStart || undefined}
+                onChange={e => setCatEnd(e.target.value)} style={{ width: 140, fontSize: 12 }} />
+              {(catStart || catEnd) && (
+                <button className="btn btn-sm btn-ghost" onClick={() => { setCatStart(''); setCatEnd('') }}>Reset</button>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
               {[['day', 'Day'], ['week', 'Week'], ['month', 'Month']].map(([b, label]) => (
                 <button key={b} onClick={() => setCatBucket(b)}
                   style={{
@@ -173,13 +187,32 @@ export default function PacePage() {
                   ? new Date(ms).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
                   : catBucket === 'week' ? 'Week of ' + fmtTipDate(ms) : fmtTipDate(ms)}
                 formatter={(v, name) => [v == null ? '—' : `${v} hrs`, name]} />
-              <Legend />
-              {CATEGORY_SERIES.map(c => (
+              {CATEGORY_SERIES.filter(c => !catHidden.includes(c)).map(c => (
                 <Line key={c} type="linear" dataKey={c} name={CAT_NAMES[c]} stroke={CATEGORY_COLORS[c]} strokeWidth={2.5}
                   dot={catBucket === 'month' ? { r: 3, fill: CATEGORY_COLORS[c] } : false} isAnimationActive={false} />
               ))}
             </LineChart>
           </ResponsiveContainer>
+          {/* Category toggles — click to switch a line off/on; the y-axis rescales to what's shown. */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: 8 }}>
+            {CATEGORY_SERIES.map(c => {
+              const off = catHidden.includes(c)
+              return (
+                <button key={c} onClick={() => setCatHidden(h => h.includes(c) ? h.filter(x => x !== c) : [...h, c])}
+                  title={off ? 'Show ' + CAT_NAMES[c] : 'Hide ' + CAT_NAMES[c]}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 6,
+                    fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--border)',
+                    background: off ? 'transparent' : 'var(--bg2)',
+                    color: off ? 'var(--text3)' : 'var(--text)',
+                    textDecoration: off ? 'line-through' : 'none', opacity: off ? 0.6 : 1,
+                  }}>
+                  <span style={{ width: 14, height: 4, borderRadius: 2, background: off ? 'var(--border)' : CATEGORY_COLORS[c] }} />
+                  {CAT_NAMES[c]}
+                </button>
+              )
+            })}
+          </div>
         </div>
         <div className="card" style={{ padding: '12px 16px', display: 'inline-block' }}>
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
