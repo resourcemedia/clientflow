@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { toLocalISO, todayISO, enrichEntries } from '../lib/timeentries'
 import { windowStats, computeAnnualProjection, buildYearEndSeries, buildRunRateSeries, buildDailyHoursSeries, buildCategoryHoursSeries, CATEGORY_SERIES } from '../lib/projections'
@@ -32,6 +32,8 @@ export default function PacePage() {
   const [catEnd,       setCatEnd]       = useState('')
   const [catHidden,    setCatHidden]    = useState(() => (localStorage.getItem('pace_catHidden') || '').split(',').filter(Boolean))   // categories switched off
   useEffect(() => { localStorage.setItem('pace_catHidden', catHidden.join(',')) }, [catHidden])
+  const [catMode,      setCatMode]      = useState(() => localStorage.getItem('pace_catMode') || 'lines')   // 'lines' | 'stacked' | 'share'
+  useEffect(() => { localStorage.setItem('pace_catMode', catMode) }, [catMode])
 
   useEffect(() => {
     if (isDemo) { setLoading(false); return }
@@ -179,6 +181,20 @@ export default function PacePage() {
               )}
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
+              {[['lines', 'Lines'], ['stacked', 'Stacked'], ['share', 'Share']].map(([m, label]) => (
+                <button key={m} onClick={() => setCatMode(m)}
+                  title={m === 'lines' ? 'One line per category' : m === 'stacked' ? 'Stacked hours: total and each category\'s part' : 'Each category as % of shown hours'}
+                  style={{
+                    padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    border: '1px solid var(--border)',
+                    background: catMode === m ? 'var(--bg4)' : 'transparent',
+                    color: catMode === m ? 'var(--text)' : 'var(--text2)',
+                  }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
               {[['day', 'Day'], ['week', 'Week'], ['month', 'Month']].map(([b, label]) => (
                 <button key={b} onClick={() => setCatBucket(b)}
                   style={{
@@ -193,6 +209,7 @@ export default function PacePage() {
             </div>
           </div>
           <ResponsiveContainer width="100%" height={300}>
+            {catMode === 'lines' ? (
             <LineChart data={catHours.data} margin={{ top: 8, right: 24, bottom: 8, left: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis type="number" dataKey="t" scale="time" domain={catHours.domain} ticks={catHours.ticks} tickFormatter={catHours.tickFmt === 'day' ? fmtAxisDay : fmtAxisMonth} tick={{ fontSize: 11, fill: 'var(--text3)' }} />
@@ -207,6 +224,29 @@ export default function PacePage() {
                   dot={catBucket === 'month' ? { r: 3, fill: CATEGORY_COLORS[c] } : false} isAnimationActive={false} />
               ))}
             </LineChart>
+            ) : (
+            <AreaChart data={catHours.data} stackOffset={catMode === 'share' ? 'expand' : 'none'} margin={{ top: 8, right: 24, bottom: 8, left: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis type="number" dataKey="t" scale="time" domain={catHours.domain} ticks={catHours.ticks} tickFormatter={catHours.tickFmt === 'day' ? fmtAxisDay : fmtAxisMonth} tick={{ fontSize: 11, fill: 'var(--text3)' }} />
+              <YAxis width={44} tick={{ fontSize: 11, fill: 'var(--text3)' }}
+                tickFormatter={catMode === 'share' ? v => Math.round(v * 100) + '%' : undefined} />
+              <Tooltip
+                labelFormatter={ms => catBucket === 'month'
+                  ? new Date(ms).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                  : catBucket === 'week' ? 'Week of ' + fmtTipDate(ms) : fmtTipDate(ms)}
+                formatter={(v, name, item) => {
+                  if (v == null) return ['—', name]
+                  const shown = CATEGORY_SERIES.filter(c => !catHidden.includes(c))
+                  const total = shown.reduce((s, c) => s + (item?.payload?.[c] || 0), 0)
+                  const pct = total > 0 ? Math.round((v / total) * 100) : 0
+                  return [catMode === 'share' ? `${pct}% (${v} hrs)` : `${v} hrs (${pct}%)`, name]
+                }} />
+              {CATEGORY_SERIES.filter(c => !catHidden.includes(c)).map(c => (
+                <Area key={c} type="linear" dataKey={c} name={CAT_NAMES[c]} stackId="cat"
+                  stroke={CATEGORY_COLORS[c]} fill={CATEGORY_COLORS[c]} fillOpacity={0.85} strokeWidth={1.5} isAnimationActive={false} />
+              ))}
+            </AreaChart>
+            )}
           </ResponsiveContainer>
           {/* Category toggles — click to switch a line off/on; the y-axis rescales to what's shown. */}
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: 8 }}>
