@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { toLocalISO, todayISO, enrichEntries } from '../lib/timeentries'
 import { windowStats, computeAnnualProjection, buildYearEndSeries, buildRunRateSeries, buildDailyHoursSeries, buildCategoryHoursSeries, CATEGORY_SERIES } from '../lib/projections'
@@ -236,9 +236,9 @@ export default function PacePage() {
               )}
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
-              {[['lines', 'Lines'], ['stacked', 'Stacked'], ['share', 'Share']].map(([m, label]) => (
+              {[['lines', 'Lines'], ['bars', 'Bars'], ['stacked', 'Stacked'], ['share', 'Share']].map(([m, label]) => (
                 <button key={m} onClick={() => setCatMode(m)}
-                  title={m === 'lines' ? 'One line per category' : m === 'stacked' ? 'Stacked hours: total and each category\'s part' : 'Each category as % of shown hours'}
+                  title={m === 'lines' ? 'One line per category' : m === 'bars' ? 'Side-by-side bars per category' : m === 'stacked' ? 'Stacked hours: total and each category\'s part' : 'Each category as % of shown hours'}
                   style={{
                     padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
                     border: '1px solid var(--border)',
@@ -284,6 +284,17 @@ export default function PacePage() {
                   dot={catBucket === 'month' ? { r: 3, fill: CATEGORY_COLORS[c] } : false} isAnimationActive={false} />
               ))}
             </LineChart>
+            ) : catMode === 'bars' ? (
+            <BarChart data={catHours.data} barGap={1} barCategoryGap="18%" margin={{ top: 8, right: 24, bottom: 8, left: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+              {/* Category axis (one slot per day/week/month) — bars need discrete slots, not a time scale. */}
+              <XAxis dataKey="t" ticks={catHours.ticks} interval={0} tickFormatter={catHours.tickFmt === 'day' ? fmtAxisDay : fmtAxisMonth} tick={{ fontSize: 11, fill: 'var(--text3)' }} />
+              <YAxis width={40} tick={{ fontSize: 11, fill: 'var(--text3)' }} />
+              <Tooltip content={renderCatTip} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+              {CATEGORY_SERIES.filter(c => !catHidden.includes(c)).map(c => (
+                <Bar key={c} dataKey={c} name={CAT_NAMES[c]} fill={CATEGORY_COLORS[c]} radius={[2, 2, 0, 0]} isAnimationActive={false} />
+              ))}
+            </BarChart>
             ) : (
             <AreaChart data={catHours.data} stackOffset={catMode === 'share' ? 'expand' : 'none'} margin={{ top: 8, right: 24, bottom: 8, left: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
