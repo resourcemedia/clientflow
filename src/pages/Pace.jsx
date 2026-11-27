@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { toLocalISO, todayISO, enrichEntries } from '../lib/timeentries'
-import { windowStats, computeAnnualProjection, buildYearEndSeries, buildRunRateSeries, buildDailyHoursSeries } from '../lib/projections'
+import { windowStats, computeAnnualProjection, buildYearEndSeries, buildRunRateSeries, buildDailyHoursSeries, buildCategoryHoursSeries, CATEGORY_SERIES } from '../lib/projections'
+import { CATEGORY_COLORS } from '../lib/categories'
 import { usePaceTargets } from '../lib/config'
 
 const isDemo = !import.meta.env.VITE_SUPABASE_URL
@@ -13,6 +14,7 @@ function fmtAxisMonth(ms) { return new Date(ms).toLocaleDateString('en-US', { mo
 function fmtK(v) { return '$' + Math.round(v / 1000) + 'k' }
 function fmtTipDate(ms) { return new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }
 function fmtAxisDay(ms) { const d = new Date(ms); return (d.getMonth() + 1) + '/' + d.getDate() }
+const CAT_NAMES = { primary: 'Primary', secondary: 'Secondary', charity: 'Charity', personal: 'Personal', accounting: 'Accounting', overhead: 'Overhead' }
 
 export default function PacePage() {
   useEffect(() => { document.title = 'Pace' }, [])
@@ -24,6 +26,8 @@ export default function PacePage() {
   const [hoursEnd,     setHoursEnd]     = useState('')
   const [rateStart,    setRateStart]    = useState('')
   const [rateEnd,      setRateEnd]      = useState('')
+  const [catBucket,    setCatBucket]    = useState(() => localStorage.getItem('pace_catBucket') || 'week')   // 'day' | 'week' | 'month'
+  useEffect(() => { localStorage.setItem('pace_catBucket', catBucket) }, [catBucket])
 
   useEffect(() => {
     if (isDemo) { setLoading(false); return }
@@ -52,6 +56,7 @@ export default function PacePage() {
   const yearEnd = useMemo(() => buildYearEndSeries(ytdEnriched, proj), [ytdEnriched, proj.A, proj.B, proj.C])
   const runRate = useMemo(() => buildRunRateSeries(ytdEnriched, rateStart, rateEnd), [ytdEnriched, rateStart, rateEnd])
   const dailyHours = useMemo(() => buildDailyHoursSeries(ytdEnriched, hoursStart, hoursEnd), [ytdEnriched, hoursStart, hoursEnd])
+  const catHours   = useMemo(() => buildCategoryHoursSeries(ytdEnriched, catBucket), [ytdEnriched, catBucket])
 
   const TH = { textAlign: 'right', fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)', paddingBottom: 6 }
   const TD = { textAlign: 'right', fontSize: 17, fontWeight: 700, fontFamily: 'DM Mono, monospace', color: 'var(--text)', padding: '3px 0' }
@@ -138,6 +143,41 @@ export default function PacePage() {
               <YAxis width={40} tick={{ fontSize: 11, fill: 'var(--text3)' }} />
               <Tooltip labelFormatter={fmtTipDate} formatter={(v) => [v == null ? '—' : `${v} hrs`, 'Billable']} />
               <Line type="linear" dataKey="hours" name="Billable hours" stroke="#185FA5" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="card" style={{ padding: 16, marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text3)' }}>Hours by Category</div>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+              {[['day', 'Day'], ['week', 'Week'], ['month', 'Month']].map(([b, label]) => (
+                <button key={b} onClick={() => setCatBucket(b)}
+                  style={{
+                    padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    border: '1px solid var(--border)',
+                    background: catBucket === b ? 'var(--bg4)' : 'transparent',
+                    color: catBucket === b ? 'var(--text)' : 'var(--text2)',
+                  }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={catHours.data} margin={{ top: 8, right: 24, bottom: 8, left: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis type="number" dataKey="t" scale="time" domain={catHours.domain} ticks={catHours.ticks} tickFormatter={catHours.tickFmt === 'day' ? fmtAxisDay : fmtAxisMonth} tick={{ fontSize: 11, fill: 'var(--text3)' }} />
+              <YAxis width={40} tick={{ fontSize: 11, fill: 'var(--text3)' }} />
+              <Tooltip
+                labelFormatter={ms => catBucket === 'month'
+                  ? new Date(ms).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                  : catBucket === 'week' ? 'Week of ' + fmtTipDate(ms) : fmtTipDate(ms)}
+                formatter={(v, name) => [v == null ? '—' : `${v} hrs`, name]} />
+              <Legend />
+              {CATEGORY_SERIES.map(c => (
+                <Line key={c} type="linear" dataKey={c} name={CAT_NAMES[c]} stroke={CATEGORY_COLORS[c]} strokeWidth={2.5}
+                  dot={catBucket === 'month' ? { r: 3, fill: CATEGORY_COLORS[c] } : false} isAnimationActive={false} />
+              ))}
             </LineChart>
           </ResponsiveContainer>
         </div>
