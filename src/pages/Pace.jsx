@@ -34,6 +34,8 @@ export default function PacePage() {
   useEffect(() => { localStorage.setItem('pace_catHidden', catHidden.join(',')) }, [catHidden])
   const [catMode,      setCatMode]      = useState(() => localStorage.getItem('pace_catMode') || 'lines')   // 'lines' | 'stacked' | 'share'
   useEffect(() => { localStorage.setItem('pace_catMode', catMode) }, [catMode])
+  const [primaryTarget, setPrimaryTarget] = useState(() => Number(localStorage.getItem('pace_primaryTarget')) || 40)   // Share view target line, % of shown hours
+  useEffect(() => { localStorage.setItem('pace_primaryTarget', String(primaryTarget)) }, [primaryTarget])
 
   useEffect(() => {
     if (isDemo) { setLoading(false); return }
@@ -194,6 +196,15 @@ export default function PacePage() {
                 </button>
               ))}
             </div>
+            {catMode === 'share' && !catHidden.includes('primary') && (
+              <label title="Primary target: dashed line on the Share chart (% of the hours shown)"
+                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text2)' }}>
+                Primary target
+                <input type="number" min={0} max={100} step={5} value={primaryTarget}
+                  onChange={e => setPrimaryTarget(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
+                  style={{ width: 56, fontSize: 12 }} />%
+              </label>
+            )}
             <div style={{ display: 'flex', gap: 4 }}>
               {[['day', 'Day'], ['week', 'Week'], ['month', 'Month']].map(([b, label]) => (
                 <button key={b} onClick={() => setCatBucket(b)}
@@ -245,6 +256,11 @@ export default function PacePage() {
                 <Area key={c} type="linear" dataKey={c} name={CAT_NAMES[c]} stackId="cat"
                   stroke={CATEGORY_COLORS[c]} fill={CATEGORY_COLORS[c]} fillOpacity={0.85} strokeWidth={1.5} isAnimationActive={false} />
               ))}
+              {/* Primary is the bottom band, so its top edge reads straight against this line. */}
+              {catMode === 'share' && !catHidden.includes('primary') && primaryTarget > 0 && (
+                <ReferenceLine y={primaryTarget / 100} stroke="#16a34a" strokeDasharray="5 4" strokeWidth={2}
+                  label={{ value: `Primary target ${primaryTarget}%`, position: 'insideBottomLeft', fill: '#16a34a', fontSize: 11 }} />
+              )}
             </AreaChart>
             )}
           </ResponsiveContainer>
