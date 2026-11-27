@@ -218,7 +218,10 @@ export function buildCategoryHoursSeries(ytdEnriched, bucket = 'week', startISO 
   return { data, ticks, tickFmt, domain }
 }
 
-export function buildDailyHoursSeries(ytdEnriched, startISO = '', endISO = '', now = new Date()) {
+// Billable hours over a range, grouped by `bucket`: 'day' (default, unchanged), 'week'
+// (Sunday-start, matching the category chart) or 'month'. Each point's t is the bucket's
+// first day; partial first/last buckets only count days inside the range.
+export function buildDailyHoursSeries(ytdEnriched, startISO = '', endISO = '', bucket = 'day', now = new Date()) {
   const pad = n => String(n).padStart(2, '0')
   const toISO = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
   const parse = s => { const [y, m, dd] = s.split('-').map(Number); return new Date(y, m - 1, dd) }
@@ -234,10 +237,23 @@ export function buildDailyHoursSeries(ytdEnriched, startISO = '', endISO = '', n
   const byDate = {}
   ytdEnriched.forEach(e => { byDate[e.date] = (byDate[e.date] || 0) + (e.billableAmt || 0) })
 
-  const data = []
+  const keyOf = d => {
+    if (bucket === 'month') return new Date(d.getFullYear(), d.getMonth(), 1).getTime()
+    if (bucket === 'week')  { const w = new Date(d); w.setDate(w.getDate() - w.getDay()); return w.getTime() }
+    return d.getTime()
+  }
+  const sums = new Map()
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const amt = byDate[toISO(d)] || 0
-    data.push({ t: d.getTime(), hours: Math.round(amt) / 100 })
+    const k = keyOf(d)
+    sums.set(k, (sums.get(k) || 0) + (byDate[toISO(d)] || 0))
+  }
+  const data = [...sums.entries()].sort((a, b) => a[0] - b[0]).map(([t, amt]) => ({ t, hours: Math.round(amt) / 100 }))
+
+  if (bucket !== 'day') {
+    const step = Math.max(1, Math.ceil(data.length / 10))
+    const ticks = bucket === 'month' ? data.map(r => r.t) : data.filter((_, i) => i % step === 0).map(r => r.t)
+    const domain = data.length ? [data[0].t, data[data.length - 1].t] : [start.getTime(), end.getTime()]
+    return { data, ticks, tickFmt: bucket === 'month' ? 'month' : 'day', domain }
   }
 
   const spanDays = data.length
