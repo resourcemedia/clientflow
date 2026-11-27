@@ -24,6 +24,8 @@ export default function PacePage() {
   const [loading,      setLoading]      = useState(true)
   const [hoursStart,   setHoursStart]   = useState('')
   const [hoursEnd,     setHoursEnd]     = useState('')
+  const [hoursBucket,  setHoursBucket]  = useState(() => localStorage.getItem('pace_hoursBucket') || 'day')   // 'day' | 'week' | 'month'
+  useEffect(() => { localStorage.setItem('pace_hoursBucket', hoursBucket) }, [hoursBucket])
   const [rateStart,    setRateStart]    = useState('')
   const [rateEnd,      setRateEnd]      = useState('')
   const [catBucket,    setCatBucket]    = useState(() => localStorage.getItem('pace_catBucket') || 'week')   // 'day' | 'week' | 'month'
@@ -78,7 +80,7 @@ export default function PacePage() {
   const proj    = computeAnnualProjection({ ytdEnriched, sevenAvg: stats7.billAvg, twentyEightAvg: stats28.billAvg })
   const yearEnd = useMemo(() => buildYearEndSeries(ytdEnriched, proj), [ytdEnriched, proj.A, proj.B, proj.C])
   const runRate = useMemo(() => buildRunRateSeries(ytdEnriched, rateStart, rateEnd), [ytdEnriched, rateStart, rateEnd])
-  const dailyHours = useMemo(() => buildDailyHoursSeries(ytdEnriched, hoursStart, hoursEnd), [ytdEnriched, hoursStart, hoursEnd])
+  const dailyHours = useMemo(() => buildDailyHoursSeries(ytdEnriched, hoursStart, hoursEnd, hoursBucket), [ytdEnriched, hoursStart, hoursEnd, hoursBucket])
   const catHours   = useMemo(() => buildCategoryHoursSeries(ytdEnriched, catBucket, catStart, catEnd), [ytdEnriched, catBucket, catStart, catEnd])
 
   const TH = { textAlign: 'right', fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)', paddingBottom: 6 }
@@ -158,14 +160,32 @@ export default function PacePage() {
                 <button className="btn btn-sm btn-ghost" onClick={() => { setHoursStart(''); setHoursEnd('') }}>YTD</button>
               )}
             </div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {[['day', 'Day'], ['week', 'Week'], ['month', 'Month']].map(([b, label]) => (
+                <button key={b} onClick={() => setHoursBucket(b)}
+                  style={{
+                    padding: '4px 11px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    border: '1px solid var(--border)',
+                    background: hoursBucket === b ? 'var(--bg4)' : 'transparent',
+                    color: hoursBucket === b ? 'var(--text)' : 'var(--text2)',
+                  }}>
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={dailyHours.data} margin={{ top: 8, right: 24, bottom: 8, left: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis type="number" dataKey="t" scale="time" domain={dailyHours.domain} ticks={dailyHours.ticks} tickFormatter={dailyHours.tickFmt === 'day' ? fmtAxisDay : fmtAxisMonth} tick={{ fontSize: 11, fill: 'var(--text3)' }} />
               <YAxis width={40} tick={{ fontSize: 11, fill: 'var(--text3)' }} />
-              <Tooltip labelFormatter={fmtTipDate} formatter={(v) => [v == null ? '—' : `${v} hrs`, 'Billable']} />
-              <Line type="linear" dataKey="hours" name="Billable hours" stroke="#185FA5" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+              <Tooltip
+                labelFormatter={ms => hoursBucket === 'month'
+                  ? new Date(ms).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                  : hoursBucket === 'week' ? 'Week of ' + fmtTipDate(ms) : fmtTipDate(ms)}
+                formatter={(v) => [v == null ? '—' : `${v} hrs`, 'Billable']} />
+              <Line type="linear" dataKey="hours" name="Billable hours" stroke="#185FA5" strokeWidth={hoursBucket === 'day' ? 1.5 : 2}
+                dot={hoursBucket === 'month' ? { r: 3, fill: '#185FA5' } : false} isAnimationActive={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
