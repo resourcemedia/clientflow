@@ -3,6 +3,9 @@
 
 import { toLocalISO } from './timeentries'
 
+// Category order for the Pace "Hours by Category" chart (matches project_category enum values).
+export const CATEGORY_SERIES = ['primary', 'secondary', 'charity', 'personal', 'accounting', 'overhead']
+
 // Rolling window over enriched time entries.
 // Preserves existing behavior exactly: the previous `days` days, today-EXCLUSIVE.
 // `today` is an ISO date string (YYYY-MM-DD).
@@ -149,6 +152,63 @@ export function buildRunRateSeries(ytdEnriched, startISO = '', endISO = '', now 
     for (let i = 0; i < data.length; i += step) ticks.push(data[i].t)
   }
   return { data, ticks, tickFmt, domain: [start.getTime(), end.getTime()] }
+}
+
+// Hours by category, bucketed by day / week / month, for the Pace category chart.
+// Uses every enriched entry's `hours` (billable or not), keyed by project.category;
+// entries without a category are skipped. Range: 'day' = trailing `dayWindow` days,
+// 'week' and 'month' = Jan 1 → yesterday (the YTD fetch is today-exclusive).
+// Weeks start Sunday (matches Calendar's date-fns startOfWeek). Every bucket gets a
+// value for each category (0 when idle) so lines stay continuous.
+export function buildCategoryHoursSeries(ytdEnriched, bucket = 'week', now = new Date(), dayWindow = 28) {
+  const pad = n => String(n).padStart(2, '0')
+  const toISO = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  const year = now.getFullYear()
+  const jan1 = new Date(year, 0, 1)
+  const lastDay = new Date(year, now.getMonth(), now.getDate()); lastDay.setDate(lastDay.getDate() - 1)
+
+  // bucket key (ms of the bucket's first day) for a local Date
+  const keyOf = d => {
+    if (bucket === 'month') return new Date(d.getFullYear(), d.getMonth(), 1).getTime()
+    if (bucket === 'week')  { const w = new Date(d); w.setDate(w.getDate() - w.getDay()); return w.getTime() }
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  }
+
+  let start = new Date(jan1)
+  if (bucket === 'day') {
+    start = new Date(lastDay); start.setDate(start.getDate() - (dayWindow - 1))
+    if (start < jan1) start = new Date(jan1)
+  }
+
+  // empty rows for every bucket in range
+  const rows = new Map()
+  for (let d = new Date(start); d <= lastDay; d.setDate(d.getDate() + 1)) {
+    const k = keyOf(d)
+    if (!rows.has(k)) {
+      const row = { t: k }
+      CATEGORY_SERIES.forEach(c => { row[c] = 0 })
+      rows.set(k, row)
+    }
+  }
+
+  const startISO = toISO(start), endISO = toISO(lastDay)
+  ytdEnriched.forEach(e => {
+    const cat = e.project?.category
+    if (!cat || !CATEGORY_SERIES.includes(cat) || !e.date || e.date < startISO || e.date > endISO) return
+    const [y, m, dd] = e.date.split('-').map(Number)
+    const row = rows.get(keyOf(new Date(y, m - 1, dd)))
+    if (row) row[cat] += (e.hours || 0)
+  })
+
+  const data = [...rows.values()].sort((a, b) => a.t - b.t)
+  data.forEach(r => CATEGORY_SERIES.forEach(c => { r[c] = Math.round(r[c] * 100) / 100 }))
+
+  // ticks: months on Month view; ~10 sampled buckets otherwise
+  const step = Math.max(1, Math.ceil(data.length / 10))
+  const ticks = bucket === 'month' ? data.map(r => r.t) : data.filter((_, i) => i % step === 0).map(r => r.t)
+  const tickFmt = bucket === 'month' ? 'month' : 'day'
+  const domain = data.length ? [data[0].t, data[data.length - 1].t] : [start.getTime(), lastDay.getTime()]
+  return { data, ticks, tickFmt, domain }
 }
 
 export function buildDailyHoursSeries(ytdEnriched, startISO = '', endISO = '', now = new Date()) {
