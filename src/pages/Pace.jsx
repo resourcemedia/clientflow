@@ -40,12 +40,27 @@ export default function PacePage() {
     d.setDate(d.getDate() - 28)
     const startISO = toLocalISO(d)
     const jan1 = toLocalISO(new Date(new Date().getFullYear(), 0, 1))
-    Promise.all([
-      supabase.from('time_entries').select(SELECT).gte('date', startISO).lt('date', today).order('date').order('start_time'),
-      supabase.from('time_entries').select(SELECT).gte('date', jan1).lt('date', today).order('date').order('start_time'),
-    ]).then(([a, b]) => {
-      setStatsEntries(a.data || [])
-      setYtdEntries(b.data || [])
+    // Supabase caps each response at 1000 rows (server max-rows). Page through in
+    // 1000-row chunks so the YTD fetch doesn't silently drop the newest entries.
+    // Same pattern as Timeboard's fetchAllEntries; order('id') keeps pages stable.
+    const fetchAll = async (fromISO) => {
+      const PAGE = 1000
+      let all = [], from = 0
+      while (true) {
+        const { data, error } = await supabase.from('time_entries').select(SELECT)
+          .gte('date', fromISO).lt('date', today)
+          .order('date').order('start_time').order('id')
+          .range(from, from + PAGE - 1)
+        if (error) { console.error('[Pace] time_entries error:', error); break }
+        all = all.concat(data || [])
+        if (!data || data.length < PAGE) break
+        from += PAGE
+      }
+      return all
+    }
+    Promise.all([fetchAll(startISO), fetchAll(jan1)]).then(([a, b]) => {
+      setStatsEntries(a)
+      setYtdEntries(b)
       setLoading(false)
     })
   }, [])
